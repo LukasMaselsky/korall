@@ -76,6 +76,20 @@ int socket_listen(SOCKET sockfd);
 
 SOCKET socket_accept(SOCKET sockfd, struct sockaddr_storage* incoming, socklen_t* addr_size);
 
+int socket_send(SOCKET sockfd, const void* msg, int len, int flags);
+
+int socket_receive(SOCKET sockfd, void* buf, int len, int flags);
+
+int socket_send_unconnected(SOCKET sockfd, const void* msg, int len, unsigned int flags,
+    const struct sockaddr* to);
+
+int socket_receive_unconnected(SOCKET sockfd, void* buf, int len, unsigned int flags,
+    struct sockaddr* from, int* fromlen);
+    
+int socket_get_peer(SOCKET sockfd, struct sockaddr* addr, int* addrlen);
+
+int get_host(char* hostname, size_t size);
+
 bool socket_creation_failed(SOCKET sock);
 
 bool is_service_valid(const char* service);

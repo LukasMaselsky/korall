@@ -120,6 +120,50 @@ SOCKET socket_accept(SOCKET sockfd, struct sockaddr_storage* incoming, socklen_t
     return accept(sockfd, (struct sockaddr*)incoming, addr_size);
 }
 
+/*
+    Returns bytes sent
+*/
+int socket_send(SOCKET sockfd, const void* msg, int len, int flags) {
+    return send(sockfd, msg, len, flags);
+}
+
+/*
+    -1 = error
+    0 = remote side closed connection
+    other number = bytes read
+*/
+int socket_receive(SOCKET sockfd, void* buf, int len, int flags) {
+    return recv(sockfd, buf, len, flags);
+}
+
+int socket_send_unconnected(SOCKET sockfd, const void* msg, int len, unsigned int flags,
+    const struct sockaddr* to) {
+    socklen_t tolen = sizeof(*to);
+    return sendto(sockfd, msg, len, flags, to, tolen);
+}
+
+/*
+    from becomes filled with originating ip and port
+*/
+int socket_receive_unconnected(SOCKET sockfd, void* buf, int len, unsigned int flags,
+    struct sockaddr* from, int* fromlen) {
+    return recvfrom(sockfd, buf, len, len, flags, from, fromlen);
+}
+
+// NOTE: send and recv can still be used with UDP if you do connect() (dest and src addresses added automatically)
+
+/*
+    Fills addr with info about other side of socket
+*/
+int socket_get_peer(SOCKET sockfd, struct sockaddr* addr, int* addrlen) {
+    return getpeername(sockfd, addr, addrlen);
+}
+
+int get_host(char* hostname, size_t size) {
+    return gethostname(hostname, size);
+}
+
+
 bool socket_creation_failed(SOCKET sock) {
     bool failed = false;
 
