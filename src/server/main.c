@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "server/main.h"
 #include "utils.h"
+#include "sockets.h"
 
 static SOCKET ipv4() {
 	// Create socket
