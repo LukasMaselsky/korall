@@ -1,15 +1,5 @@
-#include <stdio.h>
 #include "utils.h"
 #include "sockets.h"
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 /*
     Needed for Windows
@@ -147,7 +137,7 @@ int socket_send_unconnected(SOCKET sockfd, const void* msg, int len, unsigned in
 */
 int socket_receive_unconnected(SOCKET sockfd, void* buf, int len, unsigned int flags,
     struct sockaddr* from, int* fromlen) {
-    return recvfrom(sockfd, buf, len, len, flags, from, fromlen);
+    return recvfrom(sockfd, buf, len, flags, from, fromlen);
 }
 
 // NOTE: send and recv can still be used with UDP if you do connect() (dest and src addresses added automatically)
@@ -177,6 +167,9 @@ bool socket_creation_failed(SOCKET sock) {
 }
 
 bool is_service_valid(const char* service) {
+    if (service == NULL) {
+        return false; // TODO: true?
+    }
     int service_num;
     str_to_int_errno res = str_to_int(&service_num, service, 10);
     if (res == STR_TO_INT_SUCCESS) {
@@ -198,7 +191,7 @@ int get_addr_info(
     const char* service,  // e.g. "http" or port number
     const ProtocolFamily pf, // IPV4, IPV6, ANY
     const SocketType st, // TCP, UDP
-    struct addrinfo* res
+    struct addrinfo** res
 ) {
     if (node == NULL && service == NULL) {
         perror("get_addr_info: both node and service cannot be null");
@@ -221,7 +214,7 @@ int get_addr_info(
         hints.ai_flags = AI_PASSIVE; // this machines IP
     }
 
-    int status = getaddrinfo(node, service, &hints, &res);
+    int status = getaddrinfo(node, service, &hints, res);
     if (status != 0) {
         fprintf(stderr, "get_addr_info -> getaddrinfo: %s\n", gai_strerror(status));
         return 1;
@@ -229,10 +222,49 @@ int get_addr_info(
     return 0;
 }
 
-int get_addr_info_local(const char* port, struct addrinfo* res) {
+int get_addr_info_local(const char* port, struct addrinfo** res) {
     return get_addr_info(NULL, port, PF_ANY, TCP, res);
 }
 
-int get_addr_info_remote(const char* node, const char* service, struct addrinfo* res) {
+int get_addr_info_remote(const char* node, const char* service, struct addrinfo** res) {
     return get_addr_info(node, service, PF_ANY, TCP, res);
 }
+
+
+void print_addr_info(struct addrinfo* addrinfo) {
+    void* addr;
+    char* ipver;
+    struct sockaddr_in* ipv4;
+    struct sockaddr_in6* ipv6;
+    char ipstr[INET6_ADDRSTRLEN];
+
+    // get the pointer to the address itself,
+    // different fields in IPv4 and IPv6:
+    if (addrinfo->ai_family == AF_IPV4) {
+        ipv4 = (struct sockaddr_in*)addrinfo->ai_addr;
+        addr = &(ipv4->sin_addr);
+        ipver = "IPv4";
+    }
+    else {
+        ipv6 = (struct sockaddr_in6*)addrinfo->ai_addr;
+        addr = &(ipv6->sin6_addr);
+        ipver = "IPv6";
+    }
+
+    inet_ntop(addrinfo->ai_family, addr, ipstr, sizeof(ipstr));
+    printf("%s: %s\n", ipver, ipstr);
+}
+
+
+#ifndef _WIN32
+void sigchild_handler(int s) {
+    (void)s; // quiet unused variable warning
+
+    // waitpid() might overwrite errno, so we save and restore it:
+    int saved_errno = errno;
+
+    while (waitpid(-1, NULL, WNOHANG) > 0);
+
+    errno = saved_errno;
+}
+#endif

@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "server/main.h"
 #include "utils.h"
 #include "sockets.h"
@@ -40,33 +39,75 @@ static SOCKET local() {
 
 }
 
+#define PORT "3500"
+
 int main() {
+
+	SOCKET sock;
+	struct addrinfo* serverinfo, *addrinfo;
+	
 	
 	int err = socket_init(); 
 	if (err != 0) {
-		perror("Socket initialisation failed, exiting");
+		perror("Socket initialisation failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
-	return 0;
+	//err = get_addr_info_remote("www.example.net", NULL, &serverinfo);
+	err = get_addr_info_local(PORT, &serverinfo);
+	if (err != 0) {
+		exit(EXIT_FAILURE);
+	}
 
-	AddressFamily af = AF_IPV4;
+	// loop through all the results and bind to the first we can
+	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {
+		print_addr_info(addrinfo);
+		sock = socket_create(addrinfo);
+		if (sock == -1) {
+			perror("server: socket\n");
+			continue;
+		}
 
-	SOCKET sock;
-	switch (af) {
-		case AF_IPV4:
-			sock = ipv4();
-			break;
-		case AF_LOCAL:
-			sock = local();
-			break;
-		case AF_IPV6:
-		default:
-			break;
+		int res = socket_reuse_port(sock);
+		if (res == -1) {
+			perror("setsockopt\n");
+			exit(EXIT_FAILURE);
+		}
+
+		res = socket_bind(sock, addrinfo);
+		if (res == -1) {
+			socket_close(sock);
+			perror("server: bind\n");
+			continue;
+		}
+
+		break;
 	}
 
 
+	freeaddrinfo(serverinfo);
+
 	printf("Opened socket\n");
+
+	if (addrinfo == NULL) {
+		perror("server: failed to bind\n");
+		exit(EXIT_FAILURE);
+	}
+
+	int res = socket_listen(sock);
+	if (res == -1) {
+		perror("socket listen\n");
+		exit(EXIT_FAILURE);
+	}
+
+
+	// TODO: sigchld handler
+	
+	printf("Server: waiting for connections...\n");
+
+	while (true) {
+		Sleep(1000);
+	}
 
 	socket_close(sock);
 	

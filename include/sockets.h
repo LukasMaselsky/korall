@@ -1,14 +1,32 @@
 #ifndef SOCKETS_H
 #define SOCKETS_H
+
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <signal.h>
+
+
 // https://stackoverflow.com/questions/28027937/cross-platform-sockets
 #ifdef _WIN32
 /* See http://stackoverflow.com/questions/12765743/getaddrinfo-on-win32 */
+/* 0x0600 https://stackoverflow.com/questions/60229778/inet-ntop-was-not-decleared-in-this-scope */
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501  /* Windows XP. */
+#define _WIN32_WINNT 0x0600
+#elif _WIN32_WINNT < 0x0600
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
 #endif
+
 #include <winsock2.h>
-#include <Ws2tcpip.h>
+#include <ws2tcpip.h>
+#include <synchapi.h>
 #pragma comment(lib, "Ws2_32.lib") // link to library
 
 #define VERSION_COUNT 4
@@ -99,12 +117,16 @@ int get_addr_info(
     const char* service,  // e.g. "http" or port number
     const ProtocolFamily pf, // IPV4, IPV6, ANY
     const SocketType st, // TCP, UDP
-    struct addrinfo* res
+    struct addrinfo** res
 );
 
-int get_addr_info_local(const char* port, struct addrinfo* res);
+int get_addr_info_local(const char* port, struct addrinfo** res);
 
-int get_addr_info_remote(const char* node, const char* service, struct addrinfo* res);
+int get_addr_info_remote(const char* node, const char* service, struct addrinfo** res);
+
+void print_addr_info(struct addrinfo* addrinfo);
+
+void sigchild_handler(int s);
 
 
 #endif
