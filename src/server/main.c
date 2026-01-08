@@ -41,15 +41,6 @@ static SOCKET local() {
 
 #define PORT "3500"
 
-void* get_in_addr(struct sockaddr* sa)
-{
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
-
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
 
 int main() {
 
@@ -59,35 +50,34 @@ int main() {
 	
 	int err = socket_init(); 
 	if (err != 0) {
-		perror("Socket initialisation failed, exiting\n");
+		perror("Server: socket initialisation failed, exiting");
 		exit(EXIT_FAILURE);
 	}
 
-	//err = get_addr_info_remote("www.example.net", NULL, &serverinfo);
-	err = get_addr_info_local(PORT, &serverinfo);
+	err = get_addr_info_remote("127.0.0.1", PORT, &serverinfo);
 	if (err != 0) {
 		exit(EXIT_FAILURE);
 	}
 
 	// loop through all the results and bind to the first we can
 	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {
-		//	print_addr_info(addrinfo);
+		
 		server_sock = socket_create(addrinfo);
 		if (server_sock == -1) {
-			perror("server: socket\n");
+			perror("Server: socket");
 			continue;
 		}
 
 		int res = socket_reuse_port(server_sock);
 		if (res == -1) {
-			perror("setsockopt\n");
+			perror("Server: setsockopt");
 			exit(EXIT_FAILURE);
 		}
 
 		res = socket_bind(server_sock, addrinfo);
 		if (res == -1) {
 			socket_close(server_sock);
-			perror("server: bind\n");
+			perror("Server: bind");
 			continue;
 		}
 
@@ -97,16 +87,16 @@ int main() {
 
 	freeaddrinfo(serverinfo);
 
-	printf("Opened socket\n");
+	printf("Server: opened socket\n");
 
 	if (addrinfo == NULL) {
-		perror("server: failed to bind\n");
+		perror("Server: failed to bind");
 		exit(EXIT_FAILURE);
 	}
 
 	int res = socket_listen(server_sock);
 	if (res == -1) {
-		perror("socket listen\n");
+		perror("Server: socket listen\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -124,19 +114,26 @@ int main() {
 	while (true) {
 		incoming_sock = socket_accept(server_sock, &incoming_addr, &incoming_addr_len);
 		if (incoming_sock == -1) {
-			perror("Couldn't accept");
+			perror("Server: couldn't accept");
 			continue;
 		}
 
 		get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver);
 		printf("Server: got connection from %s (%s)\n", ip, ipver);
+
+		err = socket_send(incoming_sock, "Hello, world!", 13, 0);
+		if (err == -1) {
+			perror("Server: couldn't send message");
+		}
+
 		socket_close(incoming_sock);
+
 		break;
 	}
 
 	socket_close(server_sock);
 	
-	printf("Closed socket\n");
+	printf("Server: closed socket\n");
 
 	socket_quit();
 

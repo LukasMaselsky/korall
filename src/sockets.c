@@ -89,7 +89,12 @@ int socket_bind(SOCKET sockfd, struct addrinfo* res) {
 
 int socket_reuse_port(SOCKET sockfd) {
     int opt = 1;
-    return setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    #ifdef _WIN32
+        return setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
+    #else
+        return setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+    #endif
+
 }
 
 int socket_connect(SOCKET sockfd, struct addrinfo* res) {
@@ -227,7 +232,7 @@ int get_addr_info_local(const char* port, struct addrinfo** res) {
 }
 
 int get_addr_info_remote(const char* node, const char* service, struct addrinfo** res) {
-    return get_addr_info(node, service, PF_ANY, TCP, res);
+    return get_addr_info(node, service, PF_IPV4, TCP, res);
 }
 
 
