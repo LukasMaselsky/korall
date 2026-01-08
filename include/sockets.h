@@ -17,17 +17,19 @@
 #ifdef _WIN32
 /* See http://stackoverflow.com/questions/12765743/getaddrinfo-on-win32 */
 /* 0x0600 https://stackoverflow.com/questions/60229778/inet-ntop-was-not-decleared-in-this-scope */
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#elif _WIN32_WINNT < 0x0600
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#endif
+//#ifndef _WIN32_WINNT
+//#define _WIN32_WINNT 0x0600
+//#elif _WIN32_WINNT < 0x0600
+//#undef _WIN32_WINNT
+//#define _WIN32_WINNT 0x0600
+//#endif
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <synchapi.h>
+#include <iphlpapi.h>
 #pragma comment(lib, "Ws2_32.lib") // link to library
+#pragma comment(lib, "IPHLPAPI.lib")
 
 #define VERSION_COUNT 4
 
@@ -46,6 +48,7 @@ typedef struct {
 #include <arpa/inet.h>
 #include <netdb.h>  /* Needed for getaddrinfo() and freeaddrinfo() */
 #include <unistd.h> /* Needed for close() */
+#include <ifaddrs.h>
 
 #define SOCKET int
 #define SOCKET_ERROR -1
@@ -57,10 +60,12 @@ typedef struct {
 #define IPV4_ADDRSTRLEN INET_ADDRSTRLEN
 #define IPV6_ADDRSTRLEN INET6_ADDRSTRLEN
 #define MAX_LISTEN_QUEUE_LEN 10
+#define IP_VER_STR_LEN 5
 
 typedef enum {
     AF_IPV4 = AF_INET,
     AF_IPV6 = AF_INET6,
+    AF_ANY = AF_UNSPEC,
     AF_LOCAL = AF_UNIX
 } AddressFamily;
 
@@ -124,7 +129,9 @@ int get_addr_info_local(const char* port, struct addrinfo** res);
 
 int get_addr_info_remote(const char* node, const char* service, struct addrinfo** res);
 
-void print_addr_info(struct addrinfo* addrinfo);
+void get_ip_info_addr(struct addrinfo* addrinfo, char* ipstr, size_t ipstr_len, char* ipver);
+
+void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ipstr_len, char* ipver);
 
 void sigchild_handler(int s);
 

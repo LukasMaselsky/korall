@@ -231,30 +231,54 @@ int get_addr_info_remote(const char* node, const char* service, struct addrinfo*
 }
 
 
-void print_addr_info(struct addrinfo* addrinfo) {
+static void get_ip_info() {
+
+}
+
+/*
+    char ipstr[INET6_ADDRSTRLEN];
+*/
+void get_ip_info_addr(struct addrinfo* addrinfo, char* ipstr, size_t ipstr_len, char* ipver) {
     void* addr;
-    char* ipver;
     struct sockaddr_in* ipv4;
     struct sockaddr_in6* ipv6;
-    char ipstr[INET6_ADDRSTRLEN];
 
     // get the pointer to the address itself,
     // different fields in IPv4 and IPv6:
     if (addrinfo->ai_family == AF_IPV4) {
         ipv4 = (struct sockaddr_in*)addrinfo->ai_addr;
         addr = &(ipv4->sin_addr);
-        ipver = "IPv4";
+        strcpy(ipver, "IPv4");
     }
     else {
         ipv6 = (struct sockaddr_in6*)addrinfo->ai_addr;
         addr = &(ipv6->sin6_addr);
-        ipver = "IPv6";
+        strcpy(ipver, "IPv6");
     }
 
-    inet_ntop(addrinfo->ai_family, addr, ipstr, sizeof(ipstr));
-    printf("%s: %s\n", ipver, ipstr);
+    inet_ntop(addrinfo->ai_family, addr, ipstr, ipstr_len);
 }
 
+void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ipstr_len, char* ipver) {
+    void* addr;
+    struct sockaddr_in* ipv4;
+    struct sockaddr_in6* ipv6;
+
+    struct sockaddr* sa = (struct sockaddr*)addrs;
+
+    if (sa->sa_family == AF_IPV4) {
+        ipv4 = (struct sockaddr_in*)sa;
+        addr = &(ipv4->sin_addr);
+        strcpy(ipver, "IPv4");
+    }
+    else {
+        ipv6 = (struct sockaddr_in6*)sa;
+        addr = &(ipv6->sin6_addr);
+        strcpy(ipver, "IPv6");
+    }
+
+    inet_ntop(sa->sa_family, addr, ipstr, ipstr_len);
+}
 
 #ifndef _WIN32
 void sigchild_handler(int s) {
