@@ -285,16 +285,54 @@ bool is_valid_service(char* service) {
 
 static bool is_valid_ipv4(char* ip) {
     // todo
+    int len = strlen(ip);
+    if (len < 7 || len > 15) {
+        return false;
+    }
+
+    int digits = 0;
+    int sect_sum = 0;
+    for (size_t i = 0; i < len; i++) {
+        char c = ip[i];
+        
+        if (c == '.') {
+            if (sect_sum < 0 || sect_sum > 255 || digits > 3 || digits == 0) {
+                return false;
+            }
+
+            digits = 0;
+            sect_sum = 0;
+            continue;
+        }
+        
+        if (isdigit(c)){
+            int num = c - '0';
+            if (sect_sum != 0) { // ? not needed
+                sect_sum *= 10; 
+            }
+            sect_sum += num;
+            digits++;
+            continue;
+        }
+        
+        return false;
+    }
+
+    if (sect_sum < 0 || sect_sum > 255 || digits > 3) {
+        return false;
+    }
+
+
     return true;
 }
 
 static bool is_valid_ipv6(char* ip) {
     // todo
-    return true;
+    return false;
 }
 
 bool is_valid_ip(char* ip) {
-    return is_valid_ipv4(ip) && is_valid_ipv6(ip);
+    return is_valid_ipv4(ip) || is_valid_ipv6(ip);
 }
 
 

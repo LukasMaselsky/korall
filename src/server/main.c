@@ -57,7 +57,7 @@ static int process_args(
 }
 
 int main(int argc, char *argv[]) {
-	
+
 	int err;
 
 	char node_arr[INET6_ADDRSTRLEN] = "\0";
