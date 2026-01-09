@@ -1,6 +1,14 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+
 typedef enum {
     STR_TO_INT_SUCCESS,
     STR_TO_INT_OVERFLOW,

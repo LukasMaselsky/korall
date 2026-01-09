@@ -2,66 +2,89 @@
 #include "utils.h"
 #include "sockets.h"
 
-static SOCKET ipv4() {
-	// Create socket
-	SOCKET sock = socket(AF_IPV4, TCP, 0);
-	if (socket_creation_failed(sock)) {
-		perror("Socket creation failed");
-		exit(EXIT_FAILURE);
-	}
-	
 
-	//int opt = 1;
-	// setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))
-
-	// Bind socket
-	struct sockaddr_in addr;
-	memset(&addr, 0, sizeof(addr)); // zero the struct
-	addr.sin_family = AF_IPV4;
-	addr.sin_addr.s_addr = INADDR_ANY;
+static int process_args(
+	int argc, 
+	char* argv[], 
+	char* node, 
+	size_t max_node_len, 
+	char* service, 
+	size_t max_service_len
+) {
+	// options:
+	// 1. ip without port (default port)
+	// 2. no ip with port (default ip (NULL))
+	// 3. no ip no port (default ip (NULL), default port)
+	// 4. ip and port
 
 	
+	
+	if (argc == 1) {
+		// 3
+		strncpy(service, DEFAULT_PORT, max_service_len);
+		return 0;
+	}
+	
+	if (argc == 2) {
+		if (is_valid_ip(argv[1])) {
+			// ip without port
+			strncpy(node, argv[1], max_node_len); // 1
+			strncpy(service, DEFAULT_PORT, max_service_len);
+			return 0;
+		}
 
-	return sock;
-}
-
-static SOCKET local() {
-	// Create socket
-	SOCKET sock = socket(AF_LOCAL, TCP, 0);
-	if (socket_creation_failed(sock)) {
-		perror("Socket creation failed");
-		exit(EXIT_FAILURE);
+		if (is_valid_port(argv[1])) {
+			// any ip with port
+			strncpy(service, argv[1], max_service_len); // 2
+			return 0;
+		}
+		printf("Not a valid port or IP address\n");
+		return -1;
+	}
+	
+	if (argc == 3) {
+		// 4
+		if (is_valid_ip(argv[1]) && is_valid_port(argv[2])) {
+			strncpy(node, argv[1], max_node_len);
+			strncpy(service, argv[2], max_service_len);
+			return 0;
+		}
+		printf("Port or IP address is invalid\n");
+		return -1;
 	}
 
-	// Bind socket
-	struct sockaddr* addr;
-	memset(&addr, 0, sizeof(addr)); // zero the struct
-
+	return -1;
 }
 
-#define PORT "3500"
+int main(int argc, char *argv[]) {
+	
+	int err;
 
-
-int main() {
+	char node_arr[INET6_ADDRSTRLEN] = "\0";
+	char service[MAX_PORT_NUM_CHAR_LEN];
+	err = process_args(argc, argv, node_arr, INET6_ADDRSTRLEN, service, MAX_PORT_NUM_CHAR_LEN);
+	if (err == -1) {
+		printf("Could not process args");
+		exit(EXIT_FAILURE);
+	}
+	char* node = strlen(node_arr) == 0 ? NULL : node_arr;
 
 	SOCKET server_sock;
 	struct addrinfo* serverinfo, *addrinfo;
 	
-	
-	int err = socket_init(); 
+	err = socket_init(); 
 	if (err != 0) {
 		perror("Server: socket initialisation failed, exiting");
 		exit(EXIT_FAILURE);
 	}
 
-	err = get_addr_info_remote("127.0.0.1", PORT, &serverinfo);
+	err = get_addr_info(node, service, &serverinfo);
 	if (err != 0) {
 		exit(EXIT_FAILURE);
 	}
 
 	// loop through all the results and bind to the first we can
-	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {
-		
+	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {		
 		server_sock = socket_create(addrinfo);
 		if (server_sock == -1) {
 			perror("Server: socket");
@@ -87,12 +110,16 @@ int main() {
 
 	freeaddrinfo(serverinfo);
 
-	printf("Server: opened socket\n");
 
 	if (addrinfo == NULL) {
 		perror("Server: failed to bind");
 		exit(EXIT_FAILURE);
 	}
+
+	char ip[INET6_ADDRSTRLEN];
+	char ipver[IP_VER_STR_LEN];
+	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver);
+	printf("Server: opened socket on %s (%s)\n", ip, ipver);
 
 	int res = socket_listen(server_sock);
 	if (res == -1) {
@@ -108,8 +135,8 @@ int main() {
 	SOCKET incoming_sock;
 	struct sockaddr_storage incoming_addr;
 	socklen_t incoming_addr_len = sizeof(incoming_addr);
-	char ip[INET6_ADDRSTRLEN];
-	char ipver[IP_VER_STR_LEN];
+	char inc_ip[INET6_ADDRSTRLEN];
+	char inc_ipver[IP_VER_STR_LEN];
 
 	while (true) {
 		incoming_sock = socket_accept(server_sock, &incoming_addr, &incoming_addr_len);
@@ -118,10 +145,11 @@ int main() {
 			continue;
 		}
 
-		get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver);
-		printf("Server: got connection from %s (%s)\n", ip, ipver);
+		get_ip_info_storage(&incoming_addr, inc_ip, sizeof(inc_ip), inc_ipver);
+		printf("Server: got connection from %s (%s)\n", inc_ip, inc_ipver);
 
-		err = socket_send(incoming_sock, "Hello, world!", 13, 0);
+		char msg[13] = "Hello, world!";
+		err = socket_send(incoming_sock, msg, 13, 0);
 		if (err == -1) {
 			perror("Server: couldn't send message");
 		}

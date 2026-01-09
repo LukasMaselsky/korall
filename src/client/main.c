@@ -3,11 +3,13 @@
 #include "utils.h"
 #include "sockets.h"
 
-#define PORT "3500"
 #define MAX_BUFFER 200
 
-int main() {
 
+int main(int argc, char *argv[]) {
+
+	const char* node = argc > 1 ? argv[1] : NULL;
+	const char* service = argc > 2 ? argv[2] : DEFAULT_PORT;
 
 	SOCKET server_sock;
 	struct addrinfo *serverinfo, *addrinfo;
@@ -18,7 +20,7 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 
-	err = get_addr_info_remote("127.0.0.1", PORT, &serverinfo);
+	err = get_addr_info(node, service, &serverinfo);
 	if (err != 0) {
 		exit(EXIT_FAILURE);
 	}
@@ -60,6 +62,7 @@ int main() {
 		perror("Client: couldn't read");
 		exit(EXIT_FAILURE);
 	}
+	buffer[num_bytes] = '\0';
 
 	printf("Client: received '%s'\n", buffer);
 

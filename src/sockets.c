@@ -171,27 +171,8 @@ bool socket_creation_failed(SOCKET sock) {
     return failed;
 }
 
-bool is_service_valid(const char* service) {
-    if (service == NULL) {
-        return false; // TODO: true?
-    }
-    int service_num;
-    str_to_int_errno res = str_to_int(&service_num, service, 10);
-    if (res == STR_TO_INT_SUCCESS) {
-        if (service_num >= MIN_PORT_NUM && service_num <= MAX_PORT_NUM) {
-            return true;
-        }
-    }
-
-    if (strncmp(service, "http", strlen("http")) == 0 || strncmp(service, "https", strlen("https")) == 0) {
-        return true;
-    }
-
-    return false;
-}
-
 // Either node or service, but not both, may be NULL.
-int get_addr_info(
+int get_addr_info_full(
     const char* node,   // e.g. "www.example.com" or IP
     const char* service,  // e.g. "http" or port number
     const ProtocolFamily pf, // IPV4, IPV6, ANY
@@ -203,10 +184,6 @@ int get_addr_info(
         return 1;
     }
 
-    if (!is_service_valid(service)) {
-        perror("get_addr_info: service is invalid");
-        return 1;
-    }
     // TODO: node format check e.g. 1.3.4.5 valid but 1...3.5 not valid
 
 
@@ -216,7 +193,9 @@ int get_addr_info(
     hints.ai_family = pf;
     hints.ai_socktype = st;
     if (node == NULL) {
-        hints.ai_flags = AI_PASSIVE; // this machines IP
+        // hints.ai_flags = AI_PASSIVE; // this machines IP
+        //! When AI_PASSIVE, can't use NULL for node (doesn't connect on client even though 0.0.0.0 assigned)
+        //! 
     }
 
     int status = getaddrinfo(node, service, &hints, res);
@@ -227,18 +206,14 @@ int get_addr_info(
     return 0;
 }
 
-int get_addr_info_local(const char* port, struct addrinfo** res) {
-    return get_addr_info(NULL, port, PF_ANY, TCP, res);
+/*
+    node = url / ip
+    service = http / port num / etc
+*/
+int get_addr_info(const char* node, const char* service, struct addrinfo** res) {
+    return get_addr_info_full(node, service, PF_ANY, TCP, res);
 }
 
-int get_addr_info_remote(const char* node, const char* service, struct addrinfo** res) {
-    return get_addr_info(node, service, PF_IPV4, TCP, res);
-}
-
-
-static void get_ip_info() {
-
-}
 
 /*
     char ipstr[INET6_ADDRSTRLEN];
@@ -284,6 +259,44 @@ void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ips
 
     inet_ntop(sa->sa_family, addr, ipstr, ipstr_len);
 }
+
+
+bool is_valid_port(char* port) {
+    int service_num;
+    str_to_int_errno res = str_to_int(&service_num, port, 10);
+    if (res == STR_TO_INT_SUCCESS) {
+        if (service_num >= MIN_PORT_NUM && service_num <= MAX_PORT_NUM) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool is_valid_service(char* service) {
+    if (is_valid_port(service)) {
+        return true;
+    }
+
+    if (strncmp(service, "http", strlen("http")) == 0 || strncmp(service, "https", strlen("https")) == 0) {
+        return true;
+    }
+    return false;
+}
+
+static bool is_valid_ipv4(char* ip) {
+    // todo
+    return true;
+}
+
+static bool is_valid_ipv6(char* ip) {
+    // todo
+    return true;
+}
+
+bool is_valid_ip(char* ip) {
+    return is_valid_ipv4(ip) && is_valid_ipv6(ip);
+}
+
 
 #ifndef _WIN32
 void sigchild_handler(int s) {

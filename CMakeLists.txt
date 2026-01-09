@@ -31,8 +31,8 @@ project(websocket LANGUAGES C)
 # ADD SUBDIRECTORIES
 ###############################################################################
 
+# add_subdirectory(extern/tiny_regex_c)
 # set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-# add_subdirectory(extern/)
 
 ###############################################################################
 # EXECUTABLE TARGETS
@@ -102,5 +102,5 @@ target_include_directories(server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/se
 target_include_directories(client PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/client/")
 
 # Link libraries that use CMake
-# target_link_libraries(server PRIVATE )
-# target_link_libraries(client PRIVATE )
+# target_link_libraries(server PRIVATE tiny_regex_c)
+# target_link_libraries(client PRIVATE tiny_regex_c)

@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "utils.h"
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
-#include <errno.h>
-#include <limits.h>
 
 
 /* Convert string s to int out.
