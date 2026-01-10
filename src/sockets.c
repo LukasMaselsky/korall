@@ -305,11 +305,9 @@ static bool is_valid_ipv4(char* ip) {
             continue;
         }
         
-        if (isdigit(c)){
+        if (isdigit(c)) {
             int num = c - '0';
-            if (sect_sum != 0) { // ? not needed
-                sect_sum *= 10; 
-            }
+            sect_sum *= 10;
             sect_sum += num;
             digits++;
             continue;
@@ -322,16 +320,73 @@ static bool is_valid_ipv4(char* ip) {
         return false;
     }
 
-
     return true;
 }
 
 static bool is_valid_ipv6(char* ip) {
-    // todo
-    return false;
+    // only allow lowercase hex?
+    int len = strlen(ip);
+    if (len < 2 || len > 45) {
+        return false;
+    }
+
+    int digits = 0;
+    int sect_sum = 0;
+    int groups = 0;
+    int compr_count = 0;
+    int col_count = 0;
+
+    for (size_t i = 0; i < len; i++) {
+        char c = ip[i];
+
+        if (c == ':') {
+            col_count++;
+            if (col_count > 2) return false;
+            if (col_count == 2) {
+                compr_count++;
+                if (compr_count > 1) return false;
+                continue;
+            }
+
+            if (sect_sum < 0 || sect_sum > 65535 || digits > 4) {
+                return false;
+            }
+
+            groups++;
+            digits = 0;
+            sect_sum = 0;
+            continue;
+        }
+        
+        if (isxdigit(c)) {
+            int num = c - '0';
+            if (c > '9') {
+                num -= 39; // diff in ascii table
+            }
+            
+            sect_sum *= 16;
+            sect_sum += num;
+            digits++;
+            col_count = 0;
+            continue;
+        }
+
+        return false;
+    }
+
+    if (sect_sum < 0 || sect_sum > 65535 || digits > 4) {
+        return false;
+    }
+
+    if (compr_count == 1) return true;
+    
+    if (groups != 7) return false;
+    
+    return true;
 }
 
 bool is_valid_ip(char* ip) {
+    return is_valid_ipv6(ip);
     return is_valid_ipv4(ip) || is_valid_ipv6(ip);
 }
 

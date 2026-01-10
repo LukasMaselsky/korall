@@ -104,3 +104,16 @@ target_include_directories(client PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/cl
 # Link libraries that use CMake
 # target_link_libraries(server PRIVATE tiny_regex_c)
 # target_link_libraries(client PRIVATE tiny_regex_c)
+
+# Compiler flags
+
+if(MSVC)
+    add_compile_options("/W4" "$<$<CONFIG:RELEASE>:/O2>")
+else()
+    add_compile_options("-Wall" "-Wextra" "-Werror" "$<$<CONFIG:RELEASE>:-O3>")
+    if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options("-stdlib=libc++")
+    else()
+        # nothing special for gcc at the moment
+    endif()
+endif()
