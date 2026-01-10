@@ -42,3 +42,7 @@ int is_digits_only(const char* str) {
     // strspn returns the length of the initial segment of str consisting only of characters in 0123456789
     return strspn(str, "0123456789") == strlen(str);
 }
+
+bool is_flag(char* arg) {
+    return strlen(arg) >= MIN_FLAG_CHAR_LEN && arg[0] == '-' && arg[1] == '-';
+}

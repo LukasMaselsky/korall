@@ -2,6 +2,10 @@
 #include "utils.h"
 #include "sockets.h"
 
+// https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
+// https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
+
+
 
 static int process_args(
 	int argc, 
@@ -12,29 +16,29 @@ static int process_args(
 	size_t max_service_len
 ) {
 	// options:
-	// 1. ip without port (default port)
-	// 2. no ip with port (default ip (NULL))
-	// 3. no ip no port (default ip (NULL), default port)
+	// 1. no ip no port (default ip (NULL), default port)
+	// 2. ip without port (default port)
+	// 3. no ip with port (default ip (NULL))
 	// 4. ip and port
 
+	int arg_count = argc - 1;
 	
-	
-	if (argc == 1) {
-		// 3
+	if (arg_count == 0) {
+		// 1
 		strncpy(service, DEFAULT_PORT, max_service_len);
 		return 0;
 	}
 	
-	if (argc == 2) {
+	if (argc == 1) {
 		if (is_valid_ip(argv[1])) {
-			// ip without port
+			// 2
 			strncpy(node, argv[1], max_node_len); // 1
 			strncpy(service, DEFAULT_PORT, max_service_len);
 			return 0;
 		}
 
 		if (is_valid_port(argv[1])) {
-			// any ip with port
+			// 3
 			strncpy(service, argv[1], max_service_len); // 2
 			return 0;
 		}
@@ -42,7 +46,7 @@ static int process_args(
 		return -1;
 	}
 	
-	if (argc == 3) {
+	if (argc == 2) {
 		// 4
 		if (is_valid_ip(argv[1]) && is_valid_port(argv[2])) {
 			strncpy(node, argv[1], max_node_len);
