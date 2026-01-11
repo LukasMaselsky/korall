@@ -292,6 +292,7 @@ static bool is_valid_ipv4(char* ip) {
 
     int digits = 0;
     int sect_sum = 0;
+    int groups = 0;
     for (size_t i = 0; i < len; i++) {
         char c = ip[i];
         
@@ -302,6 +303,7 @@ static bool is_valid_ipv4(char* ip) {
 
             digits = 0;
             sect_sum = 0;
+            groups++;
             continue;
         }
         
@@ -316,9 +318,11 @@ static bool is_valid_ipv4(char* ip) {
         return false;
     }
 
-    if (sect_sum < 0 || sect_sum > 255 || digits > 3) {
+    if (sect_sum < 0 || sect_sum > 255 || digits > 3 || digits == 0) {
         return false;
     }
+
+    if (groups != 3) return false;
 
     return true;
 }
@@ -386,7 +390,6 @@ static bool is_valid_ipv6(char* ip) {
 }
 
 bool is_valid_ip(char* ip) {
-    return is_valid_ipv6(ip);
     return is_valid_ipv4(ip) || is_valid_ipv6(ip);
 }
 
