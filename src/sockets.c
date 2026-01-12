@@ -75,6 +75,14 @@ int socket_close(SOCKET sock)
 
 }
 
+void socket_print(SOCKET sock) {
+#ifdef _WIN32
+    printf("%llu", sock);
+#else
+    printf("%d", sock);
+#endif
+}
+
 SOCKET socket_create(struct addrinfo* res) {
     return socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 }
@@ -171,6 +179,37 @@ bool socket_creation_failed(SOCKET sock) {
     return failed;
 }
 
+
+
+static int socket_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, double timeout) {
+    struct timeval tv;
+    if (timeout != SELECT_NO_TIMEOUT) {
+        timeval_set(&tv, timeout);
+        return select(nfds, readfds, writefds, exceptfds, &tv);
+    }
+    else {
+        return select(nfds, readfds, writefds, exceptfds, NULL);
+    }
+
+}
+
+int socket_select_read_only(int nfds, fd_set* readfds, double timeout) {
+    return socket_select(nfds, readfds, NULL, NULL, timeout);
+}
+
+int socket_select_write_only(int nfds, fd_set* writefds, double timeout) {
+    return socket_select(nfds, NULL, writefds, NULL, timeout);
+}
+
+int socket_select_except_only(int nfds, fd_set* exceptfds, double timeout) {
+    return socket_select(nfds, NULL, NULL, exceptfds, timeout);
+}
+
+int socket_select_all(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, double timeout) {
+    return socket_select(nfds, readfds, writefds, exceptfds, timeout);
+}
+
+
 // Either node or service, but not both, may be NULL.
 int get_addr_info_full(
     const char* node,   // e.g. "www.example.com" or IP
@@ -183,8 +222,6 @@ int get_addr_info_full(
         perror("get_addr_info: both node and service cannot be null");
         return 1;
     }
-
-    // TODO: node format check e.g. 1.3.4.5 valid but 1...3.5 not valid
 
 
     struct addrinfo hints;
@@ -215,10 +252,7 @@ int get_addr_info(const char* node, const char* service, struct addrinfo** res) 
 }
 
 
-/*
-    char ipstr[INET6_ADDRSTRLEN];
-*/
-void get_ip_info_addr(struct addrinfo* addrinfo, char* ipstr, size_t ipstr_len, char* ipver) {
+void get_ip_info_addr(struct addrinfo* addrinfo, char* ipstr, size_t ipstr_len, char* ipver, size_t ipver_len) {
     void* addr;
     struct sockaddr_in* ipv4;
     struct sockaddr_in6* ipv6;
@@ -228,18 +262,18 @@ void get_ip_info_addr(struct addrinfo* addrinfo, char* ipstr, size_t ipstr_len, 
     if (addrinfo->ai_family == AF_IPV4) {
         ipv4 = (struct sockaddr_in*)addrinfo->ai_addr;
         addr = &(ipv4->sin_addr);
-        strcpy(ipver, "IPv4");
+        strncpy(ipver, "IPv4", ipver_len);
     }
     else {
         ipv6 = (struct sockaddr_in6*)addrinfo->ai_addr;
         addr = &(ipv6->sin6_addr);
-        strcpy(ipver, "IPv6");
+        strncpy(ipver, "IPv6", ipver_len);
     }
 
     inet_ntop(addrinfo->ai_family, addr, ipstr, ipstr_len);
 }
 
-void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ipstr_len, char* ipver) {
+void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ipstr_len, char* ipver, size_t ipver_len) {
     void* addr;
     struct sockaddr_in* ipv4;
     struct sockaddr_in6* ipv6;
@@ -249,12 +283,12 @@ void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ips
     if (sa->sa_family == AF_IPV4) {
         ipv4 = (struct sockaddr_in*)sa;
         addr = &(ipv4->sin_addr);
-        strcpy(ipver, "IPv4");
+        strncpy(ipver, "IPv4", ipver_len);
     }
     else {
         ipv6 = (struct sockaddr_in6*)sa;
         addr = &(ipv6->sin6_addr);
-        strcpy(ipver, "IPv6");
+        strncpy(ipver, "IPv6", ipver_len);
     }
 
     inet_ntop(sa->sa_family, addr, ipstr, ipstr_len);
@@ -391,6 +425,19 @@ static bool is_valid_ipv6(char* ip) {
 
 bool is_valid_ip(char* ip) {
     return is_valid_ipv4(ip) || is_valid_ipv6(ip);
+}
+
+int timeval_set(struct timeval *tv, double val) {
+    if (val < 0) return -1;
+    
+    int tv_sec = (int)val;
+    double decimal = val - tv_sec;
+    double usec_d = decimal * 1000000;
+    int tv_usec = (int)usec_d;
+    
+    tv->tv_sec = tv_sec;
+    tv->tv_usec = tv_usec;
+    return 0;
 }
 
 

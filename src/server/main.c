@@ -23,10 +23,6 @@ static int process_flag(char* flag, Flags* flags) {
 
 	switch (flag_val) {
 		case F_TCP:
-			flags->socktype = TCP;
-			break;
-		case F_UDP:
-			flags->socktype = UDP;
 			break;
 		case F_BADFLAG:
 		default:
@@ -35,7 +31,6 @@ static int process_flag(char* flag, Flags* flags) {
 
 	return 0;
 }
-
 
 static int process_args(
 	int argc,
@@ -109,52 +104,37 @@ static int process_args(
 	return 0;
 }
 
-int main(int argc, char *argv[]) {
+/*
+	Initialise a socket for listening
+*/
+SOCKET init_listen_socket(const char* node, const char* service) {
+	int res;
+	SOCKET sock;
+	struct addrinfo *serverinfo, *addrinfo;
 
-	int err;
-
-	Flags flags = { .socktype = DEFAULT_SOCK_TYPE };
-	char node_arr[INET6_ADDRSTRLEN] = "\0";
-	char service[MAX_PORT_NUM_CHAR_LEN];
-	err = process_args(argc, argv, node_arr, INET6_ADDRSTRLEN, service, MAX_PORT_NUM_CHAR_LEN, &flags);
-	if (err == -1) {
-		printf("Could not process args");
-		exit(EXIT_FAILURE);
-	}
-	char* node = strlen(node_arr) == 0 ? NULL : node_arr;
-
-	SOCKET server_sock;
-	struct addrinfo* serverinfo, *addrinfo;
-	
-	err = socket_init(); 
-	if (err != 0) {
-		perror("Server: socket initialisation failed, exiting");
-		exit(EXIT_FAILURE);
-	}
-
-	err = get_addr_info(node, service, &serverinfo);
-	if (err != 0) {
+	res = get_addr_info(node, service, &serverinfo);
+	if (res != 0) {
 		exit(EXIT_FAILURE);
 	}
 
 	// loop through all the results and bind to the first we can
-	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {		
-		server_sock = socket_create(addrinfo);
-		if (server_sock == -1) {
-			perror("Server: socket");
+	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {
+		sock = socket_create(addrinfo);
+		if (sock == -1) {
+			perror("server: socket");
 			continue;
 		}
 
-		int res = socket_reuse_port(server_sock);
+		res = socket_reuse_port(sock);
 		if (res == -1) {
-			perror("Server: setsockopt");
+			perror("server: setsockopt");
 			exit(EXIT_FAILURE);
 		}
 
-		res = socket_bind(server_sock, addrinfo);
+		res = socket_bind(sock, addrinfo);
 		if (res == -1) {
-			socket_close(server_sock);
-			perror("Server: bind");
+			socket_close(sock);
+			perror("server: bind");
 			continue;
 		}
 
@@ -166,58 +146,185 @@ int main(int argc, char *argv[]) {
 
 
 	if (addrinfo == NULL) {
-		perror("Server: failed to bind");
+		perror("server: failed to bind");
 		exit(EXIT_FAILURE);
 	}
 
-	char ip[INET6_ADDRSTRLEN];
+	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
-	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver);
-	printf("Server: opened socket on %s PORT %s (%s)\n", ip, service, ipver);
+	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
+	printf("server: opened socket on %s PORT %s (%s)\n", ip, service, ipver);
 
-	int res = socket_listen(server_sock);
+	res = socket_listen(sock);
 	if (res == -1) {
-		perror("Server: socket listen\n");
+		perror("server: socket listen\n");
 		exit(EXIT_FAILURE);
 	}
 
+	return sock;
+}
 
-	// TODO: sigchld handler
-	
-	printf("Server: waiting for connections...\n");
-
-	SOCKET incoming_sock;
+void process_incoming_connection(SOCKET sock, fd_set* main, SOCKET* fd_max) {
+	SOCKET incoming;
 	struct sockaddr_storage incoming_addr;
 	socklen_t incoming_addr_len = sizeof(incoming_addr);
-	char inc_ip[INET6_ADDRSTRLEN];
+	char ip[IPV6_ADDRSTRLEN];
+	char ipver[IP_VER_STR_LEN];
+
+	
+	incoming = socket_accept(sock, &incoming_addr, &incoming_addr_len);
+	if (incoming == -1) {
+		perror("server: couldn't accept");
+		return;
+	}
+
+	FD_SET(incoming, main); // add fd to set
+	if (incoming > *fd_max) {
+		*fd_max = incoming;
+	}
+	get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver, sizeof(ipver));
+	printf("server: got connection from %s (%s)\n", ip, ipver);
+}
+
+void broadcast(SOCKET inc_sock, SOCKET server_sock, char* data, int data_len, fd_set* main, SOCKET fd_max) {
+	// send data received to every other connection except incoming and server
+	for (SOCKET fd = 0; fd <= fd_max; fd++) {
+		if (!FD_ISSET(fd, main)) continue;
+			
+		if (fd == server_sock || fd == inc_sock) continue;
+			
+		int res = socket_send(fd, data, data_len, 0);
+		if (res == -1) {
+			printf("server: couldn't send data to ");
+			socket_print(fd);
+			printf("\n");
+		}
+	}
+}
+
+void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max) {
+	char buffer[READ_BUFFER_LEN];    // buffer for client data
+
+	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
+	if (bytes_read <= 0) {
+		if (bytes_read == 0) {
+			printf("server: socket ");
+			socket_print(inc_sock);
+			printf(" closed connection\n");
+		}
+		else {
+			printf("server: couldn't read from ");
+			socket_print(inc_sock);
+			printf("\n");
+		}
+
+		socket_close(inc_sock);
+		FD_CLR(inc_sock, main); // remove from set
+		return;
+	}
+
+	buffer[bytes_read] = '\0';
+	printf("server: received data from ");
+	socket_print(inc_sock);
+	printf(" - '%s'\n", buffer);
+	
+	broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
+
+	return;
+}
+
+int main(int argc, char *argv[]) {
+
+	Flags flags = { .socktype = DEFAULT_SOCK_TYPE };
+	char node_arr[IPV6_ADDRSTRLEN] = "\0";
+	char service[MAX_PORT_NUM_CHAR_LEN];
+	int res = process_args(argc, argv, node_arr, IPV6_ADDRSTRLEN, service, MAX_PORT_NUM_CHAR_LEN, &flags);
+	if (res == -1) {
+		printf("Could not process args");
+		exit(EXIT_FAILURE);
+	}
+	char* node = strlen(node_arr) == 0 ? NULL : node_arr;
+
+	//
+
+	res = socket_init();
+	if (res != 0) {
+		perror("server: socket initialisation failed, exiting");
+		exit(EXIT_FAILURE);
+	}
+
+
+
+	fd_set main_fds;
+	fd_set read_fds; // temps 
+	SOCKET fd_max; // biggest fd
+
+	
+	FD_ZERO(&main_fds);
+	FD_ZERO(&read_fds);
+
+	SOCKET server_sock = init_listen_socket(node, service);
+	
+	FD_SET(server_sock, &main_fds);
+	fd_max = server_sock;
+
+	while (true) {
+		read_fds = main_fds; // copy
+
+		int res = socket_select_read_only(fd_max+1, &read_fds, SELECT_NO_TIMEOUT);
+		if (res == -1) {
+			perror("Couldn't select");
+			exit(EXIT_FAILURE);
+		}
+
+		for (int i = 0; i <= fd_max; i++) {
+			if (!FD_ISSET(i, &read_fds)) continue;
+
+			if (i == server_sock) {
+				process_incoming_connection(i, &main_fds, &fd_max);
+			}
+			else {
+				process_incoming_data(i, server_sock, &main_fds, fd_max);
+			}
+			
+		}
+	}
+
+	socket_close(server_sock);
+	
+	printf("server: closed socket\n");
+
+	socket_quit();
+
+	return 0;
+}
+
+/*
+
+SOCKET incoming_sock;
+	struct sockaddr_storage incoming_addr;
+	socklen_t incoming_addr_len = sizeof(incoming_addr);
+	char inc_ip[IPV6_ADDRSTRLEN];
 	char inc_ipver[IP_VER_STR_LEN];
 
 	while (true) {
-		incoming_sock = socket_accept(server_sock, &incoming_addr, &incoming_addr_len);
+		incoming_sock = socket_accept(sock, &incoming_addr, &incoming_addr_len);
 		if (incoming_sock == -1) {
-			perror("Server: couldn't accept");
+			perror("server: couldn't accept");
 			continue;
 		}
 
-		get_ip_info_storage(&incoming_addr, inc_ip, sizeof(inc_ip), inc_ipver);
-		printf("Server: got connection from %s (%s)\n", inc_ip, inc_ipver);
+		get_ip_info_storage(&incoming_addr, inc_ip, sizeof(inc_ip), inc_ipver, sizeof(inc_ipver));
+		printf("server: got connection from %s (%s)\n", inc_ip, inc_ipver);
 
 		char msg[13] = "Hello, world!";
-		err = socket_send(incoming_sock, msg, 13, 0);
-		if (err == -1) {
-			perror("Server: couldn't send message");
+		int res = socket_send(incoming_sock, msg, 13, 0);
+		if (res == -1) {
+			perror("server: couldn't send message");
 		}
 
 		socket_close(incoming_sock);
 
 		break;
 	}
-
-	socket_close(server_sock);
-	
-	printf("Server: closed socket\n");
-
-	socket_quit();
-
-	return 0;
-}
+*/

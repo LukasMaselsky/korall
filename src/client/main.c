@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	char ip[INET6_ADDRSTRLEN];
+	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
-	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver);
+	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
 	printf("Client: connected to %s (%s)\n", ip, ipver);
 
 	freeaddrinfo(serverinfo);

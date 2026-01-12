@@ -3,6 +3,7 @@
 #include "sockets.h"
 
 #define DEFAULT_SOCK_TYPE TCP
+#define READ_BUFFER_LEN 1024
 
 typedef struct { 
 	char* key; 
@@ -12,7 +13,7 @@ typedef struct {
 typedef enum {
 	F_BADFLAG = -1,
 	F_TCP,
-	F_UDP
+	F_UDP,
 } Flag;
 
 typedef struct {
@@ -20,11 +21,10 @@ typedef struct {
 } Flags;
 
 FlagLookupEntry flag_lookup_table[] = {
-	{"--udp", F_UDP},
 	{"--tcp", F_TCP},
 };
 
-#define NUM_OF_FLAGS (sizeof(flag_lookup_table)/sizeof(FlagLookupEntry))
+#define NUM_OF_FLAGS (sizeof(flag_lookup_table)/sizeof(flag_lookup_table[0]))
 
 
 #endif
