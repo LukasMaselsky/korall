@@ -1,0 +1,18 @@
+#ifndef HTTP__H
+#define HTTP__H
+
+
+typedef enum {
+	HTTP_CONNECT,
+	HTTP_DELETE,
+	HTTP_GET,
+	HTTP_HEAD,
+	HTTP_OPTIONS,
+	HTTP_PATCH,
+	HTTP_POST,
+	HTTP_PUT,
+	HTTP_TRACE,
+	HTTP_BADMETHOD
+} HTTPMethod;
+
+#endif

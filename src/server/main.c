@@ -6,8 +6,19 @@
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
 
 
-static int flag_str_to_val(char* key)
+static Flag flag_str_to_val(char* key)
 {
+
+	// check for "--"
+	for (int i = 0; i < 2; i++) {
+		char c = key[0];
+		if (c == '\0') return F_BADFLAG;
+		if (c != '-') return F_BADFLAG;
+		key++;
+	}
+	// + 1 extra char at least ("--" invalid)
+	if (key[0] == '\0') return F_BADFLAG;
+
 	for (FlagLookupEntry* entry = flag_lookup_table; entry != flag_lookup_table + NUM_OF_FLAGS; entry++) {
 		if (strcmp(entry->key, key) == 0) {
 			return entry->val;
@@ -23,6 +34,10 @@ static int process_flag(char* flag, Flags* flags) {
 
 	switch (flag_val) {
 		case F_TCP:
+			flags->servertype = ST_TCP;
+			break;
+		case F_HTTP:
+			flags->servertype = ST_HTTP;
 			break;
 		case F_BADFLAG:
 		default:
@@ -101,6 +116,20 @@ static int process_args(
 		}
 	}
 	
+	return 0;
+}
+
+int process_http_request(
+	SOCKET inc_sock, 
+	SOCKET server_sock, 
+	const char* data, 
+	int data_len, 
+	fd_set* main, 
+	SOCKET fd_max
+) {
+
+
+
 	return 0;
 }
 
@@ -186,7 +215,7 @@ void process_incoming_connection(SOCKET sock, fd_set* main, SOCKET* fd_max) {
 	printf("server: got connection from %s (%s)\n", ip, ipver);
 }
 
-void broadcast(SOCKET inc_sock, SOCKET server_sock, char* data, int data_len, fd_set* main, SOCKET fd_max) {
+void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_len, fd_set* main, SOCKET fd_max) {
 	// send data received to every other connection except incoming and server
 	for (SOCKET fd = 0; fd <= fd_max; fd++) {
 		if (!FD_ISSET(fd, main)) continue;
@@ -202,7 +231,7 @@ void broadcast(SOCKET inc_sock, SOCKET server_sock, char* data, int data_len, fd
 	}
 }
 
-void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max) {
+void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max, Flags* flags) {
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
 
 	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
@@ -227,15 +256,22 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 	printf("server: received data from ");
 	socket_print(inc_sock);
 	printf(" - '%s'\n", buffer);
+
+	// TODO
+	if (flags->servertype == ST_HTTP) {
+		process_http_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
+	}
+	else {
+		broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
+	}
 	
-	broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
 
 	return;
 }
 
 int main(int argc, char *argv[]) {
 
-	Flags flags = { .socktype = DEFAULT_SOCK_TYPE };
+	Flags flags = default_flags;
 	char node_arr[IPV6_ADDRSTRLEN] = "\0";
 	char service[MAX_PORT_NUM_CHAR_LEN];
 	int res = process_args(argc, argv, node_arr, IPV6_ADDRSTRLEN, service, MAX_PORT_NUM_CHAR_LEN, &flags);
@@ -284,7 +320,7 @@ int main(int argc, char *argv[]) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, fd_max);
+				process_incoming_data(i, server_sock, &main_fds, fd_max, &flags);
 			}
 			
 		}
