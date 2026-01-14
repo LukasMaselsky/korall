@@ -1,14 +1,15 @@
 #include "server/main.h"
 #include "utils.h"
 #include "sockets.h"
+#include "http_.h"
+#include "lookup_tables.h"
+
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
 
-
 static Flag flag_str_to_val(char* key)
 {
-
 	// check for "--"
 	for (int i = 0; i < 2; i++) {
 		char c = key[0];
@@ -16,16 +17,14 @@ static Flag flag_str_to_val(char* key)
 		if (c != '-') return F_BADFLAG;
 		key++;
 	}
-	// + 1 extra char at least ("--" invalid)
+	// + 1 extra char at least ("--" only invalid)
 	if (key[0] == '\0') return F_BADFLAG;
 
-	for (FlagLookupEntry* entry = flag_lookup_table; entry != flag_lookup_table + NUM_OF_FLAGS; entry++) {
-		if (strcmp(entry->key, key) == 0) {
-			return entry->val;
-		}
+	int val = lookup(key, flag_lookup_table, FLAG_LOOKUP_TABLE_COUNT);
+	if (val == -1) {
+		return F_BADFLAG;
 	}
-
-	return F_BADFLAG;
+	return val;
 }
 
 static int process_flag(char* flag, Flags* flags) {
@@ -119,7 +118,7 @@ static int process_args(
 	return 0;
 }
 
-int process_http_request(
+static int process_http_request(
 	SOCKET inc_sock, 
 	SOCKET server_sock, 
 	const char* data, 

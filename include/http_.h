@@ -1,6 +1,8 @@
 #ifndef HTTP__H
 #define HTTP__H
+#include "utils.h"
 
+#define MAX_HTTP_METHOD_STR_LEN 8
 
 typedef enum {
 	HTTP_CONNECT,
@@ -14,5 +16,8 @@ typedef enum {
 	HTTP_TRACE,
 	HTTP_BADMETHOD
 } HTTPMethod;
+
+HTTPMethod process_http_method(char* str, LookupEntry* table, int table_len);
+
 
 #endif

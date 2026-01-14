@@ -43,6 +43,12 @@ int is_digits_only(const char* str) {
     return strspn(str, "0123456789") == strlen(str);
 }
 
-bool is_flag(char* arg) {
-    return strlen(arg) >= MIN_FLAG_CHAR_LEN && arg[0] == '-' && arg[1] == '-';
+int lookup(char* key, LookupEntry *table, unsigned int table_count) {
+    if (key[0] == '\0') return -1;
+    for (LookupEntry* entry = table; entry != table + table_count; entry++) {
+        if (*(entry->key) == *key && strcmp(entry->key, key) == 0) {
+            return entry->val;
+        }
+    }
+    return -1;
 }
