@@ -44,13 +44,24 @@ project(websocket LANGUAGES C)
 file(GLOB_RECURSE MY_SOURCES_SERVER CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/server/*.c")
 file(GLOB_RECURSE MY_SOURCES_CLIENT CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/client/*.c")
 file(GLOB MY_SOURCES_GLOBAL CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+file(GLOB MY_SOURCES_TESTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.c")
 
 add_executable(server)
 target_sources(server PRIVATE ${MY_SOURCES_SERVER})
 target_sources(server PRIVATE ${MY_SOURCES_GLOBAL})
+
 add_executable(client)
 target_sources(client PRIVATE ${MY_SOURCES_CLIENT})
 target_sources(client PRIVATE ${MY_SOURCES_GLOBAL})
+
+# filter out main files for test so no main() conflicts in test binary
+list(REMOVE_ITEM MY_SOURCES_CLIENT "${CMAKE_CURRENT_SOURCE_DIR}/src/client/main.c") 
+list(REMOVE_ITEM MY_SOURCES_SERVER "${CMAKE_CURRENT_SOURCE_DIR}/src/server/main.c") 
+add_executable(tests)
+target_sources(tests PRIVATE ${MY_SOURCES_TESTS})
+target_sources(tests PRIVATE ${MY_SOURCES_GLOBAL})
+target_sources(tests PRIVATE ${MY_SOURCES_CLIENT})
+target_sources(tests PRIVATE ${MY_SOURCES_SERVER})
 
 if(PRODUCTION_BUILD)
 	# setup the ASSETS_PATH macro to be in the root folder of your exe
@@ -86,12 +97,16 @@ if(MSVC)
 
     	target_compile_definitions(client PUBLIC _CRT_SECURE_NO_WARNINGS)
 		# set_target_properties(client PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console
+    	
+		target_compile_definitions(tests PUBLIC _CRT_SECURE_NO_WARNINGS)
+		# set_target_properties(client PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console
 endif()
 
 # Force remove unicode
 if (WIN32)
 	target_compile_options(server PRIVATE /UUNICODE /U_UNICODE)
 	target_compile_options(client PRIVATE /UUNICODE /U_UNICODE)
+	target_compile_options(tests PRIVATE /UUNICODE /U_UNICODE)
 endif()
 
 
@@ -100,6 +115,9 @@ target_include_directories(server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 target_include_directories(client PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 target_include_directories(server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/server/")
 target_include_directories(client PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/client/")
+target_include_directories(tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+target_include_directories(tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/server/")
+target_include_directories(tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/client/")
 
 # Link libraries that use CMake
 # target_link_libraries(server PRIVATE tiny_regex_c)
