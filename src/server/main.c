@@ -118,7 +118,28 @@ static int process_args(
 	return 0;
 }
 
-static int process_http_request(
+static void test(const char** str) {
+	const char* p = *str;
+	p++;
+	*str = p;
+	return;
+}
+
+// host needed for relative rt
+static int validate_http_request(const char *data, int data_len) {
+	const LookupEntry* table = &http_method_lookup_table;
+	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
+
+	HTTPMethod method = process_http_method(&data, table, table_len);
+	if (method == HTTP_BADMETHOD || data[0] == '\0') return -1;
+	data++; // advance past space
+
+	// process rt
+
+	// process prot
+}
+
+static void process_http_request(
 	SOCKET inc_sock, 
 	SOCKET server_sock, 
 	const char* data, 
@@ -126,10 +147,14 @@ static int process_http_request(
 	fd_set* main, 
 	SOCKET fd_max
 ) {
+	if (validate_http_request(data, data_len) == -1) {
+		// send invalid response
+		return;
+	}
+	// send response;
 
 
-
-	return 0;
+	return;
 }
 
 /*
@@ -269,7 +294,7 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 }
 
 int main(int argc, char *argv[]) {
-
+	
 	Flags flags = default_flags;
 	char node_arr[IPV6_ADDRSTRLEN] = "\0";
 	char service[MAX_PORT_NUM_CHAR_LEN];

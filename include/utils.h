@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 
 typedef enum {
@@ -25,7 +26,7 @@ typedef struct {
 
 str_to_int_errno str_to_int(int* out, char* s, int base);
 
-int is_digits_only(const char* str);
+bool is_digits_only(const char* str);
 
 int lookup(char* key, LookupEntry* table, unsigned int table_count);
 

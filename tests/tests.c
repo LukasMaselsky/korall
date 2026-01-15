@@ -1,6 +1,6 @@
 #include <stdio.h>
 #define HEADERS
-#include "test_string.c"
+#include "test_all.c"
 #undef HEADERS
 
 #define TEST(name) test = name; test_count++; printf("Running test: %s\n", name);
@@ -9,7 +9,7 @@
     assertion = #ast;\
     file = __FILE__;\
     line = __LINE__;\
-    if(ast) printf(""); else goto fail;\
+    if(!ast) goto fail;\
   } while(0)
 
 int main() {
@@ -20,14 +20,14 @@ int main() {
     int test_count = 0;
 
 # define TESTS
-# include "test_string.c"
+# include "test_all.c"
 # undef TESTS
 
     printf("All tests passed (%d/%d)\n", test_count, test_count);
     return 0;
 
 fail:
-    printf("!\nTest failed at %s:%d\n    %s: %s\n",
+    printf("\nTest failed at %s:%d\n    %s: %s\n",
         file, line,
         test, assertion);
     return -1;
