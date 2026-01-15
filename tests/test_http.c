@@ -3,6 +3,15 @@
 #include "lookup_tables.h"
 #elif defined TESTS
 
+TEST("process_http_request_target") {
+	const char* str = "* HTTP/1.1";
+	int res;
+	HTTPMethod method = HTTP_OPTIONS;
+	res = process_http_request_target(&str, method);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1") == 0);
+}
+
 TEST("process_http_protocol") {
 	const char* str = "HTTP/1.1";
 	int res;

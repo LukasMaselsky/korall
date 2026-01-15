@@ -29,10 +29,21 @@ int process_http_request_target(const char **str, HTTPMethod method) {
 			return 0;
 		}
 	}
-	if (method == HTTP_CONNECT) {
+	const char* s = *str;
+	const char first_c = s[0];
+	if (first_c == '/') {
+		// relative path
 
-		return 0;
+
 	}
+	else if (first_c == 'h' || first_c == 'H') {
+		// absolute path
+
+	}
+	else {
+		return -1;
+	}
+
 	return -1;
 }
 
