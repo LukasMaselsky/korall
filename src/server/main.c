@@ -126,17 +126,32 @@ static void test(const char** str) {
 }
 
 // host needed for relative rt
-static int validate_http_request(const char *data, int data_len) {
+static int validate_http_request(const char *data, int data_len, HTTPRequest *req) {
 	const LookupEntry* table = &http_method_lookup_table;
 	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
 
 	HTTPMethod method = process_http_method(&data, table, table_len);
 	if (method == HTTP_BADMETHOD || data[0] == '\0') return -1;
+	req->method = method;
+	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process rt
+	int res = process_http_request_target(&data, method, req);
+	if (res == -1) return -1;
+	if (*data != ' ') return -1;
+	data++; // advance past space
 
 	// process prot
+	res = process_http_protocol(&data);
+	if (res == -1) return -1;
+	
+	if (*data != '\n') return -1;
+	data++; // advance past newline
+
+	// todo: process headers and body
+
+	return 0;
 }
 
 static void process_http_request(
@@ -147,7 +162,12 @@ static void process_http_request(
 	fd_set* main, 
 	SOCKET fd_max
 ) {
-	if (validate_http_request(data, data_len) == -1) {
+
+	char req_t[MAX_HTTP_URL_LEN];
+	HTTPRequest req;
+	req.request_target = req_t;
+
+	if (validate_http_request(data, data_len, &req) == -1) {
 		// send invalid response
 		return;
 	}
@@ -165,7 +185,8 @@ SOCKET init_listen_socket(const char* node, const char* service) {
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
 
-	res = get_addr_info(node, service, &serverinfo);
+	const char* n = strcmp(node, "localhost") == 0 ? LOCALHOST_NODE : node;
+	res = get_addr_info(n, service, &serverinfo);
 	if (res != 0) {
 		exit(EXIT_FAILURE);
 	}
@@ -314,7 +335,6 @@ int main(int argc, char *argv[]) {
 	}
 
 
-
 	fd_set main_fds;
 	fd_set read_fds; // temps 
 	SOCKET fd_max; // biggest fd
@@ -358,33 +378,3 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
-
-/*
-
-SOCKET incoming_sock;
-	struct sockaddr_storage incoming_addr;
-	socklen_t incoming_addr_len = sizeof(incoming_addr);
-	char inc_ip[IPV6_ADDRSTRLEN];
-	char inc_ipver[IP_VER_STR_LEN];
-
-	while (true) {
-		incoming_sock = socket_accept(sock, &incoming_addr, &incoming_addr_len);
-		if (incoming_sock == -1) {
-			perror("server: couldn't accept");
-			continue;
-		}
-
-		get_ip_info_storage(&incoming_addr, inc_ip, sizeof(inc_ip), inc_ipver, sizeof(inc_ipver));
-		printf("server: got connection from %s (%s)\n", inc_ip, inc_ipver);
-
-		char msg[13] = "Hello, world!";
-		int res = socket_send(incoming_sock, msg, 13, 0);
-		if (res == -1) {
-			perror("server: couldn't send message");
-		}
-
-		socket_close(incoming_sock);
-
-		break;
-	}
-*/

@@ -3,13 +3,75 @@
 #include "lookup_tables.h"
 #elif defined TESTS
 
-TEST("process_http_request_target") {
-	const char* str = "* HTTP/1.1";
+TEST("process_http_request") {
+
+}
+
+TEST("validate_http_request_target") {
+
+	char req_t[MAX_HTTP_URL_LEN];
+	HTTPRequest req;
+	req.request_target = req_t;
+
+	HTTPMethod method;
 	int res;
-	HTTPMethod method = HTTP_OPTIONS;
-	res = process_http_request_target(&str, method);
+
+	const char* str = "* HTTP/1.1";
+	method = HTTP_OPTIONS;
+	res = process_http_request_target(&str, method, &req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
+	ASSERT(strcmp(req.request_target, "*") == 0);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	str = "/a/b/c HTTP/1.1";
+	method = HTTP_GET;
+	res = process_http_request_target(&str, method, &req);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1") == 0);
+	ASSERT(strcmp(req.request_target, "/a/b/c") == 0);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	str = "/ HTTP/1.1\n";
+	method = HTTP_GET;
+	res = process_http_request_target(&str, method, &req);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1\n") == 0);
+	ASSERT(strcmp(req.request_target, "/") == 0);
+
+	// todo: absolute paths
+}
+
+TEST("process_http_request_target_relative") {
+	char req_t[MAX_HTTP_URL_LEN];
+	HTTPRequest req;
+	req.request_target = req_t;
+
+	int res;
+	const char* str = "/a/b/c HTTP/1.1";
+	res = process_http_request_target_relative(&str, &req);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1") == 0);
+	ASSERT(strcmp(req.request_target, "/a/b/c") == 0);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	str = "/ HTTP/1.1";
+	res = process_http_request_target_relative(&str, &req);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1") == 0);
+	ASSERT(strcmp(req.request_target, "/") == 0);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	str = "// HTTP/1.1";
+	res = process_http_request_target_relative(&str, &req);
+	ASSERT(res == -1);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	str = "/{/a HTTP/1.1";
+	res = process_http_request_target_relative(&str, &req);
+	ASSERT(res == -1);
+
+
 }
 
 TEST("process_http_protocol") {
@@ -28,11 +90,11 @@ TEST("process_http_protocol") {
 
 	str = "HTTP/1.1 ";
 	res = process_http_protocol(&str);
-	ASSERT(res == -1);
+	ASSERT(res == 0);
 
 	str = "HTTP/1.1\n";
 	res = process_http_protocol(&str);
-	ASSERT(res == -1);
+	ASSERT(res == 0);
 
 	str = "";
 	res = process_http_protocol(&str);
@@ -58,7 +120,7 @@ TEST("process_http_method") {
 		{ "TRACE" , HTTP_TRACE }
 	};
 	const char* str = "POST /users HTTP/1.1";
-	bool res;
+	HTTPMethod res;
 	res = process_http_method(&str, &table, table_len);
 	ASSERT(res == HTTP_POST);
 	str = "CONNECT /users HTTP/1.1";
@@ -96,7 +158,7 @@ TEST("process_http_method") {
 
 	str = "GET";
 	res = process_http_method(&str, &table, table_len);
-	ASSERT(res == HTTP_BADMETHOD);
+	ASSERT(res == HTTP_GET);
 
 	str = "";
 	res = process_http_method(&str, &table, table_len);

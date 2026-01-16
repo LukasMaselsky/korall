@@ -424,7 +424,8 @@ static bool is_valid_ipv6(char* ip) {
 }
 
 bool is_valid_ip(char* ip) {
-    return is_valid_ipv4(ip) || is_valid_ipv6(ip);
+    // allow "localhost"
+    return is_valid_ipv4(ip) || is_valid_ipv6(ip) || strcmp(ip, "localhost") == 0;
 }
 
 int timeval_set(struct timeval *tv, double val) {

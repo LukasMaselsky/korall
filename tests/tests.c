@@ -9,7 +9,7 @@
     assertion = #ast;\
     file = __FILE__;\
     line = __LINE__;\
-    if(!ast) goto fail;\
+    if(!(ast)) goto fail;\
   } while(0)
 
 int main() {
@@ -23,11 +23,13 @@ int main() {
 # include "test_all.c"
 # undef TESTS
 
-    printf("All tests passed (%d/%d)\n", test_count, test_count);
+    printf("\n");
+    printf(ANSI_COLOR_GREEN "All tests passed (%d/%d)\n" ANSI_COLOR_RESET, test_count, test_count);
     return 0;
 
 fail:
-    printf("\nTest failed at %s:%d\n    %s: %s\n",
+    printf("\n");
+    printf(ANSI_COLOR_RED "Test failed at %s:%d\n    %s: %s" ANSI_COLOR_RESET "\n",
         file, line,
         test, assertion);
     return -1;
