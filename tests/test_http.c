@@ -3,11 +3,28 @@
 #include "lookup_tables.h"
 #elif defined TESTS
 
-TEST("process_http_request") {
+TEST("validate_http_request") {
+	char req_t[MAX_HTTP_URL_LEN];
+	HTTPRequest req;
+	req.request_target = req_t;
+	int res;
+	const char* str;
+
+	str = "GET / HTTP/1.1\n";
+	res = validate_http_request(str, strlen(str), &req);
+	ASSERT(res == 0);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	str = "GET / HTTP/1.1";
+	res = validate_http_request(str, strlen(str), &req);
+	ASSERT(res == -1);
+
+	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	
 
 }
 
-TEST("validate_http_request_target") {
+TEST("process_http_request_target") {
 
 	char req_t[MAX_HTTP_URL_LEN];
 	HTTPRequest req;

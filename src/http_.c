@@ -2,6 +2,38 @@
 #include "utils.h"
 #include "lookup_tables.h"
 
+// host needed for relative rt
+int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
+	const LookupEntry* table = &http_method_lookup_table;
+	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
+
+	HTTPMethod method = process_http_method(&data, table, table_len);
+	if (method == HTTP_BADMETHOD || data[0] == '\0') return -1;
+	req->method = method;
+	if (*data != ' ') return -1;
+	data++; // advance past space
+
+	// process rt
+	int res = process_http_request_target(&data, method, req);
+	if (res == -1) return -1;
+	if (*data != ' ') return -1;
+	data++; // advance past space
+
+	// process prot
+	res = process_http_protocol(&data);
+	if (res == -1) return -1;
+
+	if (*data != '\n') return -1; // must have newline
+	data++; // advance past newline
+
+
+	if (*data == '\n' && data[1] == '\0') return 0; // no header, no body
+
+	// todo: process headers and body
+
+	return 0;
+}
+
 int process_http_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN] = { 0 };
 	int len = HTTP_PROT_LEN;

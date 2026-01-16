@@ -125,34 +125,6 @@ static void test(const char** str) {
 	return;
 }
 
-// host needed for relative rt
-static int validate_http_request(const char *data, int data_len, HTTPRequest *req) {
-	const LookupEntry* table = &http_method_lookup_table;
-	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
-
-	HTTPMethod method = process_http_method(&data, table, table_len);
-	if (method == HTTP_BADMETHOD || data[0] == '\0') return -1;
-	req->method = method;
-	if (*data != ' ') return -1;
-	data++; // advance past space
-
-	// process rt
-	int res = process_http_request_target(&data, method, req);
-	if (res == -1) return -1;
-	if (*data != ' ') return -1;
-	data++; // advance past space
-
-	// process prot
-	res = process_http_protocol(&data);
-	if (res == -1) return -1;
-	
-	if (*data != '\n') return -1;
-	data++; // advance past newline
-
-	// todo: process headers and body
-
-	return 0;
-}
 
 static void process_http_request(
 	SOCKET inc_sock, 
@@ -185,8 +157,12 @@ SOCKET init_listen_socket(const char* node, const char* service) {
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
 
-	const char* n = strcmp(node, "localhost") == 0 ? LOCALHOST_NODE : node;
-	res = get_addr_info(n, service, &serverinfo);
+
+	if (node != NULL && strcmp(node, "localhost") == 0) {
+		node = LOCALHOST_NODE;
+	}
+	res = get_addr_info(node, service, &serverinfo);
+	
 	if (res != 0) {
 		exit(EXIT_FAILURE);
 	}

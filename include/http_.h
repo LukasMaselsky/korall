@@ -26,6 +26,8 @@ typedef struct {
 	char* request_target;
 } HTTPRequest;
 
+int validate_http_request(const char* data, int data_len, HTTPRequest* req);
+
 HTTPMethod process_http_method(const char** str, const LookupEntry* table, const int table_len);
 
 int process_http_request_target_relative(const char** str, HTTPRequest* req);
