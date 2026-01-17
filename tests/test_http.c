@@ -4,90 +4,93 @@
 #elif defined TESTS
 
 TEST("validate_http_request") {
-	char req_t[MAX_HTTP_URL_LEN];
-	HTTPRequest req;
-	req.request_target = req_t;
+	
+	HTTPRequest *req = http_request_st_init();
 	int res;
 	const char* str;
 
 	str = "GET / HTTP/1.1\n";
-	res = validate_http_request(str, strlen(str), &req);
+	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == 0);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	str = "GET / HTTP/1.1";
-	res = validate_http_request(str, strlen(str), &req);
+	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	
-
+	
+	
+	
+	http_request_st_free(req);
 }
 
 TEST("process_http_request_target") {
 
-	char req_t[MAX_HTTP_URL_LEN];
-	HTTPRequest req;
-	req.request_target = req_t;
-
+	HTTPRequest *req = http_request_st_init();
 	HTTPMethod method;
 	int res;
 
 	const char* str = "* HTTP/1.1";
-	method = HTTP_OPTIONS;
-	res = process_http_request_target(&str, method, &req);
+	req->start_line->method = HTTP_OPTIONS;
+	res = process_http_request_target(&str, req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
-	ASSERT(strcmp(req.request_target, "*") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "*") == 0);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	str = "/a/b/c HTTP/1.1";
-	method = HTTP_GET;
-	res = process_http_request_target(&str, method, &req);
+	req->start_line->method = HTTP_GET;
+	res = process_http_request_target(&str, req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
-	ASSERT(strcmp(req.request_target, "/a/b/c") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "/a/b/c") == 0);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	str = "/ HTTP/1.1\n";
-	method = HTTP_GET;
-	res = process_http_request_target(&str, method, &req);
+	req->start_line->method = HTTP_GET;
+	res = process_http_request_target(&str, req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1\n") == 0);
-	ASSERT(strcmp(req.request_target, "/") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "/") == 0);
 
 	// todo: absolute paths
+
+	http_request_st_free(req);
 }
 
 TEST("process_http_request_target_relative") {
-	char req_t[MAX_HTTP_URL_LEN];
-	HTTPRequest req;
-	req.request_target = req_t;
-
+	HTTPRequest *req = http_request_st_init();
+	
 	int res;
-	const char* str = "/a/b/c HTTP/1.1";
-	res = process_http_request_target_relative(&str, &req);
+	const char* str;
+
+	str = "/a/b/c HTTP/1.1";
+	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
-	ASSERT(strcmp(req.request_target, "/a/b/c") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "/a/b/c") == 0);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	str = "/ HTTP/1.1";
-	res = process_http_request_target_relative(&str, &req);
+	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
-	ASSERT(strcmp(req.request_target, "/") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "/") == 0);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	str = "// HTTP/1.1";
-	res = process_http_request_target_relative(&str, &req);
+	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == -1);
 
-	memset(req.request_target, 0, MAX_HTTP_URL_LEN);
+	http_request_st_clear(&req);
 	str = "/{/a HTTP/1.1";
-	res = process_http_request_target_relative(&str, &req);
+	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == -1);
 
+
+	http_request_st_free(req);
 
 }
 

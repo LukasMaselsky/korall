@@ -135,16 +135,15 @@ static void process_http_request(
 	SOCKET fd_max
 ) {
 
-	char req_t[MAX_HTTP_URL_LEN];
-	HTTPRequest req;
-	req.request_target = req_t;
+	HTTPRequest *req = http_request_st_init();
 
-	if (validate_http_request(data, data_len, &req) == -1) {
+	if (validate_http_request(data, data_len, req) == -1) {
 		// send invalid response
 		return;
 	}
 	// send response;
 
+	http_request_st_free(req);
 
 	return;
 }
@@ -293,8 +292,8 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 int main(int argc, char *argv[]) {
 	
 	Flags flags = default_flags;
-	char node_arr[IPV6_ADDRSTRLEN] = "\0";
-	char service[MAX_PORT_NUM_CHAR_LEN];
+	char node_arr[IPV6_ADDRSTRLEN + 1] = "\0";
+	char service[MAX_PORT_NUM_CHAR_LEN + 1]; // todo: test overflow?
 	int res = process_args(argc, argv, node_arr, IPV6_ADDRSTRLEN, service, MAX_PORT_NUM_CHAR_LEN, &flags);
 	if (res == -1) {
 		printf("Could not process args");

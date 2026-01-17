@@ -53,3 +53,12 @@ int lookup(char* key, LookupEntry *table, unsigned int table_count) {
     }
     return -1;
 }
+
+void* safe_calloc(size_t count, size_t size) {
+    void* p = calloc(count, size);
+    if (p == NULL) {
+        fprintf(stderr, "Fatal: failed to allocate %zu bytes.\n", size);
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}

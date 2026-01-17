@@ -38,4 +38,6 @@ bool is_digits_only(const char* str);
 
 int lookup(char* key, LookupEntry* table, unsigned int table_count);
 
+void* safe_calloc(size_t count, size_t size);
+
 #endif
