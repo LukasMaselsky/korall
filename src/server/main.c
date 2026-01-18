@@ -20,7 +20,7 @@ static Flag flag_str_to_val(char* key)
 	// + 1 extra char at least ("--" only invalid)
 	if (key[0] == '\0') return F_BADFLAG;
 
-	int val = lookup(key, flag_lookup_table, FLAG_LOOKUP_TABLE_COUNT);
+	int val = lookup(key, flag_lookup_table, FLAG_LOOKUP_TABLE_COUNT, true);
 	if (val == -1) {
 		return F_BADFLAG;
 	}
@@ -116,13 +116,6 @@ static int process_args(
 	}
 	
 	return 0;
-}
-
-static void test(const char** str) {
-	const char* p = *str;
-	p++;
-	*str = p;
-	return;
 }
 
 

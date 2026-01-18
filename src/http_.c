@@ -29,9 +29,75 @@ int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
 
 	if (*data == '\n' && data[1] == '\0') return 0; // no header, no body
 
-	// todo: process headers and body
+	res = process_http_headers(&data, req);
+	if (res == -1) return -1;
+
+	// todo: body
 
 	return 0;
+}
+
+int process_http_header_value(HTTPHeaderField field, char* value) {
+	// massive switch for each header
+	switch (field) {
+		case HTTP_H_HOST:
+			// todo
+			return 0;
+			break;
+		default:
+			return -1;
+	}
+}
+
+int process_http_header(const char** str, HTTPRequest* req) {
+	// process field
+
+	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
+	int len = MAX_HTTP_HEADER_FIELD_LEN;
+	int i = 0;
+	const char* s = *str;
+	for (char c = *s; c != ':' && i < len; c = *(++s)) {
+		if (c == '\0' || c == '\n') return -1;
+		field[i] = c;
+		i++;
+	}
+	field[i] = '\0';
+	if (*s != ':') return -1; // field too long
+
+	HTTPHeaderField header_field = lookup(field, http_header_field_lookup_table, HTTP_HEADER_FIELD_TABLE_COUNT, true);
+	if (header_field == HTTP_H_BADFIELD) return -1;
+
+	s++; // skip colon
+	// process value
+
+	// skip through whitespace
+	while (*s == ' ')
+		s++;
+
+	if (*s == '\0' || *s == '\n') return -1; // empty field e.g. "Host:    ";
+
+	char value[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+	len = MAX_HTTP_HEADER_FIELD_LEN;
+	i = 0;
+	for (char c = *s; c != '\n' && c != '\0' && i < len; c = *(++s)) {
+		value[i] = c;
+		i++;
+	}
+	value[i] = '\0';
+	if (*s != '\n') return -1; // newline always needed
+
+	if (process_http_header_value(header_field, value) == -1) return -1;
+
+	*str = ++s;
+}
+
+int process_http_headers(const char** str, HTTPRequest* req) {
+
+	while (true) {
+		if (process_http_header(str, req) == -1) return -1;
+		if (**str == '\n') return 0; // empty newline at end of headers
+	}
+
 }
 
 int process_http_protocol(const char** str) {
@@ -50,8 +116,7 @@ int process_http_protocol(const char** str) {
 	return -1;
 }
 
-
-bool is_valid_request_target_relative(char c) {
+static bool is_valid_request_target_relative(char c) {
 	// ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 	// $%&'()*+,-./:;=[]_~
 	// @!?#
@@ -124,7 +189,7 @@ HTTPMethod process_http_method(const char **str, const LookupEntry *table, const
 	}
 	method[i] = '\0';
 	*str = s;
-	return lookup(method, table, table_len);
+	return lookup(method, table, table_len, false);
 }
 
 HTTPRequest* http_request_st_init() {

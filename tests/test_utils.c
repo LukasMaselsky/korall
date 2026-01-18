@@ -3,11 +3,6 @@
 #include "utils.h"
 #elif defined TESTS
 
-TEST("strlen returns length of string") {
-	ASSERT(strlen("") == 0);
-	ASSERT(strlen("foo") == 3);
-}
-
 TEST("is_digits_only") {
 	bool res;
 	res = is_digits_only("a");

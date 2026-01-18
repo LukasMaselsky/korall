@@ -9,7 +9,7 @@ TEST("validate_http_request") {
 	int res;
 	const char* str;
 
-	str = "GET / HTTP/1.1\n";
+	str = "GET / HTTP/1.1\n\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == 0);
 
@@ -19,12 +19,48 @@ TEST("validate_http_request") {
 	ASSERT(res == -1);
 
 	http_request_st_clear(&req);
-	
+	str = "GET / HTTP/1.1\n";
+	res = validate_http_request(str, strlen(str), req);
+	ASSERT(res == -1);
+
+	http_request_st_clear(&req);
 	
 	
 	
 	http_request_st_free(req);
 }
+
+TEST("process_http_header") {
+
+}
+
+TEST("process_http_headers") {
+	HTTPRequest* req = http_request_st_init();
+	int res;
+	const char* str;
+
+	str = "Host: localhost\n\n";
+	res = process_http_headers(&str, req);
+	ASSERT(res == 0);
+
+	http_request_st_clear(&req);
+	str = "Host: localhost\n";
+	res = process_http_headers(&str, req);
+	ASSERT(res == -1);
+
+	http_request_st_clear(&req);
+	str = "Host:      \n\n";
+	res = process_http_headers(&str, req);
+	ASSERT(res == -1);
+
+	http_request_st_clear(&req);
+	str = "FakeField: localhost\n";
+	res = process_http_headers(&str, req);
+	ASSERT(res == -1);
+
+	http_request_st_free(req);
+}
+
 
 TEST("process_http_request_target") {
 

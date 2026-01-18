@@ -1,5 +1,7 @@
 #include "utils.h"
-
+#ifndef _WIN32
+#include <strings.h>
+#endif
 
 /* Convert string s to int out.
  *
@@ -44,12 +46,28 @@ bool is_digits_only(const char* str) {
     return strspn(str, "0123456789") == strlen(str);
 }
 
-int lookup(char* key, LookupEntry *table, unsigned int table_count) {
+static int strcmp_ci(const char* str1, const char* str2) {
+#ifdef _WIN32
+    return stricmp(str1, str2);
+#else
+    return strcasecmp(str1, str2);
+#endif
+}
+
+int lookup(const char* key, const LookupEntry *table, const unsigned int table_count, const bool case_insensitive) {
     if (key[0] == '\0') return -1;
     for (LookupEntry* entry = table; entry != table + table_count; entry++) {
-        if (*(entry->key) == *key && strcmp(entry->key, key) == 0) {
-            return entry->val;
+        if (*(entry->key) == *key) {
+            if (case_insensitive) {
+                if (strcmp_ci(entry->key, key) == 0)
+                    return entry->val;
+            }
+            else {
+                if (strcmp(entry->key, key) == 0)
+                    return entry->val;
+            }
         }
+        
     }
     return -1;
 }

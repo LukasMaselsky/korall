@@ -36,7 +36,7 @@ str_to_int_errno str_to_int(int* out, char* s, int base);
 
 bool is_digits_only(const char* str);
 
-int lookup(char* key, LookupEntry* table, unsigned int table_count);
+int lookup(char* key, LookupEntry* table, unsigned int table_count, bool case_insensitive);
 
 void* safe_calloc(size_t count, size_t size);
 

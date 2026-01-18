@@ -8,6 +8,8 @@
 #define HTTP_PROT_LEN 8
 #define MAX_DOMAIN_LEN 253
 #define MAX_HTTP_BODY_LEN 1000000 // 1mb?
+#define MAX_HTTP_HEADER_FIELD_LEN 32
+#define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 // https://stackoverflow.com/questions/161738/what-is-the-best-regular-expression-to-check-if-a-string-is-a-valid-url#comment117272662_55468411
 
 typedef enum {
@@ -22,6 +24,11 @@ typedef enum {
 	HTTP_PUT,
 	HTTP_TRACE
 } HTTPMethod;
+
+typedef enum {
+	HTTP_H_BADFIELD = -1,
+	HTTP_H_HOST,
+} HTTPHeaderField;
 
 typedef struct {
 	char* request_target;
@@ -50,6 +57,14 @@ typedef struct {
 } HTTPRequest;
 
 int validate_http_request(const char* data, int data_len, HTTPRequest* req);
+
+
+
+int process_http_header_value(HTTPHeaderField field, char* value);
+
+int process_http_header(const char** str, HTTPRequest* req);
+
+int process_http_headers(const char** str, HTTPRequest* req);
 
 HTTPMethod process_http_method(const char** str, const LookupEntry* table, const int table_len);
 
