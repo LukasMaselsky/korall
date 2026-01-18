@@ -15,6 +15,7 @@ typedef enum {
 	F_BADFLAG = -1,
 	F_TCP,
 	F_HTTP,
+	F_COUNT
 } Flag;
 
 typedef struct {
