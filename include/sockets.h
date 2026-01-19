@@ -149,6 +149,10 @@ bool is_valid_port(char* port);
 
 bool is_valid_service(char* service);
 
+bool is_valid_ipv6(char* ip);
+
+bool is_valid_ipv4(char* ip);
+
 bool is_valid_ip(char* ip);
 
 int timeval_set(struct timeval* tv, double val);

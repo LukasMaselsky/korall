@@ -34,6 +34,8 @@ typedef struct {
 
 str_to_int_errno str_to_int(int* out, char* s, int base);
 
+bool is_digit(const char c);
+
 bool is_digits_only(const char* str);
 
 int lookup(const char* key, const LookupEntry* table, const unsigned int table_count, const bool case_insensitive);

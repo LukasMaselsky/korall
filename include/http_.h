@@ -10,6 +10,7 @@
 #define MAX_HTTP_BODY_LEN 1000000 // 1mb?
 #define MAX_HTTP_HEADER_FIELD_LEN 32
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
+#define MAX_DOMAIN_NAME_LEN 253
 // https://stackoverflow.com/questions/161738/what-is-the-best-regular-expression-to-check-if-a-string-is-a-valid-url#comment117272662_55468411
 
 typedef enum {

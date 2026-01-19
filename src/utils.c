@@ -39,6 +39,10 @@ str_to_int_errno str_to_int(int* out, char* s, int base) {
     return STR_TO_INT_SUCCESS;
 }
 
+bool is_digit(const char c) {
+    return c >= '0' && c <= '9';
+}
+
 
 bool is_digits_only(const char* str) {
     // strspn returns the length of the initial segment of str consisting only of characters in 0123456789

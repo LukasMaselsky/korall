@@ -317,7 +317,7 @@ bool is_valid_service(char* service) {
     return false;
 }
 
-static bool is_valid_ipv4(char* ip) {
+bool is_valid_ipv4(char* ip) {
     // todo
     int len = strlen(ip);
     if (len < 7 || len > 15) {
@@ -361,7 +361,7 @@ static bool is_valid_ipv4(char* ip) {
     return true;
 }
 
-static bool is_valid_ipv6(char* ip) {
+bool is_valid_ipv6(char* ip) {
     // only allow lowercase hex?
     int len = strlen(ip);
     if (len < 2 || len > 45) {
