@@ -102,7 +102,7 @@ int validate_http_request(const char* data, int data_len, HTTPRequest* req);
 
 
 
-int process_http_header_value(HTTPHeaderField field, char* value);
+int process_http_header_value(const HTTPHeaderField field, const char* value, HTTPRequest* req);
 
 int process_http_header(const char** str, HTTPRequest* req);
 

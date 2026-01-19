@@ -14,6 +14,16 @@ TEST("validate_http_request") {
 	ASSERT(res == 0);
 
 	http_request_st_clear(&req);
+	str = "GET / HTTP/1.1\nHost: localhost\n\n";
+	res = validate_http_request(str, strlen(str), req);
+	ASSERT(res == 0);
+
+	http_request_st_clear(&req);
+	str = "GET / HTTP/1.1\nHost: \n\n";
+	res = validate_http_request(str, strlen(str), req);
+	ASSERT(res == -1);
+
+	http_request_st_clear(&req);
 	str = "GET / HTTP/1.1";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);

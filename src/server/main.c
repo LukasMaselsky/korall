@@ -33,10 +33,10 @@ static int process_flag(char* flag, Flags* flags) {
 
 	switch (flag_val) {
 		case F_TCP:
-			flags->servertype = ST_TCP;
+			flags->server_type = ST_TCP;
 			break;
 		case F_HTTP:
-			flags->servertype = ST_HTTP;
+			flags->server_type = ST_HTTP;
 			break;
 		case F_BADFLAG:
 		default:
@@ -150,8 +150,8 @@ SOCKET init_listen_socket(const char* node, const char* service) {
 	struct addrinfo *serverinfo, *addrinfo;
 
 
-	if (node != NULL && strcmp(node, "localhost") == 0) {
-		node = LOCALHOST_NODE;
+	if (node == NULL || strcmp(node, "localhost") == 0) {
+		node = LOCALHOST_NODE; // default server to localhost
 	}
 	res = get_addr_info(node, service, &serverinfo);
 	
@@ -271,7 +271,7 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 	printf(" - '%s'\n", buffer);
 
 	// TODO
-	if (flags->servertype == ST_HTTP) {
+	if (flags->server_type == ST_HTTP) {
 		process_http_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
 	}
 	else {
@@ -283,6 +283,8 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 }
 
 int main(int argc, char *argv[]) {
+
+
 	
 	Flags flags = default_flags;
 	char node_arr[IPV6_ADDRSTRLEN + 1] = "\0";
@@ -293,6 +295,11 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	char* node = strlen(node_arr) == 0 ? NULL : node_arr;
+
+	ServerInfo si;
+	si.ip = node;
+	si.port = service;
+	si.type = flags.server_type;
 
 	//
 

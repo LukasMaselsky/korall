@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "lookup_tables.h"
 #include "sockets.h"
+#include "http_headers.h"
 
 // host needed for relative rt
 int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
@@ -37,12 +38,11 @@ int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
 	return 0;
 }
 
-int process_http_header_value(HTTPHeaderField field, char* value) {
+int process_http_header_value(const HTTPHeaderField field, const char* value, HTTPRequest *req) {
 	// massive switch for each header
 	switch (field) {
 		case HTTP_H_HOST:
-			// todo
-			return 0;
+			return process_http_host(value, req);
 			break;
 		default:
 			return -1;
@@ -86,7 +86,7 @@ int process_http_header(const char** str, HTTPRequest* req) {
 	value[i] = '\0';
 	if (*s != '\n') return -1; // newline always needed
 
-	if (process_http_header_value(header_field, value) == -1) return -1;
+	if (process_http_header_value(header_field, value, req) == -1) return -1;
 
 	*str = ++s;
 }

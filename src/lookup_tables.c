@@ -2,7 +2,7 @@
 #include "lookup_tables.h"
 
 Flags default_flags = {
-	.servertype = ST_TCP,
+	.server_type = ST_TCP,
 };
 
 const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {

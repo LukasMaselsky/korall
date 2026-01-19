@@ -19,8 +19,14 @@ typedef enum {
 } Flag;
 
 typedef struct {
-	ServerType servertype;
+	ServerType server_type;
 } Flags;
+
+typedef struct {
+	ServerType type;
+	char* ip;
+	char* port;
+} ServerInfo;
 
 
 #endif
