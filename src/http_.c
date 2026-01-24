@@ -159,6 +159,12 @@ int process_http_request_target(const char **str, HTTPRequest *req) {
 		*str = ++s;
 		return 0;
 	}
+	if (method == HTTP_CONNECT) {
+
+		// todo
+
+		//return 0;
+	}
 
 	const char first_c = s[0];
 	if (first_c == '/') {

@@ -101,6 +101,14 @@ TEST("process_http_request_target") {
 	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "/") == 0);
 
+	http_request_st_clear(&req);
+	str = "localhost:3500 HTTP/1.1\r\n";
+	req->start_line->method = HTTP_CONNECT;
+	res = process_http_request_target(&str, req);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "localhost:3500") == 0);
+
 	// todo: absolute paths
 
 	http_request_st_free(req);
