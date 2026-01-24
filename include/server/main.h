@@ -24,7 +24,7 @@ typedef struct {
 
 typedef struct {
 	ServerType type;
-	char* ip;
+	char* domain;
 	char* port;
 } ServerInfo;
 

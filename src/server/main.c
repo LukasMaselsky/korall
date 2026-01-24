@@ -125,18 +125,30 @@ static void process_http_request(
 	const char* data, 
 	int data_len, 
 	fd_set* main, 
-	SOCKET fd_max
+	SOCKET fd_max,
+	ServerInfo *si
 ) {
 
 	HTTPRequest *req = http_request_st_init();
 
+	// first validate format
+
 	if (validate_http_request(data, data_len, req) == -1) {
-		// send invalid response
+		// todo: send invalid response
 		printf("INVALID\n");
 		return;
 	}
+
+	// check if Host matches server domain + port
+	if (strcmp(si->domain, req->headers->host->domain) != 0 ||
+		strcmp(si->port, req->headers->host->port) != 0) return;
+	// todo: send invalid Host res
+	
+	
 	printf("VALID\n");
-	// send response;
+	
+	
+	// todo: send response;
 
 	http_request_st_free(req);
 
@@ -146,7 +158,7 @@ static void process_http_request(
 /*
 	Initialise a socket for listening
 */
-SOCKET init_listen_socket(const char* node, const char* service) {
+SOCKET init_listen_socket(const char* node, const char* service, ServerInfo *si) {
 	int res;
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
@@ -154,6 +166,7 @@ SOCKET init_listen_socket(const char* node, const char* service) {
 
 	if (node == NULL || strcmp(node, "localhost") == 0) {
 		node = LOCALHOST_NODE; // default server to localhost
+		si->domain = "localhost";
 	}
 	res = get_addr_info(node, service, &serverinfo);
 	
@@ -246,7 +259,7 @@ void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_l
 	}
 }
 
-void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max, Flags* flags) {
+void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max, Flags* flags, ServerInfo *si) {
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
 
 	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
@@ -274,7 +287,7 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 
 	// TODO
 	if (flags->server_type == ST_HTTP) {
-		process_http_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
+		process_http_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, si);
 	}
 	else {
 		broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
@@ -285,8 +298,6 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 }
 
 int main(int argc, char *argv[]) {
-
-
 	
 	Flags flags = default_flags;
 	char node_arr[IPV6_ADDRSTRLEN + 1] = "\0";
@@ -299,7 +310,7 @@ int main(int argc, char *argv[]) {
 	char* node = strlen(node_arr) == 0 ? NULL : node_arr;
 
 	ServerInfo si;
-	si.ip = node;
+	si.domain = node;
 	si.port = service;
 	si.type = flags.server_type;
 
@@ -320,7 +331,7 @@ int main(int argc, char *argv[]) {
 	FD_ZERO(&main_fds);
 	FD_ZERO(&read_fds);
 
-	SOCKET server_sock = init_listen_socket(node, service);
+	SOCKET server_sock = init_listen_socket(node, service, &si);
 	
 	FD_SET(server_sock, &main_fds);
 	fd_max = server_sock;
@@ -341,7 +352,7 @@ int main(int argc, char *argv[]) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, fd_max, &flags);
+				process_incoming_data(i, server_sock, &main_fds, fd_max, &flags, &si);
 			}
 			
 		}
