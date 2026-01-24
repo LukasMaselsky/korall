@@ -25,10 +25,10 @@ int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
 	res = process_http_protocol(&data);
 	if (res == -1) return -1;
 
-	if (*data != '\n') return -1; // must have newline
-	data++; // advance past newline
+	if (*data != '\r' || data[1] != '\n') return -1; // must have \r\n
+	data += 2;
 
-	if (*data == '\n' && data[1] == '\0') return 0; // no header, no body
+	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return 0; // no header, no body
 
 	res = process_http_headers(&data, req);
 	if (res == -1) return -1;
@@ -79,23 +79,24 @@ int process_http_header(const char** str, HTTPRequest* req) {
 	char value[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
 	len = MAX_HTTP_HEADER_FIELD_LEN;
 	i = 0;
-	for (char c = *s; c != '\n' && c != '\0' && i < len; c = *(++s)) {
+	for (char c = *s; c != '\r' && c != '\0' && i < len; c = *(++s)) {
 		value[i] = c;
 		i++;
 	}
 	value[i] = '\0';
-	if (*s != '\n') return -1; // newline always needed
+	if (*s != '\r' || s[1] != '\n') return -1; // newline always needed
 
 	if (process_http_header_value(header_field, value, req) == -1) return -1;
 
-	*str = ++s;
+	s += 2; // \r\n
+	*str = s;
 }
 
 int process_http_headers(const char** str, HTTPRequest* req) {
 
 	while (true) {
 		if (process_http_header(str, req) == -1) return -1;
-		if (**str == '\n') return 0; // empty newline at end of headers
+		if (**str == '\r' && (*str)[1] == '\n') return 0; // empty newline at end of headers
 	}
 
 }

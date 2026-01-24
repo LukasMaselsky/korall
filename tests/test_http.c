@@ -7,19 +7,19 @@ TEST("validate_http_request") {
 	
 	HTTPRequest *req = http_request_st_init();
 	int res;
-	const char* str;
+	char* str;
 
-	str = "GET / HTTP/1.1\n\n";
+	str = "GET / HTTP/1.1\r\n\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == 0);
 
 	http_request_st_clear(&req);
-	str = "GET / HTTP/1.1\nHost: localhost\n\n";
+	str = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == 0);
 
 	http_request_st_clear(&req);
-	str = "GET / HTTP/1.1\nHost: \n\n";
+	str = "GET / HTTP/1.1\r\nHost: \r\n\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
 
@@ -29,7 +29,7 @@ TEST("validate_http_request") {
 	ASSERT(res == -1);
 
 	http_request_st_clear(&req);
-	str = "GET / HTTP/1.1\n";
+	str = "GET / HTTP/1.1\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
 
@@ -49,22 +49,22 @@ TEST("process_http_headers") {
 	int res;
 	const char* str;
 
-	str = "Host: localhost\n\n";
+	str = "Host: localhost\r\n\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == 0);
 
 	http_request_st_clear(&req);
-	str = "Host: localhost\n";
+	str = "Host: localhost\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == -1);
 
 	http_request_st_clear(&req);
-	str = "Host:      \n\n";
+	str = "Host:      \r\n\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == -1);
 
 	http_request_st_clear(&req);
-	str = "FakeField: localhost\n";
+	str = "FakeField: localhost\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == -1);
 
@@ -94,11 +94,11 @@ TEST("process_http_request_target") {
 	ASSERT(strcmp(req->start_line->request_target, "/a/b/c") == 0);
 
 	http_request_st_clear(&req);
-	str = "/ HTTP/1.1\n";
+	str = "/ HTTP/1.1\r\n";
 	req->start_line->method = HTTP_GET;
 	res = process_http_request_target(&str, req);
 	ASSERT(res == 0);
-	ASSERT(strcmp(str, " HTTP/1.1\n") == 0);
+	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "/") == 0);
 
 	// todo: absolute paths
@@ -158,7 +158,7 @@ TEST("process_http_protocol") {
 	res = process_http_protocol(&str);
 	ASSERT(res == 0);
 
-	str = "HTTP/1.1\n";
+	str = "HTTP/1.1\r\n";
 	res = process_http_protocol(&str);
 	ASSERT(res == 0);
 

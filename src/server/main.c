@@ -132,8 +132,10 @@ static void process_http_request(
 
 	if (validate_http_request(data, data_len, req) == -1) {
 		// send invalid response
+		printf("INVALID\n");
 		return;
 	}
+	printf("VALID\n");
 	// send response;
 
 	http_request_st_free(req);
@@ -268,7 +270,7 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 	buffer[bytes_read] = '\0';
 	printf("server: received data from ");
 	socket_print(inc_sock);
-	printf(" - '%s'\n", buffer);
+	printf("\n'%s'\n", buffer);
 
 	// TODO
 	if (flags->server_type == ST_HTTP) {
