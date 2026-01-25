@@ -4,7 +4,7 @@
 #elif defined TESTS
 
 TEST("process_http_host") {
-	HTTPRequest* req = http_request_st_init();
+	HTTPRequest* req = http_request_init();
 	int res;
 	const char* str;
 
@@ -16,7 +16,7 @@ TEST("process_http_host") {
 
 	
 	// port too small
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "localhost:88";
 	res = process_http_host(str, req);
 	ASSERT(res == -1);

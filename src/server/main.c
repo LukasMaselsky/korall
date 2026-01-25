@@ -157,7 +157,9 @@ static void process_http_request(
 	ServerInfo *si
 ) {
 
-	HTTPRequest *req = http_request_st_init();
+	HTTPRequest *req = http_request_init();
+
+	// todo: swtich from process_http.. to http_process... etc
 
 	// first validate format
 	if (validate_http_request(data, data_len, req) == -1) {
@@ -180,7 +182,7 @@ static void process_http_request(
 	
 	// todo: send response;
 
-	http_request_st_free(req);
+	http_request_free(req);
 
 	return;
 }

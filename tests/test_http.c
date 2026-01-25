@@ -5,7 +5,7 @@
 
 TEST("validate_http_request") {
 	
-	HTTPRequest *req = http_request_st_init();
+	HTTPRequest *req = http_request_init();
 	int res;
 	char* str;
 
@@ -13,22 +13,22 @@ TEST("validate_http_request") {
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "GET / HTTP/1.1\r\nHost: \r\n\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "GET / HTTP/1.1";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "GET / HTTP/1.1\r\n";
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
@@ -37,7 +37,7 @@ TEST("validate_http_request") {
 	
 	
 	
-	http_request_st_free(req);
+	http_request_free(req);
 }
 
 TEST("process_http_header") {
@@ -45,7 +45,7 @@ TEST("process_http_header") {
 }
 
 TEST("process_http_headers") {
-	HTTPRequest* req = http_request_st_init();
+	HTTPRequest* req = http_request_init();
 	int res;
 	const char* str;
 
@@ -53,28 +53,28 @@ TEST("process_http_headers") {
 	res = process_http_headers(&str, req);
 	ASSERT(res == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "Host: localhost\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == -1);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "Host:      \r\n\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == -1);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "FakeField: localhost\r\n";
 	res = process_http_headers(&str, req);
 	ASSERT(res == -1);
 
-	http_request_st_free(req);
+	http_request_free(req);
 }
 
 
 TEST("process_http_request_target") {
 
-	HTTPRequest *req = http_request_st_init();
+	HTTPRequest *req = http_request_init();
 	HTTPMethod method;
 	int res;
 
@@ -85,7 +85,7 @@ TEST("process_http_request_target") {
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "*") == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "/a/b/c HTTP/1.1";
 	req->start_line->method = HTTP_GET;
 	res = process_http_request_target(&str, req);
@@ -93,7 +93,7 @@ TEST("process_http_request_target") {
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "/a/b/c") == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "/ HTTP/1.1\r\n";
 	req->start_line->method = HTTP_GET;
 	res = process_http_request_target(&str, req);
@@ -101,7 +101,7 @@ TEST("process_http_request_target") {
 	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "/") == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "localhost:3500 HTTP/1.1\r\n";
 	req->start_line->method = HTTP_CONNECT;
 	res = process_http_request_target(&str, req);
@@ -110,7 +110,7 @@ TEST("process_http_request_target") {
 	ASSERT(strcmp(req->start_line->request_target, "localhost:3500") == 0);
 
 	// connect, rt too long
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "localhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhost:3500 HTTP/1.1\r\n";
 	req->start_line->method = HTTP_CONNECT;
 	res = process_http_request_target(&str, req);
@@ -118,11 +118,11 @@ TEST("process_http_request_target") {
 
 	// todo: absolute paths
 
-	http_request_st_free(req);
+	http_request_free(req);
 }
 
 TEST("process_http_request_target_relative") {
-	HTTPRequest *req = http_request_st_init();
+	HTTPRequest *req = http_request_init();
 	
 	int res;
 	const char* str;
@@ -133,25 +133,25 @@ TEST("process_http_request_target_relative") {
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "/a/b/c") == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "/ HTTP/1.1";
 	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "/") == 0);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "// HTTP/1.1";
 	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == -1);
 
-	http_request_st_clear(&req);
+	http_request_clear(&req);
 	str = "/{/a HTTP/1.1";
 	res = process_http_request_target_relative(&str, req);
 	ASSERT(res == -1);
 
 
-	http_request_st_free(req);
+	http_request_free(req);
 
 }
 
@@ -189,7 +189,7 @@ TEST("process_http_protocol") {
 
 TEST("process_http_method") {
 	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
-	const LookupEntry table[HTTP_METHOD_LOOKUP_TABLE_COUNT] = {
+	const LookupEntryStrInt table[HTTP_METHOD_LOOKUP_TABLE_COUNT] = {
 		{ "CONNECT", HTTP_CONNECT },
 		{ "DELETE", HTTP_DELETE },
 		{ "GET", HTTP_GET },

@@ -40,10 +40,10 @@ int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
 	return 0;
 }
 
-int process_http_header_value(const HTTPHeaderField field, const char* value, HTTPRequest *req) {
+int process_http_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
 	// massive switch for each header
 	switch (field) {
-		case HTTP_H_HOST:
+		case HTTP_RQH_HOST:
 			return process_http_host(value, req);
 			break;
 		default:
@@ -66,8 +66,8 @@ int process_http_header(const char** str, HTTPRequest* req) {
 	field[i] = '\0';
 	if (*s != ':') return -1; // field too long
 
-	HTTPHeaderField header_field = lookup_str_int(field, http_header_field_lookup_table, HTTP_HEADER_FIELD_TABLE_COUNT, true);
-	if (header_field == HTTP_H_BADFIELD) return -1;
+	HTTPRequestHeaderField header_field = lookup_str_int(field, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true);
+	if (header_field == HTTP_RQH_BADFIELD) return -1;
 
 	s++; // skip colon
 	// process value
@@ -92,6 +92,7 @@ int process_http_header(const char** str, HTTPRequest* req) {
 
 	s += 2; // \r\n
 	*str = s;
+	return 0;
 }
 
 int process_http_headers(const char** str, HTTPRequest* req) {
@@ -217,7 +218,7 @@ HTTPMethod process_http_method(const char **str, const LookupEntryStrInt *table,
 	return lookup_str_int(method, table, table_len, false);
 }
 
-HTTPRequest* http_request_st_init() {
+HTTPRequest* http_request_init() {
 	// start line
 	char* request_target;
 	request_target = (char*) safe_calloc(MAX_HTTP_URL_LEN + 1, sizeof(*request_target));
@@ -259,7 +260,7 @@ HTTPRequest* http_request_st_init() {
 	return req;
 }
 
-void http_request_st_free(HTTPRequest* req) {
+void http_request_free(HTTPRequest* req) {
 	// start line
 
 	free(req->start_line->request_target);
@@ -282,7 +283,75 @@ void http_request_st_free(HTTPRequest* req) {
 	free(req);
 }
 
-void http_request_st_clear(HTTPRequest** req) {
-	http_request_st_free(*req);
-	*req = http_request_st_init();
+void http_request_clear(HTTPRequest** req) {
+	http_request_free(*req);
+	*req = http_request_init();
+}
+
+// Response
+
+int http_response_send() {
+
+}
+
+HTTPResponse* http_response_init() {
+	// start line
+	char* reason_phrase;
+	reason_phrase = (char*)safe_calloc(MAX_REASON_PHRASE_LEN + 1, sizeof(*reason_phrase));
+
+	HTTPResponseStartLine* sl;
+	sl = (HTTPResponseStartLine*)safe_calloc(1, sizeof(*sl));
+	sl->reason_phrase = reason_phrase;
+
+	// headers
+
+	char* server;
+	server = (char*)safe_calloc(MAX_HTTP_HEADER_VALUE_LEN + 1, sizeof(*server));
+
+	HTTPResponseHeaders* headers;
+	headers = (HTTPResponseHeaders*)safe_calloc(1, sizeof(*headers));
+	headers->server = server;
+
+	// body
+
+	char* body;
+	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char*));
+	HTTPBody* rs_body;
+	rs_body = (HTTPBody*)safe_calloc(1, sizeof(*rs_body));
+	rs_body->body = body;
+
+	// all
+
+	HTTPResponse* req;
+	req = (HTTPResponse*)safe_calloc(1, sizeof(*req));
+	req->start_line = sl;
+	req->headers = headers;
+	req->body = rs_body;
+	return req;
+}
+
+void http_response_free(HTTPResponse* res) {
+	// start line
+
+	free(res->start_line->reason_phrase);
+	free(res->start_line);
+
+	// headers
+
+	free(res->headers->server);
+	free(res->headers);
+
+	// body
+
+	free(res->body->body);
+	free(res->body);
+
+	// all
+
+	free(res);
+}
+
+void http_response_clear(HTTPResponse** res) {
+	http_response_free(*res);
+	*res = http_response_init();
 }
