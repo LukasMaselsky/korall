@@ -33,7 +33,7 @@ TEST("validate_http_request") {
 	res = validate_http_request(str, strlen(str), req);
 	ASSERT(res == -1);
 
-	http_request_st_clear(&req);
+
 	
 	
 	
@@ -108,6 +108,13 @@ TEST("process_http_request_target") {
 	ASSERT(res == 0);
 	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "localhost:3500") == 0);
+
+	// connect, rt too long
+	http_request_st_clear(&req);
+	str = "localhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhost:3500 HTTP/1.1\r\n";
+	req->start_line->method = HTTP_CONNECT;
+	res = process_http_request_target(&str, req);
+	ASSERT(res == -1);
 
 	// todo: absolute paths
 

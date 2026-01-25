@@ -58,9 +58,9 @@ static int strcmp_ci(const char* str1, const char* str2) {
 #endif
 }
 
-int lookup(const char* key, const LookupEntry *table, const unsigned int table_count, const bool case_insensitive) {
+int lookup_str_int(const char* key, const LookupEntryStrInt *table, const unsigned int table_count, const bool case_insensitive) {
     if (key[0] == '\0') return -1;
-    for (LookupEntry* entry = table; entry != table + table_count; entry++) {
+    for (LookupEntryStrInt* entry = table; entry != table + table_count; entry++) {
         if (*(entry->key) == *key) {
             if (case_insensitive) {
                 if (strcmp_ci(entry->key, key) == 0)
@@ -73,7 +73,17 @@ int lookup(const char* key, const LookupEntry *table, const unsigned int table_c
         }
         
     }
+
     return -1;
+}
+
+const char* lookup_int_str(const int key, const LookupEntryIntStr* table, const unsigned int table_count) {
+    for (LookupEntryIntStr* entry = table; entry != table + table_count; entry++) {
+        if (entry->key == key)
+            return entry->val;
+    }
+
+    return NULL;
 }
 
 void* safe_calloc(size_t count, size_t size) {

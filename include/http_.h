@@ -73,11 +73,88 @@ typedef enum {
 	HTTP_H_COUNT
 } HTTPHeaderField;
 
+typedef enum {
+	HTTP_SC_100 = 100,
+	HTTP_SC_101 = 101,
+	HTTP_SC_102 = 102,
+	HTTP_SC_103 = 103,
+	HTTP_SC_200 = 200,
+	HTTP_SC_201 = 201,
+	HTTP_SC_202 = 202,
+	HTTP_SC_203 = 203,
+	HTTP_SC_204 = 204,
+	HTTP_SC_205 = 205,
+	HTTP_SC_206 = 206,
+	HTTP_SC_207 = 207,
+	HTTP_SC_208 = 208,
+	HTTP_SC_209 = 209,
+	HTTP_SC_226 = 226,
+	HTTP_SC_300 = 300,
+	HTTP_SC_301 = 301,
+	HTTP_SC_302 = 302,
+	HTTP_SC_303 = 303,
+	HTTP_SC_304 = 304,
+	HTTP_SC_305 = 305,
+	HTTP_SC_306 = 306,
+	HTTP_SC_307 = 307,
+	HTTP_SC_308 = 308,
+	HTTP_SC_400 = 400,
+	HTTP_SC_401 = 401,
+	HTTP_SC_402 = 402,
+	HTTP_SC_403 = 403,
+	HTTP_SC_404 = 404,
+	HTTP_SC_405 = 405,
+	HTTP_SC_406 = 406,
+	HTTP_SC_407 = 407,
+	HTTP_SC_408 = 408,
+	HTTP_SC_409 = 409,
+	HTTP_SC_410 = 410,
+	HTTP_SC_411 = 411,
+	HTTP_SC_412 = 412,
+	HTTP_SC_413 = 413,
+	HTTP_SC_414 = 414,
+	HTTP_SC_415 = 415,
+	HTTP_SC_416 = 416,
+	HTTP_SC_417 = 417,
+	HTTP_SC_418 = 418,
+	HTTP_SC_421 = 421,
+	HTTP_SC_422 = 422,
+	HTTP_SC_423 = 423,
+	HTTP_SC_424 = 424,
+	HTTP_SC_425 = 425,
+	HTTP_SC_426 = 426,
+	HTTP_SC_428 = 428,
+	HTTP_SC_429 = 429,
+	HTTP_SC_431 = 431,
+	HTTP_SC_444 = 444,
+	HTTP_SC_451 = 451,
+	HTTP_SC_499 = 499,
+	HTTP_SC_500 = 500,
+	HTTP_SC_501 = 501,
+	HTTP_SC_502 = 502,
+	HTTP_SC_503 = 503,
+	HTTP_SC_504 = 504,
+	HTTP_SC_505 = 505,
+	HTTP_SC_506 = 506,
+	HTTP_SC_507 = 507,
+	HTTP_SC_508 = 508,
+	HTTP_SC_509 = 509,
+	HTTP_SC_510 = 510,
+	HTTP_SC_511 = 511,
+	HTTP_SC_599 = 599,
+	HTTP_SC_COUNT = 65,
+} HTTPStatusCode;
+
+typedef struct {
+	char* body;
+} HTTPBody;
+
+// Request
+
 typedef struct {
 	char* request_target;
 	HTTPMethod method;
 } HTTPRequestStartLine;
-
 
 typedef struct {
 	char* domain;
@@ -88,20 +165,30 @@ typedef struct {
 	HTTPHeaderHost *host;
 } HTTPRequestHeaders;
 
-
-typedef struct {
-	char* body;
-} HTTPRequestBody;
-
 typedef struct {
 	HTTPRequestStartLine *start_line;
 	HTTPRequestHeaders* headers;
-	HTTPRequestBody* body;
+	HTTPBody* body;
 } HTTPRequest;
 
+// Response
+
+typedef struct {
+	HTTPStatusCode status_code;
+	char *reason_phrase;
+} HTTPResponseStartLine;
+
+typedef struct {
+	char* server;
+} HTTPResponseHeaders;
+
+typedef struct {
+	HTTPResponseStartLine* start_line;
+	HTTPResponseHeaders* headers;
+	HTTPBody* body;
+} HTTPResponse;
+
 int validate_http_request(const char* data, int data_len, HTTPRequest* req);
-
-
 
 int process_http_header_value(const HTTPHeaderField field, const char* value, HTTPRequest* req);
 
@@ -109,7 +196,7 @@ int process_http_header(const char** str, HTTPRequest* req);
 
 int process_http_headers(const char** str, HTTPRequest* req);
 
-HTTPMethod process_http_method(const char** str, const LookupEntry* table, const int table_len);
+HTTPMethod process_http_method(const char** str, const LookupEntryStrInt* table, const int table_len);
 
 int process_http_request_target_relative(const char** str, HTTPRequest* req);
 

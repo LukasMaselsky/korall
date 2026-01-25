@@ -5,12 +5,12 @@ Flags default_flags = {
 	.server_type = ST_HTTP,
 };
 
-const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {
+const LookupEntryStrInt flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {
 	{"tcp", F_TCP},
 	{"http", F_HTTP},
 };
 
-const LookupEntry http_method_lookup_table[HTTP_METHOD_LOOKUP_TABLE_COUNT] = {
+const LookupEntryStrInt http_method_lookup_table[HTTP_METHOD_LOOKUP_TABLE_COUNT] = {
 	{ "CONNECT", HTTP_CONNECT },
 	{ "DELETE", HTTP_DELETE },
 	{ "GET", HTTP_GET },
@@ -22,7 +22,7 @@ const LookupEntry http_method_lookup_table[HTTP_METHOD_LOOKUP_TABLE_COUNT] = {
 	{ "TRACE" , HTTP_TRACE }
 };
 
-const LookupEntry http_header_field_lookup_table[HTTP_HEADER_FIELD_TABLE_COUNT] = {
+const LookupEntryStrInt http_header_field_lookup_table[HTTP_HEADER_FIELD_TABLE_COUNT] = {
 	{"A-IM", HTTP_H_A_IM},
 	{"Accept", HTTP_H_ACCEPT},
 	{"Accept-Charset", HTTP_H_ACCEPT_CHARSET},
@@ -64,4 +64,72 @@ const LookupEntry http_header_field_lookup_table[HTTP_HEADER_FIELD_TABLE_COUNT] 
 	{"Upgrade", HTTP_H_UPGRADE},
 	{"Via", HTTP_H_VIA},
 	{"Warning", HTTP_H_WARNING},
+};
+
+const LookupEntryIntStr http_status_code_lookup_table[HTTP_STATUS_CODE_TABLE_COUNT] = {
+	{ HTTP_SC_100, "Continue"},
+	{ HTTP_SC_101, "Switching Protocols"},
+	{ HTTP_SC_102, "Processing"},
+	{ HTTP_SC_103, "Early Hints"},
+	{ HTTP_SC_200, "OK"},
+	{ HTTP_SC_201, "Created"},
+	{ HTTP_SC_202, "Accepted"},
+	{ HTTP_SC_203, "Non-Authoritative Information"},
+	{ HTTP_SC_204, "No Content"},
+	{ HTTP_SC_205, "Reset Content"},
+	{ HTTP_SC_206, "Partial Content"},
+	{ HTTP_SC_207, "Multi-Status"},
+	{ HTTP_SC_208, "Already Reported"},
+	{ HTTP_SC_226, "IM Used"},
+	{ HTTP_SC_300, "Multiple Choices"},
+	{ HTTP_SC_301, "Moved Permanently"},
+	{ HTTP_SC_302, "Found"},
+	{ HTTP_SC_303, "See Other"},
+	{ HTTP_SC_304, "Not Modified"},
+	{ HTTP_SC_305, "Use Proxy"},
+	{ HTTP_SC_307, "Temporary Redirect"},
+	{ HTTP_SC_308, "Permanent Redirect"},
+	{ HTTP_SC_400, "Bad Request"},
+	{ HTTP_SC_401, "Unauthorized"},
+	{ HTTP_SC_402, "Payment Required"},
+	{ HTTP_SC_403, "Forbidden"},
+	{ HTTP_SC_404, "Not Found"},
+	{ HTTP_SC_405, "Method Not Allowed"},
+	{ HTTP_SC_406, "Not Acceptable"},
+	{ HTTP_SC_407, "Proxy Authentication Required"},
+	{ HTTP_SC_408, "Request Timeout"},
+	{ HTTP_SC_409, "Conflict"},
+	{ HTTP_SC_410, "Gone"},
+	{ HTTP_SC_411, "Length Required"},
+	{ HTTP_SC_412, "Precondition Failed"},
+	{ HTTP_SC_413, "Payload Too Large"},
+	{ HTTP_SC_414, "URI Too Long"},
+	{ HTTP_SC_415, "Unsupported Media Type"},
+	{ HTTP_SC_416, "Requested Range Not Satisfiable"},
+	{ HTTP_SC_417, "Expectation Failed"},
+	{ HTTP_SC_418, "I'm a teapot"},
+	{ HTTP_SC_421, "Misdirected Request"},
+	{ HTTP_SC_422, "Unprocessable Entity"},
+	{ HTTP_SC_423, "Locked"},
+	{ HTTP_SC_424, "Failed Dependency"},
+	{ HTTP_SC_425, "Too Early"},
+	{ HTTP_SC_426, "Upgrade Required"},
+	{ HTTP_SC_428, "Precondition Required"},
+	{ HTTP_SC_429, "Too Many Requests"},
+	{ HTTP_SC_431, "Request Header Fields Too Large"},
+	{ HTTP_SC_444, "Connection Closed Without Response"},
+	{ HTTP_SC_451, "Unavailable For Legal Reasons"},
+	{ HTTP_SC_499, "Client Closed Request"},
+	{ HTTP_SC_500, "Internal Server Error"},
+	{ HTTP_SC_501, "Not Implemented"},
+	{ HTTP_SC_502, "Bad Gateway"},
+	{ HTTP_SC_503, "Service Unavailable"},
+	{ HTTP_SC_504, "Gateway Timeout"},
+	{ HTTP_SC_505, "HTTP Version Not Supported"},
+	{ HTTP_SC_506, "Variant Also Negotiates"},
+	{ HTTP_SC_507, "Insufficient Storage"},
+	{ HTTP_SC_508, "Loop Detected"},
+	{ HTTP_SC_510, "Not Extended"},
+	{ HTTP_SC_511, "Network Authentication Required"},
+	{ HTTP_SC_599, "Network Connect Timeout Error"}
 };

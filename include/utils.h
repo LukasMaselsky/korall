@@ -30,7 +30,12 @@ typedef enum {
 typedef struct {
     char* key;
     int val;
-} LookupEntry;
+} LookupEntryStrInt
+;
+typedef struct {
+    int key;
+    char* val;
+} LookupEntryIntStr;
 
 str_to_int_errno str_to_int(int* out, char* s, int base);
 
@@ -38,7 +43,9 @@ bool is_digit(const char c);
 
 bool is_digits_only(const char* str);
 
-int lookup(const char* key, const LookupEntry* table, const unsigned int table_count, const bool case_insensitive);
+int lookup_str_int(const char* key, const LookupEntryStrInt* table, const unsigned int table_count, const bool case_insensitive);
+
+const char* lookup_int_str(const int key, const LookupEntryIntStr* table, const unsigned int table_count);
 
 void* safe_calloc(size_t count, size_t size);
 

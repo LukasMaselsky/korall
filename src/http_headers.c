@@ -3,6 +3,9 @@
 #include "http_.h"
 #include "sockets.h"
 
+/*
+	Make sure domain:port or domain is valid format
+*/
 int http_domain_port(const char* value, char* domain, char* port, bool *with_port) {
 	if (*value == '\0') return -1;
 	char temp[MAX_DOMAIN_LEN + 1];

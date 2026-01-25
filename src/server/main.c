@@ -20,7 +20,7 @@ static Flag flag_str_to_val(char* key)
 	// + 1 extra char at least ("--" only invalid)
 	if (key[0] == '\0') return F_BADFLAG;
 
-	int val = lookup(key, flag_lookup_table, FLAG_LOOKUP_TABLE_COUNT, true);
+	int val = lookup_str_int(key, flag_lookup_table, FLAG_LOOKUP_TABLE_COUNT, true);
 	if (val == -1) {
 		return F_BADFLAG;
 	}
@@ -118,6 +118,34 @@ static int process_args(
 	return 0;
 }
 
+static bool http_domain_port_match_server(ServerInfo* si, HTTPRequest* req) {
+
+	if (req->start_line->method == HTTP_CONNECT) {
+		// know rt is valid domain:port
+		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
+		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+		const char* str = req->start_line->request_target;
+		int i = 0;
+		for (char c = *str; c != ':'; c = *(++str)) {
+			domain[i] = c;
+			i++;
+		}
+		str++;
+		i = 0;
+		for (char c = *str; c != '\0'; c = *(++str)) {
+			port[i] = c;
+			i++;
+		}
+		if (strcmp(si->domain, domain) != 0 ||
+			strcmp(si->port, port) != 0) return false;
+	}
+	
+	if (strcmp(si->domain, req->headers->host->domain) != 0 ||
+		strcmp(si->port, req->headers->host->port) != 0) return false;
+	
+
+	return true;
+}
 
 static void process_http_request(
 	SOCKET inc_sock, 
@@ -132,17 +160,19 @@ static void process_http_request(
 	HTTPRequest *req = http_request_st_init();
 
 	// first validate format
-
 	if (validate_http_request(data, data_len, req) == -1) {
 		// todo: send invalid response
 		printf("INVALID\n");
 		return;
 	}
 
-	// check if Host matches server domain + port
-	if (strcmp(si->domain, req->headers->host->domain) != 0 ||
-		strcmp(si->port, req->headers->host->port) != 0) return;
-	// todo: send invalid Host res
+	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
+	if (!http_domain_port_match_server(si, req)) { 
+		// todo: send invalid Host res
+		return;
+	}
+
+
 	
 	
 	printf("VALID\n");

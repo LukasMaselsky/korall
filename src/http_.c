@@ -4,9 +4,11 @@
 #include "sockets.h"
 #include "http_headers.h"
 
-// host needed for relative rt
+/*
+	Check if the format of the HTTP request is correct
+*/
 int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
-	const LookupEntry* table = &http_method_lookup_table;
+	const LookupEntryStrInt* table = &http_method_lookup_table;
 	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
 
 	HTTPMethod method = process_http_method(&data, table, table_len);
@@ -45,7 +47,7 @@ int process_http_header_value(const HTTPHeaderField field, const char* value, HT
 			return process_http_host(value, req);
 			break;
 		default:
-			return -1;
+			return -1; // todo: allow custom headers
 	}
 }
 
@@ -64,7 +66,7 @@ int process_http_header(const char** str, HTTPRequest* req) {
 	field[i] = '\0';
 	if (*s != ':') return -1; // field too long
 
-	HTTPHeaderField header_field = lookup(field, http_header_field_lookup_table, HTTP_HEADER_FIELD_TABLE_COUNT, true);
+	HTTPHeaderField header_field = lookup_str_int(field, http_header_field_lookup_table, HTTP_HEADER_FIELD_TABLE_COUNT, true);
 	if (header_field == HTTP_H_BADFIELD) return -1;
 
 	s++; // skip colon
@@ -160,10 +162,26 @@ int process_http_request_target(const char **str, HTTPRequest *req) {
 		return 0;
 	}
 	if (method == HTTP_CONNECT) {
+		// rt has to be domain:port format
+		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
+		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+		bool with_port = false;
+		char value[MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN + 1];
+		const char* s = *str;
+		int i = 0;
+		int len = MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN;
+		for (char c = *s; c != '\0' && c != ' ' && i < len; c = *(++s)) {
+			value[i] = c;
+			i++;
+		}
+		value[i] = '\0';
+		*str = s;
 
-		// todo
+		int res = http_domain_port(value, domain, port, &with_port);
+		if (res == -1 || !with_port) return -1;
 
-		//return 0;
+		strncpy(req->start_line->request_target, value, len);
+		return 0;
 	}
 
 	const char first_c = s[0];
@@ -184,7 +202,7 @@ int process_http_request_target(const char **str, HTTPRequest *req) {
 	return -1;
 }
 
-HTTPMethod process_http_method(const char **str, const LookupEntry *table, const int table_len) {
+HTTPMethod process_http_method(const char **str, const LookupEntryStrInt *table, const int table_len) {
 	
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 	int len = MAX_HTTP_METHOD_STR_LEN;
@@ -196,7 +214,7 @@ HTTPMethod process_http_method(const char **str, const LookupEntry *table, const
 	}
 	method[i] = '\0';
 	*str = s;
-	return lookup(method, table, table_len, false);
+	return lookup_str_int(method, table, table_len, false);
 }
 
 HTTPRequest* http_request_st_init() {
@@ -227,8 +245,8 @@ HTTPRequest* http_request_st_init() {
 
 	char* body;
 	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char*));
-	HTTPRequestBody* rq_body;
-	rq_body = (HTTPRequestBody*)safe_calloc(1, sizeof(*rq_body));
+	HTTPBody* rq_body;
+	rq_body = (HTTPBody*)safe_calloc(1, sizeof(*rq_body));
 	rq_body->body = body;
 
 	// all
