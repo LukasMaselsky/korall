@@ -25,4 +25,10 @@ TEST("is_digits_only") {
 
 }
 
+TEST("get_current_time_gmt") {
+	struct tm *t;
+	get_current_time_gmt(&t);
+	// todo
+}
+
 #endif

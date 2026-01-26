@@ -290,8 +290,101 @@ void http_request_clear(HTTPRequest** req) {
 
 // Response
 
-int http_response_send() {
+HTTPResponse* http_response_construct(
+	HTTPStatusCode code,
+	const char* server_name,
+	MediaType content_type,
+	const char* body
+) {
+	HTTPResponse* res = http_response_init();
+	res->start_line->status_code = code;
+	const char* code_str = lookup_int_str(code, http_status_code_lookup_table, HTTP_STATUS_CODE_TABLE_COUNT);
+	if (code_str == NULL) {
+		printf("server: response construction failed, reason phrase lookup\n");
+		return NULL;
+	}
+	strncpy(res->start_line->reason_phrase, code_str, MAX_REASON_PHRASE_LEN);
 
+	http_get_current_date(res->headers->date, MAX_DATE_STR_LEN + 1); // + 1 needed, \0 included for strftime
+	strncpy(res->headers->server, server_name, MAX_HTTP_HEADER_VALUE_LEN);
+
+	if (body != NULL) {
+		size_t body_len = strlen(body);
+		if (body_len > MAX_HTTP_BODY_LEN) {
+			printf("server: response construction failed, body too long\n");
+			return NULL;
+		}
+		const char* ct_str = lookup_int_str(content_type, media_type_lookup_table, MEDIA_TYPE_TABLE_COUNT);
+		if (ct_str == NULL) {
+			printf("server: response construction failed, content type lookup\n");
+			return NULL;
+		}
+		strncpy(res->headers->content_type, ct_str, MAX_MEDIA_TYPE_LEN);
+		res->headers->content_length = body_len;
+		strncpy(res->body->body, body, MAX_HTTP_BODY_LEN);
+	}
+	else {
+		res->headers->content_type = NULL;
+		res->headers->content_length = 0;
+		res->body->body = NULL;
+	}
+
+	return res;
+}
+
+int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **buf) {
+	const char* field_val;
+	field_val = lookup_int_str(field, http_res_header_field_lookup_table, HTTP_RES_HEADER_FIELD_TABLE_COUNT);
+	if (field_val == NULL) {
+		return -1;
+	}
+	sprintf(*buf, "%s: %s\r\n", field_val, value);
+	*buf += strlen(field_val) + strlen(value) + 4; // ": " + "\r\n" = 4
+	return 0;
+}
+
+int http_response_to_str(HTTPResponse* res, char *data, int data_len) {
+	// todo: careful about data buf overflow if headers too large (> 1mb)
+	sprintf(data, "HTTP/1.1 %d %s\r\n", res->start_line->status_code, res->start_line->reason_phrase);
+	data += HTTP_PROT_LEN + 1 + 3 + 1 + strlen(res->start_line->reason_phrase) + 2;
+	
+	if (http_header_to_str(HTTP_RSH_SERVER, res->headers->server, &data) == -1) return -1;
+	if (http_header_to_str(HTTP_RSH_DATE, res->headers->date, &data) == -1) return -1;
+	if (http_header_to_str(HTTP_RSH_CONTENT_TYPE, res->headers->content_type, &data) == -1) return -1;
+	char cl[20];
+	int_to_str(res->headers->content_length, cl);
+	if (http_header_to_str(HTTP_RSH_CONTENT_LENGTH, cl, &data) == -1) return -1;
+
+	if (res->body->body == NULL) return 0;
+
+	sprintf(data, "\r\n%s", res->body->body);
+
+	return 0;
+}
+
+int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main) {
+	if (inc_sock == server_sock) {
+		printf("server: cannot send HTTP response to itself\n");
+		return -1;
+	}
+	if (!FD_ISSET(inc_sock, main)) { 
+		printf("server: socket is not in set\n");
+		return -1;
+	};
+
+	char data[MAX_HTTP_RES_LEN + 1];
+	char data_len = MAX_HTTP_RES_LEN;
+	if (http_response_to_str(res, data, data_len) == -1) {
+		printf("server: failed to convert HTTP response to str\n");
+		return -1;
+	}
+
+	int r = socket_send(inc_sock, data, strlen(data), 0);
+	if (r == -1) {
+		printf("server: couldn't send data to ");
+		socket_print(inc_sock);
+		printf("\n");
+	}
 }
 
 HTTPResponse* http_response_init() {
@@ -305,12 +398,16 @@ HTTPResponse* http_response_init() {
 
 	// headers
 
-	char* server;
+	char* server, *date, *content_type;
 	server = (char*)safe_calloc(MAX_HTTP_HEADER_VALUE_LEN + 1, sizeof(*server));
+	date = (char*)safe_calloc(MAX_DATE_STR_LEN + 1, sizeof(*date));
+	content_type = (char*)safe_calloc(MAX_MEDIA_TYPE_LEN + 1, sizeof(*content_type));
 
 	HTTPResponseHeaders* headers;
 	headers = (HTTPResponseHeaders*)safe_calloc(1, sizeof(*headers));
 	headers->server = server;
+	headers->content_type = content_type;
+	headers->date = date;
 
 	// body
 
@@ -339,6 +436,8 @@ void http_response_free(HTTPResponse* res) {
 	// headers
 
 	free(res->headers->server);
+	free(res->headers->date);
+	free(res->headers->content_type);
 	free(res->headers);
 
 	// body
@@ -354,4 +453,11 @@ void http_response_free(HTTPResponse* res) {
 void http_response_clear(HTTPResponse** res) {
 	http_response_free(*res);
 	*res = http_response_init();
+}
+
+void http_get_current_date(char *str, size_t str_len) {
+	struct tm* timeinfo;
+	get_current_time_gmt(&timeinfo);
+
+	strftime(str, str_len, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 }

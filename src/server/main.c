@@ -170,17 +170,21 @@ static void process_http_request(
 
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
 	if (!http_domain_port_match_server(si, req)) { 
-		// todo: send invalid Host res
+		HTTPResponse* res = http_response_construct(HTTP_SC_400, SERVER_NAME, MT_APP_JSON, INVALID_HOST_RESPONSE_BODY);
+		if (res == NULL) return;
+		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
+		http_response_free(res);
 		return;
 	}
 
+	printf("server: valid HTTP request received\n");
+	printf("server: sending HTTP response\n");
 
-	
-	
-	printf("VALID\n");
-	
-	
-	// todo: send response;
+	HTTPResponse* res = http_response_construct(HTTP_SC_200, SERVER_NAME, MT_TXT_PLAIN, "Hello World!");
+	if (res == NULL) return;
+	if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
+	http_response_free(res);
+
 
 	http_request_free(req);
 

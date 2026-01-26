@@ -39,6 +39,10 @@ str_to_int_errno str_to_int(int* out, char* s, int base) {
     return STR_TO_INT_SUCCESS;
 }
 
+void int_to_str(int value, char* str) {
+    sprintf(str, "%d", value);
+}
+
 bool is_digit(const char c) {
     return c >= '0' && c <= '9';
 }
@@ -93,4 +97,11 @@ void* safe_calloc(size_t count, size_t size) {
         exit(EXIT_FAILURE);
     }
     return p;
+}
+
+void get_current_time_gmt(struct tm **t) {
+    time_t raw_time;
+    time(&raw_time);
+    *t = gmtime(&raw_time);
+    return;
 }

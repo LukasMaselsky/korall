@@ -2,7 +2,7 @@
 #include "lookup_tables.h"
 
 Flags default_flags = {
-	.server_type = ST_HTTP,
+	.server_type = ST_HTTP, // todo: move to main.c ?
 };
 
 const LookupEntryStrInt flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {
@@ -183,4 +183,39 @@ const LookupEntryIntStr http_res_header_field_lookup_table[HTTP_RES_HEADER_FIELD
 	{ HTTP_RSH_WARNING, "Warning" },
 	{ HTTP_RSH_WWW_AUTHENTICATE, "WWW-Authenticate" },
 	{ HTTP_RSH_X_FRAME_OPTIONS, "X-Frame-Options" },
+};
+
+const LookupEntryIntStr media_type_lookup_table[MEDIA_TYPE_TABLE_COUNT] = {
+	{ MT_APP_JSON, "application/json" },
+	{ MT_APP_LD_JSON, "application/ld+json" },
+	{ MT_APP_MSWORD, "application/msword" },
+	{ MT_APP_PDF, "application/pdf" },
+	{ MT_APP_SQL, "application/sql" },
+	{ MT_APP_VND_API_JSON, "application/vnd.api+json" },
+	{ MT_APP_VND_MS_PORT_EXEC, "application/vnd.microsoft.portable-executable" },
+	{ MT_APP_VND_MS_XLS, "application/vnd.ms-excel" },
+	{ MT_APP_VND_MS_PPT, "application/vnd.ms-powerpoint" },
+	{ MT_APP_VND_ODT, "application/vnd.oasis.opendocument.text" },
+	{ MT_APP_VND_PPTX, "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
+	{ MT_APP_VND_XLSX, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+	{ MT_APP_VND_DOCX, "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+	{ MT_APP_X_WWW_FORM_URLENCODED, "application/x-www-form-urlencoded" },
+	{ MT_APP_XML, "application/xml" },
+	{ MT_APP_ZIP, "application/zip" },
+	{ MT_APP_ZSTD, "application/zstd" },
+	{ MT_AUD_MPEG, "audio/mpeg" },
+	{ MT_AUD_OGG, "audio/ogg" },
+	{ MT_IMG_AVIF, "image/avif" },
+	{ MT_IMG_JPEG, "image/jpeg" },
+	{ MT_IMG_PNG, "image/png" },
+	{ MT_IMG_SVG_XML, "image/svg+xml" },
+	{ MT_IMG_TIFF, "image/tiff" },
+	{ MT_MOD_OBJ, "model/obj" },
+	{ MT_MTP_FORM_DATA, "multipart/form-data" },
+	{ MT_TXT_PLAIN, "text/plain" },
+	{ MT_TXT_CSS, "text/css" },
+	{ MT_TXT_CSV, "text/csv" },
+	{ MT_TXT_HTML, "text/html" },
+	{ MT_TXT_JS, "text/javascript" },
+	{ MT_TXT_XML, "text/xml" },
 };

@@ -1,19 +1,26 @@
 #ifndef HTTP__H
 #define HTTP__H
 #include "utils.h"
+#include "sockets.h"
 
 #define MAX_HTTP_METHOD_STR_LEN 7
 #define MAX_HTTP_QUERY_STR_LEN 1024
 #define MAX_HTTP_URL_LEN 2048 // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
 #define HTTP_PROT_LEN 8
 #define MAX_DOMAIN_LEN 253
-#define MAX_HTTP_BODY_LEN 1000000 // 1mb?
+#define MAX_HTTP_BODY_LEN 1000 // 1mb?
 #define MAX_HTTP_HEADER_FIELD_LEN 32
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_DOMAIN_NAME_LEN 253
+#define MAX_MEDIA_TYPE_LEN 74
+#define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2
 
 #define MAX_REASON_PHRASE_LEN 35
+
+#define MAX_DATE_STR_LEN 29
 // https://stackoverflow.com/questions/161738/what-is-the-best-regular-expression-to-check-if-a-string-is-a-valid-url#comment117272662_55468411
+
+#define INVALID_HOST_RESPONSE_BODY "{\n\t\"error\": \"Bad request\",\n\t\"message\" : \"Invalid Host header\",\n}"
 
 typedef enum {
 	HTTP_BADMETHOD = -1,
@@ -199,6 +206,42 @@ typedef enum {
 	HTTP_SC_COUNT = 65,
 } HTTPStatusCode;
 
+typedef enum {
+	MT_APP_JSON,
+	MT_APP_LD_JSON,
+	MT_APP_MSWORD,
+	MT_APP_PDF,
+	MT_APP_SQL,
+	MT_APP_VND_API_JSON,
+	MT_APP_VND_MS_PORT_EXEC,
+	MT_APP_VND_MS_XLS,
+	MT_APP_VND_MS_PPT,
+	MT_APP_VND_ODT,
+	MT_APP_VND_PPTX,
+	MT_APP_VND_XLSX,
+	MT_APP_VND_DOCX,
+	MT_APP_X_WWW_FORM_URLENCODED,
+	MT_APP_XML,
+	MT_APP_ZIP,
+	MT_APP_ZSTD,
+	MT_AUD_MPEG,
+	MT_AUD_OGG,
+	MT_IMG_AVIF,
+	MT_IMG_JPEG,
+	MT_IMG_PNG,
+	MT_IMG_SVG_XML,
+	MT_IMG_TIFF,
+	MT_MOD_OBJ,
+	MT_MTP_FORM_DATA,
+	MT_TXT_PLAIN,
+	MT_TXT_CSS,
+	MT_TXT_CSV,
+	MT_TXT_HTML,
+	MT_TXT_JS,
+	MT_TXT_XML,
+	MT_COUNT
+} MediaType;
+
 typedef struct {
 	char* body;
 } HTTPBody;
@@ -233,7 +276,10 @@ typedef struct {
 } HTTPResponseStartLine;
 
 typedef struct {
+	char* date;
 	char* server;
+	char* content_type;
+	size_t content_length;
 } HTTPResponseHeaders;
 
 typedef struct {
@@ -264,10 +310,27 @@ void http_request_free(HTTPRequest* req);
 
 void http_request_clear(HTTPRequest** req);
 
+HTTPResponse* http_response_construct(
+	HTTPStatusCode code,
+	const char* server_name,
+	MediaType content_type,
+	const char* body
+);
+
+int http_header_to_str(HTTPResponseHeaderField field, const char* value, char** buf);
+
+int http_response_to_str(HTTPResponse* res, char* data, int data_len);
+
+int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main);
+
 HTTPResponse* http_response_init();
 
 void http_response_free(HTTPResponse* res);
 
 void http_response_clear(HTTPResponse** res);
+
+void http_get_current_date(char* str, size_t str_len);
+
+
 
 #endif

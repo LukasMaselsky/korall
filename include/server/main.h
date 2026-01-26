@@ -6,6 +6,8 @@
 #define READ_BUFFER_LEN 1024
 #define RESPONSE_BUFFER_LEN 1024
 
+#define SERVER_NAME "MyServer" // todo: put into si ?
+
 typedef enum {
 	ST_TCP,
 	ST_HTTP,

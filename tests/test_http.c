@@ -246,5 +246,20 @@ TEST("process_http_method") {
 	ASSERT(res == HTTP_BADMETHOD);
 }
 
+TEST("http_get_current_date") {
+	char buf[MAX_DATE_STR_LEN + 1];
+	http_get_current_date(buf, MAX_DATE_STR_LEN + 1);
+	// todo
+}
+
+TEST("http_response_to_str") {
+	HTTPResponse* res = http_response_construct(HTTP_SC_200, "MyServer", MT_TXT_PLAIN, "Hello World!");
+	char data[MAX_HTTP_RES_LEN + 1];
+	char data_len = MAX_HTTP_RES_LEN;
+	int r;
+	r = http_response_to_str(res, data, data_len);
+	ASSERT(r == 0);
+}
+
 
 #endif
