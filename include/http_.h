@@ -8,7 +8,7 @@
 #define MAX_HTTP_URL_LEN 2048 // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
 #define HTTP_PROT_LEN 8
 #define MAX_DOMAIN_LEN 253
-#define MAX_HTTP_BODY_LEN 1000 // 1mb?
+#define MAX_HTTP_BODY_LEN 1000000 // 1mb? todo: stack overflow
 #define MAX_HTTP_HEADER_FIELD_LEN 32
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_DOMAIN_NAME_LEN 253
@@ -21,6 +21,7 @@
 // https://stackoverflow.com/questions/161738/what-is-the-best-regular-expression-to-check-if-a-string-is-a-valid-url#comment117272662_55468411
 
 #define INVALID_HOST_RESPONSE_BODY "{\n\t\"error\": \"Bad request\",\n\t\"message\" : \"Invalid Host header\",\n}"
+#define INVALID_SYNTAX_RESPONSE_BODY "{\n\t\"error\": \"Bad request\",\n\t\"message\" : \"Request body could not be read properly.\",\n}"
 
 typedef enum {
 	HTTP_BADMETHOD = -1,
@@ -319,7 +320,7 @@ HTTPResponse* http_response_construct(
 
 int http_header_to_str(HTTPResponseHeaderField field, const char* value, char** buf);
 
-int http_response_to_str(HTTPResponse* res, char* data, int data_len);
+char* http_response_to_str(HTTPResponse* res);
 
 int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main);
 

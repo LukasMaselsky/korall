@@ -343,23 +343,39 @@ int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **
 	return 0;
 }
 
-int http_response_to_str(HTTPResponse* res, char *data, int data_len) {
-	// todo: careful about data buf overflow if headers too large (> 1mb)
+char* http_response_to_str(HTTPResponse* res) {
+	int data_len = MAX_HTTP_RES_LEN;
+	char* data;
+	data = (char*)safe_calloc(MAX_HTTP_RES_LEN + 1, sizeof(*data));
+	char* data_start = data;
+
 	sprintf(data, "HTTP/1.1 %d %s\r\n", res->start_line->status_code, res->start_line->reason_phrase);
 	data += HTTP_PROT_LEN + 1 + 3 + 1 + strlen(res->start_line->reason_phrase) + 2;
 	
-	if (http_header_to_str(HTTP_RSH_SERVER, res->headers->server, &data) == -1) return -1;
-	if (http_header_to_str(HTTP_RSH_DATE, res->headers->date, &data) == -1) return -1;
-	if (http_header_to_str(HTTP_RSH_CONTENT_TYPE, res->headers->content_type, &data) == -1) return -1;
+	if (http_header_to_str(HTTP_RSH_SERVER, res->headers->server, &data) == -1) { 
+		free(data);
+		return NULL;
+	};
+	if (http_header_to_str(HTTP_RSH_DATE, res->headers->date, &data) == -1) {
+		free(data);
+		return NULL;
+	};
+	if (http_header_to_str(HTTP_RSH_CONTENT_TYPE, res->headers->content_type, &data) == -1) {
+		free(data);
+		return NULL;
+	};
 	char cl[20];
 	int_to_str(res->headers->content_length, cl);
-	if (http_header_to_str(HTTP_RSH_CONTENT_LENGTH, cl, &data) == -1) return -1;
+	if (http_header_to_str(HTTP_RSH_CONTENT_LENGTH, cl, &data) == -1) {
+		free(data);
+		return NULL;
+	};
 
-	if (res->body->body == NULL) return 0;
+	if (res->body->body == NULL) return data_start;
 
 	sprintf(data, "\r\n%s", res->body->body);
 
-	return 0;
+	return data_start;
 }
 
 int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main) {
@@ -372,9 +388,8 @@ int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, f
 		return -1;
 	};
 
-	char data[MAX_HTTP_RES_LEN + 1];
-	char data_len = MAX_HTTP_RES_LEN;
-	if (http_response_to_str(res, data, data_len) == -1) {
+	char* data = http_response_to_str(res);
+	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");
 		return -1;
 	}
@@ -385,6 +400,7 @@ int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, f
 		socket_print(inc_sock);
 		printf("\n");
 	}
+	free(data);
 }
 
 HTTPResponse* http_response_init() {

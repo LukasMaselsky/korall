@@ -254,11 +254,11 @@ TEST("http_get_current_date") {
 
 TEST("http_response_to_str") {
 	HTTPResponse* res = http_response_construct(HTTP_SC_200, "MyServer", MT_TXT_PLAIN, "Hello World!");
-	char data[MAX_HTTP_RES_LEN + 1];
-	char data_len = MAX_HTTP_RES_LEN;
-	int r;
-	r = http_response_to_str(res, data, data_len);
-	ASSERT(r == 0);
+	char *r = http_response_to_str(res);
+	ASSERT(r != NULL);
+	free(r);
+
+
 }
 
 
