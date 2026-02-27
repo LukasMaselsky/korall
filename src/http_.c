@@ -7,24 +7,24 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
-	const LookupEntryStrInt* table = &http_method_lookup_table;
+int http_validate_request(const char* data, int data_len, HTTPRequest* req) {
+	const LookupEntry* table = &http_method_lookup_table;
 	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
 
-	HTTPMethod method = process_http_method(&data, table, table_len);
+	HTTPMethod method = http_process_method(&data, table, table_len);
 	if (method == HTTP_BADMETHOD || data[0] == '\0') return -1;
 	req->start_line->method = method;
 	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process rt
-	int res = process_http_request_target(&data, req);
+	int res = http_process_request_target(&data, req);
 	if (res == -1) return -1;
 	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process prot
-	res = process_http_protocol(&data);
+	res = http_process_protocol(&data);
 	if (res == -1) return -1;
 
 	if (*data != '\r' || data[1] != '\n') return -1; // must have \r\n
@@ -32,26 +32,28 @@ int validate_http_request(const char* data, int data_len, HTTPRequest* req) {
 
 	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return 0; // no header, no body
 
-	res = process_http_headers(&data, req);
+	res = http_process_headers(&data, req);
 	if (res == -1) return -1;
 
 	// todo: body
+	// Only patch, put and post has body
 
 	return 0;
 }
 
-int process_http_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
+int http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_HOST:
-			return process_http_host(value, req);
-			break;
+			return http_process_host(value, req);
+		case HTTP_RQH_ACCEPT:
+			return http_process_accept(value, req);
 		default:
 			return -1; // todo: allow custom headers
 	}
 }
 
-int process_http_header(const char** str, HTTPRequest* req) {
+int http_process_header(const char** str, HTTPRequest* req) {
 	// process field
 
 	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
@@ -88,23 +90,23 @@ int process_http_header(const char** str, HTTPRequest* req) {
 	value[i] = '\0';
 	if (*s != '\r' || s[1] != '\n') return -1; // newline always needed
 
-	if (process_http_header_value(header_field, value, req) == -1) return -1;
+	if (http_process_header_value(header_field, value, req) == -1) return -1;
 
 	s += 2; // \r\n
 	*str = s;
 	return 0;
 }
 
-int process_http_headers(const char** str, HTTPRequest* req) {
+int http_process_headers(const char** str, HTTPRequest* req) {
 
 	while (true) {
-		if (process_http_header(str, req) == -1) return -1;
+		if (http_process_header(str, req) == -1) return -1;
 		if (**str == '\r' && (*str)[1] == '\n') return 0; // empty newline at end of headers
 	}
 
 }
 
-int process_http_protocol(const char** str) {
+int http_process_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
 	int len = HTTP_PROT_LEN;
 	int i = 0;
@@ -132,7 +134,7 @@ static bool is_valid_request_target_relative(char c) {
 	return false;
 }
 
-int process_http_request_target_relative(const char** str, HTTPRequest* req) {
+int http_process_request_target_relative(const char** str, HTTPRequest* req) {
 	// todo: query string
 	int len = MAX_HTTP_URL_LEN;
 	int i = 0;
@@ -152,7 +154,7 @@ int process_http_request_target_relative(const char** str, HTTPRequest* req) {
 	return 0;
 }
 
-int process_http_request_target(const char **str, HTTPRequest *req) {
+int http_process_request_target(const char **str, HTTPRequest *req) {
 	HTTPMethod method = req->start_line->method;
 	if (method == HTTP_BADMETHOD) return -1;
 	const char* s = *str;
@@ -188,7 +190,7 @@ int process_http_request_target(const char **str, HTTPRequest *req) {
 	const char first_c = s[0];
 	if (first_c == '/') {
 		// relative path
-		return process_http_request_target_relative(str, req);
+		return http_process_request_target_relative(str, req);
 	}
 	else if (first_c == 'h' || first_c == 'H') {
 		// absolute path
@@ -203,7 +205,7 @@ int process_http_request_target(const char **str, HTTPRequest *req) {
 	return -1;
 }
 
-HTTPMethod process_http_method(const char **str, const LookupEntryStrInt *table, const int table_len) {
+HTTPMethod http_process_method(const char **str, const LookupEntry *table, const int table_len) {
 	
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 	int len = MAX_HTTP_METHOD_STR_LEN;
@@ -293,7 +295,7 @@ void http_request_clear(HTTPRequest** req) {
 HTTPResponse* http_response_construct(
 	HTTPStatusCode code,
 	const char* server_name,
-	MediaType content_type,
+	HTTPMediaType content_type,
 	const char* body
 ) {
 	HTTPResponse* res = http_response_init();
@@ -314,7 +316,7 @@ HTTPResponse* http_response_construct(
 			printf("server: response construction failed, body too long\n");
 			return NULL;
 		}
-		const char* ct_str = lookup_int_str(content_type, media_type_lookup_table, MEDIA_TYPE_TABLE_COUNT);
+		const char* ct_str = lookup_int_str(content_type, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT);
 		if (ct_str == NULL) {
 			printf("server: response construction failed, content type lookup\n");
 			return NULL;

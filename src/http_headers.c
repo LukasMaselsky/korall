@@ -1,6 +1,7 @@
 #include "http_headers.h"
 #include "utils.h"
 #include "http_.h"
+#include "lookup_tables.h"
 #include "sockets.h"
 
 /*
@@ -8,7 +9,7 @@
 */
 int http_domain_port(const char* value, char* domain, char* port, bool *with_port) {
 	if (*value == '\0') return -1;
-	char temp[MAX_DOMAIN_LEN + 1];
+	char temp[MAX_DOMAIN_LEN + 1] = { 0 };
 
 	*with_port = false;
 	int len = MAX_DOMAIN_NAME_LEN;
@@ -68,15 +69,24 @@ int http_domain_port(const char* value, char* domain, char* port, bool *with_por
 	return -1;
 }
 
-int process_http_host(const char* value, HTTPRequest* req) {
+int http_process_host(const char* value, HTTPRequest* req) {
 
 	char domain[MAX_DOMAIN_LEN + 1] = { 0 };
 	char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
-	bool with_port = false;
+	bool with_port = false; // needed since function is used elsewhere, here can throw away
 	int res = http_domain_port(value, domain, port, &with_port);
 	if (res == -1) return -1;
 
 	strncpy(req->headers->host->domain, domain, MAX_DOMAIN_LEN);
 	strncpy(req->headers->host->port, port, MAX_PORT_NUM_CHAR_LEN);
+	return 0;
+}
+
+int http_process_accept(const char* value, HTTPRequest* req) {
+	// todo: multiple types
+	int res = lookup_str_int(value, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, false);
+	if (res == -1) return -1;
+
+	req->headers->accept = res;
 	return 0;
 }

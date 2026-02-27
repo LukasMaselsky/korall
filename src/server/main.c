@@ -4,6 +4,9 @@
 #include "http_.h"
 #include "lookup_tables.h"
 
+Flags default_flags = {
+	.server_type = ST_HTTP,
+};
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
@@ -147,7 +150,7 @@ static bool http_domain_port_match_server(ServerInfo* si, HTTPRequest* req) {
 	return true;
 }
 
-static void process_http_request(
+static void http_process_request(
 	SOCKET inc_sock, 
 	SOCKET server_sock, 
 	const char* data, 
@@ -159,32 +162,32 @@ static void process_http_request(
 
 	HTTPRequest *req = http_request_init();
 
-	// todo: swtich from process_http.. to http_process... etc
-
 	// first validate format
-	if (validate_http_request(data, data_len, req) == -1) {
+	if (http_validate_request(data, data_len, req) == -1) {
 		printf("server: invalid HTTP request received, syntax\n");
-		HTTPResponse* res = http_response_construct(HTTP_SC_400, SERVER_NAME, MT_APP_JSON, INVALID_SYNTAX_RESPONSE_BODY);
+		HTTPResponse* res = http_response_construct(HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, INVALID_SYNTAX_RESPONSE_BODY);
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(res);
+		http_request_free(req);
 		return;
 	}
 
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
 	if (!http_domain_port_match_server(si, req)) { 
 		printf("server: invalid HTTP request received, host\n");
-		HTTPResponse* res = http_response_construct(HTTP_SC_400, SERVER_NAME, MT_APP_JSON, INVALID_HOST_RESPONSE_BODY);
+		HTTPResponse* res = http_response_construct(HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, INVALID_HOST_RESPONSE_BODY);
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(res);
+		http_request_free(req);
 		return;
 	}
 
 	printf("server: valid HTTP request received\n");
 	printf("server: sending HTTP response\n\n");
 
-	HTTPResponse* res = http_response_construct(HTTP_SC_200, SERVER_NAME, MT_TXT_PLAIN, "Hello World!");
+	HTTPResponse* res = http_response_construct(HTTP_SC_200, SERVER_NAME, HTTP_MT_TXT_PLAIN, "Hello World!");
 	if (res == NULL) return;
 	if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 	http_response_free(res);
@@ -327,7 +330,7 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 
 	// TODO
 	if (flags->server_type == ST_HTTP) {
-		process_http_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, si);
+		http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, si);
 	}
 	else {
 		broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);

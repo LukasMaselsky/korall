@@ -8,7 +8,7 @@
 #define MAX_HTTP_URL_LEN 2048 // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
 #define HTTP_PROT_LEN 8
 #define MAX_DOMAIN_LEN 253
-#define MAX_HTTP_BODY_LEN 1000000 // 1mb? todo: stack overflow
+#define MAX_HTTP_BODY_LEN 1000000 // 1mb?
 #define MAX_HTTP_HEADER_FIELD_LEN 32
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_DOMAIN_NAME_LEN 253
@@ -208,40 +208,47 @@ typedef enum {
 } HTTPStatusCode;
 
 typedef enum {
-	MT_APP_JSON,
-	MT_APP_LD_JSON,
-	MT_APP_MSWORD,
-	MT_APP_PDF,
-	MT_APP_SQL,
-	MT_APP_VND_API_JSON,
-	MT_APP_VND_MS_PORT_EXEC,
-	MT_APP_VND_MS_XLS,
-	MT_APP_VND_MS_PPT,
-	MT_APP_VND_ODT,
-	MT_APP_VND_PPTX,
-	MT_APP_VND_XLSX,
-	MT_APP_VND_DOCX,
-	MT_APP_X_WWW_FORM_URLENCODED,
-	MT_APP_XML,
-	MT_APP_ZIP,
-	MT_APP_ZSTD,
-	MT_AUD_MPEG,
-	MT_AUD_OGG,
-	MT_IMG_AVIF,
-	MT_IMG_JPEG,
-	MT_IMG_PNG,
-	MT_IMG_SVG_XML,
-	MT_IMG_TIFF,
-	MT_MOD_OBJ,
-	MT_MTP_FORM_DATA,
-	MT_TXT_PLAIN,
-	MT_TXT_CSS,
-	MT_TXT_CSV,
-	MT_TXT_HTML,
-	MT_TXT_JS,
-	MT_TXT_XML,
-	MT_COUNT
-} MediaType;
+	HTTP_MT_ANY,
+	HTTP_MT_APP,
+	HTTP_MT_APP_JSON,
+	HTTP_MT_APP_LD_JSON,
+	HTTP_MT_APP_MSWORD,
+	HTTP_MT_APP_PDF,
+	HTTP_MT_APP_SQL,
+	HTTP_MT_APP_VND_API_JSON,
+	HTTP_MT_APP_VND_MS_PORT_EXEC,
+	HTTP_MT_APP_VND_MS_XLS,
+	HTTP_MT_APP_VND_MS_PPT,
+	HTTP_MT_APP_VND_ODT,
+	HTTP_MT_APP_VND_PPTX,
+	HTTP_MT_APP_VND_XLSX,
+	HTTP_MT_APP_VND_DOCX,
+	HTTP_MT_APP_X_WWW_FORM_URLENCODED,
+	HTTP_MT_APP_XML,
+	HTTP_MT_APP_ZIP,
+	HTTP_MT_APP_ZSTD,
+	HTTP_MT_AUD,
+	HTTP_MT_AUD_MPEG,
+	HTTP_MT_AUD_OGG,
+	HTTP_MT_IMG,
+	HTTP_MT_IMG_AVIF,
+	HTTP_MT_IMG_JPEG,
+	HTTP_MT_IMG_PNG,
+	HTTP_MT_IMG_SVG_XML,
+	HTTP_MT_IMG_TIFF,
+	HTTP_MT_MOD,
+	HTTP_MT_MOD_OBJ,
+	HTTP_MT_MTP,
+	HTTP_MT_MTP_FORM_DATA,
+	HTTP_MT_TXT,
+	HTTP_MT_TXT_PLAIN,
+	HTTP_MT_TXT_CSS,
+	HTTP_MT_TXT_CSV,
+	HTTP_MT_TXT_HTML,
+	HTTP_MT_TXT_JS,
+	HTTP_MT_TXT_XML,
+	HTTP_MT_COUNT
+} HTTPMediaType;
 
 typedef struct {
 	char* body;
@@ -261,6 +268,7 @@ typedef struct {
 
 typedef struct {
 	HTTPHeaderHost *host;
+	HTTPMediaType accept;
 } HTTPRequestHeaders;
 
 typedef struct {
@@ -289,21 +297,21 @@ typedef struct {
 	HTTPBody* body;
 } HTTPResponse;
 
-int validate_http_request(const char* data, int data_len, HTTPRequest* req);
+int http_validate_request(const char* data, int data_len, HTTPRequest* req);
 
-int process_http_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
+int http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
 
-int process_http_header(const char** str, HTTPRequest* req);
+int http_process_header(const char** str, HTTPRequest* req);
 
-int process_http_headers(const char** str, HTTPRequest* req);
+int http_process_headers(const char** str, HTTPRequest* req);
 
-HTTPMethod process_http_method(const char** str, const LookupEntryStrInt* table, const int table_len);
+HTTPMethod http_process_method(const char** str, const LookupEntry* table, const int table_len);
 
-int process_http_request_target_relative(const char** str, HTTPRequest* req);
+int http_process_request_target_relative(const char** str, HTTPRequest* req);
 
-int process_http_request_target(const char** str, HTTPRequest* req);
+int http_process_request_target(const char** str, HTTPRequest* req);
 
-int process_http_protocol(const char** str);
+int http_process_protocol(const char** str);
 
 HTTPRequest* http_request_init();
 
@@ -314,7 +322,7 @@ void http_request_clear(HTTPRequest** req);
 HTTPResponse* http_response_construct(
 	HTTPStatusCode code,
 	const char* server_name,
-	MediaType content_type,
+	HTTPMediaType content_type,
 	const char* body
 );
 

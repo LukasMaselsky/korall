@@ -62,17 +62,17 @@ static int strcmp_ci(const char* str1, const char* str2) {
 #endif
 }
 
-int lookup_str_int(const char* key, const LookupEntryStrInt *table, const unsigned int table_count, const bool case_insensitive) {
+int lookup_str_int(const char* key, const LookupEntry *table, const unsigned int table_count, const bool case_insensitive) {
     if (key[0] == '\0') return -1;
-    for (LookupEntryStrInt* entry = table; entry != table + table_count; entry++) {
-        if (*(entry->key) == *key) {
+    for (LookupEntry* entry = table; entry != table + table_count; entry++) {
+        if (*(entry->string) == *key) {
             if (case_insensitive) {
-                if (strcmp_ci(entry->key, key) == 0)
-                    return entry->val;
+                if (strcmp_ci(entry->string, key) == 0)
+                    return entry->integer;
             }
             else {
-                if (strcmp(entry->key, key) == 0)
-                    return entry->val;
+                if (strcmp(entry->string, key) == 0)
+                    return entry->integer;
             }
         }
         
@@ -81,10 +81,10 @@ int lookup_str_int(const char* key, const LookupEntryStrInt *table, const unsign
     return -1;
 }
 
-const char* lookup_int_str(const int key, const LookupEntryIntStr* table, const unsigned int table_count) {
-    for (LookupEntryIntStr* entry = table; entry != table + table_count; entry++) {
-        if (entry->key == key)
-            return entry->val;
+const char* lookup_int_str(const int key, const LookupEntry* table, const unsigned int table_count) {
+    for (LookupEntry* entry = table; entry != table + table_count; entry++) {
+        if (entry->integer == key)
+            return entry->string;
     }
 
     return NULL;
