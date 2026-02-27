@@ -256,7 +256,7 @@ HTTPRequest* http_request_init() {
 	// body
 
 	char* body;
-	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char*));
+	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char));
 	HTTPBody* rq_body;
 	rq_body = (HTTPBody*)safe_calloc(1, sizeof(*rq_body));
 	rq_body->body = body;

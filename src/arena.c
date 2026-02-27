@@ -1,0 +1,46 @@
+#include "arena.h"
+
+uintptr_t align_forward(uintptr_t ptr, size_t alignment) {
+    uintptr_t p, a, modulo;
+    if (!is_power_of_two(alignment)) {
+        return 0;
+    }
+
+    p = ptr;
+    a = (uintptr_t)alignment;
+    modulo = p & (a - 1);
+
+    if (modulo) {
+        p += a - modulo;
+    }
+
+    return p;
+}
+
+Arena* arena_init(size_t capacity) {
+    void* buf = safe_calloc(1, capacity);
+    
+    
+}
+
+void arena_free(Arena* arena) {
+
+}
+
+void* arena_alloc(Arena *arena, size_t size) {
+    if (size == 0) return 0;
+   
+    size_t alignment = ALIGNMENT;
+    uintptr_t cur = (uintptr_t)arena->cur;
+    uintptr_t new_cur = align_forward(cur, alignment);
+    unsigned int ali_size = new_cur - (uintptr_t)arena->base;
+
+    if (ali_size + size > arena->capacity) {
+        return 0;
+    }
+
+    arena->size = ali_size + size;
+    arena->cur = new_cur + size;
+
+    return new_cur;
+}

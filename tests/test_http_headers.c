@@ -90,7 +90,6 @@ TEST("http_process_accept_encoding") {
 	ASSERT(req->headers->accept_encoding[1].field == HTTP_ENC_DEFLATE);
 	http_request_clear(&req);
 
-
 }
 
 #endif
