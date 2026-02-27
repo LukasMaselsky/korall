@@ -222,3 +222,15 @@ const LookupEntry http_media_type_lookup_table[HTTP_MEDIA_TYPE_TABLE_COUNT] = {
 	{ HTTP_MT_TXT_JS, "text/javascript" },
 	{ HTTP_MT_TXT_XML, "text/xml" },
 };	  
+
+const LookupEntry http_encoding_lookup_table[HTTP_ENCODING_TABLE_COUNT] = {
+	{ HTTP_ENC_ANY, "*" },
+	{ HTTP_ENC_GZIP, "gzip" },
+	{ HTTP_ENC_COMPRESS, "compress" },
+	{ HTTP_ENC_DEFLATE, "deflate" },
+	{ HTTP_ENC_BR, "br" },
+	{ HTTP_ENC_ZSTD, "zstd" },
+	{ HTTP_ENC_DCB, "dcb" },
+	{ HTTP_ENC_DCZ, "dcz" },
+	{ HTTP_ENC_IDENTITY, "identity" },
+};

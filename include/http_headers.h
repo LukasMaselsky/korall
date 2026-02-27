@@ -6,6 +6,18 @@ int http_domain_port(const char* value, char* domain, char* port, bool* with_por
 
 int http_process_host(const char* value, HTTPRequest* req);
 
+int http_process_weighted_list(
+	const char* value,
+	HTTPRequest* req,
+	LookupEntry* table,
+	int table_len,
+	char* field_arr,
+	int field_arr_len,
+	HTTPWeightedField* res
+);
+
 int http_process_accept(const char* value, HTTPRequest* req);
+
+int http_process_accept_encoding(const char* value, HTTPRequest* req);
 
 #endif

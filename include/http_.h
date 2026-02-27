@@ -250,6 +250,19 @@ typedef enum {
 	HTTP_MT_COUNT
 } HTTPMediaType;
 
+typedef enum {
+	HTTP_ENC_ANY,
+	HTTP_ENC_GZIP,
+	HTTP_ENC_COMPRESS,
+	HTTP_ENC_DEFLATE,
+	HTTP_ENC_BR,
+	HTTP_ENC_ZSTD,
+	HTTP_ENC_DCB,
+	HTTP_ENC_DCZ,
+	HTTP_ENC_IDENTITY,
+	HTTP_ENC_COUNT
+} HTTPEncoding;
+
 typedef struct {
 	char* body;
 } HTTPBody;
@@ -269,13 +282,14 @@ typedef struct {
 } HTTPHeaderHost;
 
 typedef struct {
-	HTTPMediaType media_type;
+	int field;
 	double weight;
-} HTTPMediaTypeWeighted;
+} HTTPWeightedField;
 
 typedef struct {
 	HTTPHeaderHost *host;
-	HTTPMediaTypeWeighted *accept;
+	HTTPWeightedField *accept;
+	HTTPWeightedField* accept_encoding;
 } HTTPRequestHeaders;
 
 // Request

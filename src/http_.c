@@ -240,14 +240,18 @@ HTTPRequest* http_request_init() {
 	hh->domain = domain;
 	hh->port = port;
 
-	HTTPMediaTypeWeighted* mtw;
-	mtw = (HTTPMediaTypeWeighted*)safe_calloc(HTTP_MEDIA_TYPE_TABLE_COUNT, sizeof(*mtw)); // todo: change count ?
+	HTTPWeightedField* mtw;
+	mtw = (HTTPWeightedField*)safe_calloc(HTTP_MEDIA_TYPE_TABLE_COUNT, sizeof(*mtw)); // todo: change count ?
+
+	HTTPWeightedField* ew;
+	ew = (HTTPWeightedField*)safe_calloc(HTTP_ENCODING_TABLE_COUNT, sizeof(*ew)); // todo: change count ?
 
 
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)safe_calloc(1, sizeof(*headers));
 	headers->host = hh;
 	headers->accept = mtw;
+	headers->accept_encoding = ew;
 
 	// body
 
@@ -279,6 +283,7 @@ void http_request_free(HTTPRequest* req) {
 	free(req->headers->host->port);
 	free(req->headers->host);
 	free(req->headers->accept);
+	free(req->headers->accept_encoding);
 	free(req->headers);
 
 	// body

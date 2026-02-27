@@ -48,7 +48,7 @@ int http_domain_port(const char* value, char* domain, char* port, bool *with_por
 
 	// process port
 
-	char port_temp[MAX_PORT_NUM_CHAR_LEN + 1];
+	char port_temp[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 	len = MAX_PORT_NUM_CHAR_LEN;
 	value++; // skip ':'
 	i = 0;
@@ -82,20 +82,24 @@ int http_process_host(const char* value, HTTPRequest* req) {
 	return 0;
 }
 
-int http_process_accept(const char* value, HTTPRequest* req) {
-	// "text/html, text/plain;q=0.9, text/*;q=0.8, */*;q=0.7"
-	char temp[MAX_MEDIA_TYPE_CHAR_LEN] = { 0 };
-	HTTPMediaTypeWeighted* accepted = req->headers->accept;
+int http_process_weighted_list(
+	const char* value, 
+	HTTPRequest* req, 
+	LookupEntry *table, 
+	int table_len, 
+	char *field_arr, 
+	int field_arr_len, 
+	HTTPWeightedField* res_arr
+) {
 	int i = 0;
 	for (char c = *value; ; c = *(++value)) {
 		if (c == ',' || c == ';' || c == '\0') {
-			temp[i] = '\0';
-			int res = lookup_str_int(temp, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, false);
+			field_arr[i] = '\0';
+			int res = lookup_str_int(field_arr, table, table_len, false);
 			if (res == -1) return -1;
 
-			accepted->media_type = res;
-			accepted->weight = 1.0;
-
+			res_arr->field = res;
+			res_arr->weight = 1.0;
 
 			if (c == ';') {
 				// get weight
@@ -119,10 +123,10 @@ int http_process_accept(const char* value, HTTPRequest* req) {
 				if (float_temp[j - 1] == '.') return -1;
 				float_temp[j] = '\0';
 				double val = strtod(float_temp, NULL);
-				accepted->weight = val;
+				res_arr->weight = val;
 			}
 
-			accepted++;
+			res_arr++;
 
 			do {
 				value++;
@@ -130,10 +134,22 @@ int http_process_accept(const char* value, HTTPRequest* req) {
 			c = *value;
 			if (c == '\0') return 0;
 			i = 0;
-			memset(temp, 0, MAX_MEDIA_TYPE_CHAR_LEN);
+			memset(field_arr, 0, field_arr_len);
 		}
-		temp[i] = c;
+		field_arr[i] = c;
 		i++;
 	}
 	return 0;
+}
+
+int http_process_accept(const char* value, HTTPRequest* req) {
+	char temp[MAX_MEDIA_TYPE_CHAR_LEN + 1] = { 0 };
+	HTTPWeightedField* res_arr = req->headers->accept;
+	return http_process_weighted_list(value, req, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, temp, MAX_MEDIA_TYPE_CHAR_LEN + 1, res_arr);
+}
+
+int http_process_accept_encoding(const char* value, HTTPRequest* req) {
+	char temp[MAX_ENCODING_CHAR_LEN + 1] = { 0 };
+	HTTPWeightedField* res_arr = req->headers->accept_encoding;
+	return http_process_weighted_list(value, req, http_encoding_lookup_table, HTTP_ENCODING_TABLE_COUNT, temp, MAX_ENCODING_CHAR_LEN + 1, res_arr);
 }
