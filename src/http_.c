@@ -240,9 +240,14 @@ HTTPRequest* http_request_init() {
 	hh->domain = domain;
 	hh->port = port;
 
+	HTTPMediaTypeWeighted* mtw;
+	mtw = (HTTPMediaTypeWeighted*)safe_calloc(HTTP_MEDIA_TYPE_TABLE_COUNT, sizeof(*mtw)); // todo: change count ?
+
+
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)safe_calloc(1, sizeof(*headers));
 	headers->host = hh;
+	headers->accept = mtw;
 
 	// body
 
@@ -273,6 +278,7 @@ void http_request_free(HTTPRequest* req) {
 	free(req->headers->host->domain);
 	free(req->headers->host->port);
 	free(req->headers->host);
+	free(req->headers->accept);
 	free(req->headers);
 
 	// body

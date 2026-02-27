@@ -83,10 +83,57 @@ int http_process_host(const char* value, HTTPRequest* req) {
 }
 
 int http_process_accept(const char* value, HTTPRequest* req) {
-	// todo: multiple types
-	int res = lookup_str_int(value, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, false);
-	if (res == -1) return -1;
+	// "text/html, text/plain;q=0.9, text/*;q=0.8, */*;q=0.7"
+	char temp[MAX_MEDIA_TYPE_CHAR_LEN] = { 0 };
+	HTTPMediaTypeWeighted* accepted = req->headers->accept;
+	int i = 0;
+	for (char c = *value; ; c = *(++value)) {
+		if (c == ',' || c == ';' || c == '\0') {
+			temp[i] = '\0';
+			int res = lookup_str_int(temp, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, false);
+			if (res == -1) return -1;
 
-	req->headers->accept = res;
+			accepted->media_type = res;
+			accepted->weight = 1.0;
+
+
+			if (c == ';') {
+				// get weight
+				++value; // skip ;
+				if (!(value[0] == 'q' && value[1] == '=' && value[2] == '0' && value[3] == '.')) return -1; // invalid weight format
+				value += 4;
+
+				char float_temp[64 + 1] = { 0 };
+				float_temp[0] = '0';
+				float_temp[1] = '.';
+				int j = 2;
+				for (c = *value; c != ',' && j < 64; c = *(++value)) {
+					if (c == '\0') {
+						--value; // for skip spaces
+						break;
+					}
+					if (!(c <= '9' && c >= '0')) return -1;
+					float_temp[j] = c;
+					j++;
+				}
+				if (float_temp[j - 1] == '.') return -1;
+				float_temp[j] = '\0';
+				double val = strtod(float_temp, NULL);
+				accepted->weight = val;
+			}
+
+			accepted++;
+
+			do {
+				value++;
+			} while (*value == ' '); // skip spaces
+			c = *value;
+			if (c == '\0') return 0;
+			i = 0;
+			memset(temp, 0, MAX_MEDIA_TYPE_CHAR_LEN);
+		}
+		temp[i] = c;
+		i++;
+	}
 	return 0;
 }

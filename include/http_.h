@@ -261,15 +261,24 @@ typedef struct {
 	HTTPMethod method;
 } HTTPRequestStartLine;
 
+// Headers
+
 typedef struct {
 	char* domain;
 	char* port;
 } HTTPHeaderHost;
 
 typedef struct {
+	HTTPMediaType media_type;
+	double weight;
+} HTTPMediaTypeWeighted;
+
+typedef struct {
 	HTTPHeaderHost *host;
-	HTTPMediaType accept;
+	HTTPMediaTypeWeighted *accept;
 } HTTPRequestHeaders;
+
+// Request
 
 typedef struct {
 	HTTPRequestStartLine *start_line;
