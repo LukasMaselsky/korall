@@ -6,8 +6,8 @@
 #define is_power_of_two(x) ((x != 0) && ((x & (x - 1)) == 0))
 
 typedef struct {
-	void* const base;
-	const size_t capacity;
+	void* base;
+	size_t capacity;
 	size_t size;
 	void *cur;
 } Arena;
