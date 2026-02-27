@@ -17,14 +17,18 @@ uintptr_t align_forward(uintptr_t ptr, size_t alignment) {
     return p;
 }
 
-Arena* arena_init(size_t capacity) {
+Arena arena_init(size_t capacity) {
     void* buf = safe_calloc(1, capacity);
-    
-    
+    Arena arena = { .base = buf, .capacity = capacity, .cur = buf, .size = 0 };
+    return arena;
 }
 
 void arena_free(Arena* arena) {
-
+    free(arena->base);
+    arena->base = NULL;
+    arena->capacity = 0;
+    arena->size = 0;
+    arena->cur = NULL;
 }
 
 void* arena_alloc(Arena *arena, size_t size) {

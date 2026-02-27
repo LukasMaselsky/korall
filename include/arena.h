@@ -18,6 +18,6 @@ void* arena_alloc(Arena* arena, size_t size);
 
 void arena_free(Arena* arena);
 
-
+Arena arena_init(size_t capacity);
 
 #endif
