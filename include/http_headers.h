@@ -13,7 +13,7 @@ int http_process_weighted_list(
 	int table_len,
 	char* field_arr,
 	int field_arr_len,
-	HTTPWeightedField* res
+	Array* res_arr
 );
 
 int http_process_accept(const char* value, HTTPRequest* req);

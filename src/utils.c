@@ -105,3 +105,8 @@ void get_current_time_gmt(struct tm **t) {
     *t = gmtime(&raw_time);
     return;
 }
+
+bool starts_with(const char* pre, const char* str)
+{
+    return strncmp(pre, str, strlen(pre)) == 0;
+}

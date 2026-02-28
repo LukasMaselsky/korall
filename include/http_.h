@@ -2,6 +2,8 @@
 #define HTTP__H
 #include "utils.h"
 #include "sockets.h"
+#include "arena.h"
+#include "array.h"
 
 #define MAX_HTTP_METHOD_STR_LEN 7
 #define MAX_HTTP_QUERY_STR_LEN 1024
@@ -14,6 +16,9 @@
 #define MAX_DOMAIN_NAME_LEN 253
 #define MAX_MEDIA_TYPE_LEN 74
 #define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2
+
+#define HTTP_RES_SIZE MAX_HTTP_BODY_LEN * 2
+#define HTTP_REQ_SIZE HTTP_RES_SIZE
 
 #define MAX_REASON_PHRASE_LEN 35
 
@@ -288,8 +293,8 @@ typedef struct {
 
 typedef struct {
 	HTTPHeaderHost *host;
-	HTTPWeightedField *accept;
-	HTTPWeightedField* accept_encoding;
+	Array *accept;
+	Array *accept_encoding;
 } HTTPRequestHeaders;
 
 // Request
@@ -336,13 +341,14 @@ int http_process_request_target(const char** str, HTTPRequest* req);
 
 int http_process_protocol(const char** str);
 
-HTTPRequest* http_request_init();
+HTTPRequest* http_request_init(Arena* arena);
 
-void http_request_free(HTTPRequest* req);
+void http_request_free(Arena *arena, HTTPRequest* req);
 
-void http_request_clear(HTTPRequest** req);
+void http_request_clear(Arena *arena, HTTPRequest** req);
 
 HTTPResponse* http_response_construct(
+	Arena* arena,
 	HTTPStatusCode code,
 	const char* server_name,
 	HTTPMediaType content_type,
@@ -355,14 +361,13 @@ char* http_response_to_str(HTTPResponse* res);
 
 int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main);
 
-HTTPResponse* http_response_init();
+HTTPResponse* http_response_init(Arena *arena);
 
-void http_response_free(HTTPResponse* res);
+void http_response_free(Arena* arena, HTTPResponse* res);
 
-void http_response_clear(HTTPResponse** res);
+void http_response_clear(Arena* arena, HTTPResponse** res);
 
 void http_get_current_date(char* str, size_t str_len);
-
 
 
 #endif

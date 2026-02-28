@@ -16,6 +16,8 @@ uintptr_t align_forward(uintptr_t ptr, size_t alignment);
 
 void* arena_alloc(Arena* arena, size_t size);
 
+void arena_clear(Arena* arena);
+
 void arena_free(Arena* arena);
 
 Arena arena_init(size_t capacity);

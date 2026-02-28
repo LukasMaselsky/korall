@@ -3,6 +3,8 @@
 #include "lookup_tables.h"
 #include "sockets.h"
 #include "http_headers.h"
+#include "arena.h"
+#include "array.h"
 
 /*
 	Check if the format of the HTTP request is correct
@@ -220,35 +222,41 @@ HTTPMethod http_process_method(const char **str, const LookupEntry *table, const
 	return lookup_str_int(method, table, table_len, false);
 }
 
-HTTPRequest* http_request_init() {
+HTTPRequest* http_request_init(Arena *arena) {
 	// start line
 	char* request_target;
-	request_target = (char*) safe_calloc(MAX_HTTP_URL_LEN + 1, sizeof(*request_target));
+	request_target = (char*) arena_alloc(arena, (MAX_HTTP_URL_LEN + 1) * sizeof(*request_target));
 
 	HTTPRequestStartLine* sl;
-	sl = (HTTPRequestStartLine*) safe_calloc(1, sizeof(*sl));
+	sl = (HTTPRequestStartLine*)arena_alloc(arena, 1 * sizeof(*sl));
 	sl->request_target = request_target;
 
 	// headers
 
 	char *domain, *port;
-	domain = (char*)safe_calloc(MAX_DOMAIN_LEN + 1, sizeof(*domain));
-	port = (char*)safe_calloc(MAX_PORT_NUM_CHAR_LEN + 1, sizeof(*port));
+	domain = (char*)arena_alloc(arena, (MAX_DOMAIN_LEN + 1) * sizeof(*domain));
+	port = (char*)arena_alloc(arena, (MAX_PORT_NUM_CHAR_LEN + 1) * sizeof(*port));
 
 	HTTPHeaderHost* hh;
-	hh = (HTTPHeaderHost*) safe_calloc(1, sizeof(*hh));
+	hh = (HTTPHeaderHost*)arena_alloc(arena, 1 * sizeof(*hh));
 	hh->domain = domain;
 	hh->port = port;
 
-	HTTPWeightedField* mtw;
-	mtw = (HTTPWeightedField*)safe_calloc(HTTP_MEDIA_TYPE_TABLE_COUNT, sizeof(*mtw)); // todo: change count ?
+	HTTPWeightedField* mtw_data;
+	mtw_data = (HTTPWeightedField*)arena_alloc(arena, HTTP_MEDIA_TYPE_TABLE_COUNT * sizeof(*mtw_data)); // todo: capacity
+	Array* mtw;
+	mtw = (Array*)arena_alloc(arena, sizeof(*mtw)); // todo: change count ?
+	array_init(mtw, mtw_data, sizeof(*mtw_data), HTTP_MEDIA_TYPE_TABLE_COUNT);
 
-	HTTPWeightedField* ew;
-	ew = (HTTPWeightedField*)safe_calloc(HTTP_ENCODING_TABLE_COUNT, sizeof(*ew)); // todo: change count ?
+	HTTPWeightedField* ew_data;
+	ew_data = (HTTPWeightedField*)arena_alloc(arena, HTTP_ENCODING_TABLE_COUNT * sizeof(*ew_data));
+	Array* ew;
+	ew = (Array*)arena_alloc(arena, sizeof(*ew)); // todo: change count ?
+	array_init(ew, ew_data, sizeof(*ew_data), HTTP_ENCODING_TABLE_COUNT);
 
 
 	HTTPRequestHeaders* headers;
-	headers = (HTTPRequestHeaders*)safe_calloc(1, sizeof(*headers));
+	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
 	headers->host = hh;
 	headers->accept = mtw;
 	headers->accept_encoding = ew;
@@ -256,60 +264,40 @@ HTTPRequest* http_request_init() {
 	// body
 
 	char* body;
-	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char));
+	body = (char*)arena_alloc(arena, (MAX_HTTP_BODY_LEN + 1) * sizeof(*body));
 	HTTPBody* rq_body;
-	rq_body = (HTTPBody*)safe_calloc(1, sizeof(*rq_body));
+	rq_body = (HTTPBody*)arena_alloc(arena, 1 * sizeof(*rq_body));
 	rq_body->body = body;
 
 	// all
 
 	HTTPRequest *req;
-	req = (HTTPRequest*) safe_calloc(1, sizeof(*req));
+	req = (HTTPRequest*)arena_alloc(arena, 1 * sizeof(*req));
 	req->start_line = sl;
 	req->headers = headers;
 	req->body = rq_body;
 	return req;
 }
 
-void http_request_free(HTTPRequest* req) {
-	// start line
-
-	free(req->start_line->request_target);
-	free(req->start_line);
-
-	// headers
-
-	free(req->headers->host->domain);
-	free(req->headers->host->port);
-	free(req->headers->host);
-	free(req->headers->accept);
-	free(req->headers->accept_encoding);
-	free(req->headers);
-
-	// body
-
-	free(req->body->body);
-	free(req->body);
-
-	// all
-
-	free(req);
+void http_request_free(Arena *arena, HTTPRequest* req) {
+	arena_free(arena);
 }
 
-void http_request_clear(HTTPRequest** req) {
-	http_request_free(*req);
-	*req = http_request_init();
+void http_request_clear(Arena *arena, HTTPRequest** req) {
+	arena_clear(arena);
+	*req = http_request_init(arena);
 }
 
 // Response
 
 HTTPResponse* http_response_construct(
+	Arena* arena,
 	HTTPStatusCode code,
 	const char* server_name,
 	HTTPMediaType content_type,
 	const char* body
 ) {
-	HTTPResponse* res = http_response_init();
+	HTTPResponse* res = http_response_init(arena);
 	res->start_line->status_code = code;
 	const char* code_str = lookup_int_str(code, http_status_code_lookup_table, HTTP_STATUS_CODE_TABLE_COUNT);
 	if (code_str == NULL) {
@@ -416,7 +404,7 @@ int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, f
 	free(data);
 }
 
-HTTPResponse* http_response_init() {
+HTTPResponse* http_response_init(Arena *arena) {
 	// start line
 	char* reason_phrase;
 	reason_phrase = (char*)safe_calloc(MAX_REASON_PHRASE_LEN + 1, sizeof(*reason_phrase));
@@ -456,32 +444,13 @@ HTTPResponse* http_response_init() {
 	return req;
 }
 
-void http_response_free(HTTPResponse* res) {
-	// start line
-
-	free(res->start_line->reason_phrase);
-	free(res->start_line);
-
-	// headers
-
-	free(res->headers->server);
-	free(res->headers->date);
-	free(res->headers->content_type);
-	free(res->headers);
-
-	// body
-
-	free(res->body->body);
-	free(res->body);
-
-	// all
-
-	free(res);
+void http_response_free(Arena* arena, HTTPResponse* res) {
+	arena_free(arena);
 }
 
-void http_response_clear(HTTPResponse** res) {
-	http_response_free(*res);
-	*res = http_response_init();
+void http_response_clear(Arena* arena, HTTPResponse** res) {
+	arena_clear(arena);
+	*res = http_response_init(arena);
 }
 
 void http_get_current_date(char *str, size_t str_len) {
