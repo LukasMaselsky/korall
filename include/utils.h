@@ -49,4 +49,6 @@ void* safe_calloc(size_t count, size_t size);
 
 void get_current_time_gmt(struct tm** t);
 
+bool starts_with(const char* pre, const char* str);
+
 #endif

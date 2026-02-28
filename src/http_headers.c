@@ -89,7 +89,7 @@ int http_process_weighted_list(
 	int table_len, 
 	char *field_arr, 
 	int field_arr_len, 
-	HTTPWeightedField* res_arr
+	Array* res_arr
 ) {
 	int i = 0;
 	for (char c = *value; ; c = *(++value)) {
@@ -98,9 +98,7 @@ int http_process_weighted_list(
 			int res = lookup_str_int(field_arr, table, table_len, false);
 			if (res == -1) return -1;
 
-			res_arr->field = res;
-			res_arr->weight = 1.0;
-
+			double weight = 1.0;
 			if (c == ';') {
 				// get weight
 				++value; // skip ;
@@ -123,11 +121,12 @@ int http_process_weighted_list(
 				if (float_temp[j - 1] == '.') return -1;
 				float_temp[j] = '\0';
 				double val = strtod(float_temp, NULL);
-				res_arr->weight = val;
+				weight = val;
 			}
 
-			res_arr++;
-
+			HTTPWeightedField wf = { .field = res, .weight = weight};
+			array_add(res_arr, (void *) &wf);
+			
 			do {
 				value++;
 			} while (*value == ' '); // skip spaces
@@ -144,12 +143,12 @@ int http_process_weighted_list(
 
 int http_process_accept(const char* value, HTTPRequest* req) {
 	char temp[MAX_MEDIA_TYPE_CHAR_LEN + 1] = { 0 };
-	HTTPWeightedField* res_arr = req->headers->accept;
+	Array* res_arr = req->headers->accept;
 	return http_process_weighted_list(value, req, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, temp, MAX_MEDIA_TYPE_CHAR_LEN + 1, res_arr);
 }
 
 int http_process_accept_encoding(const char* value, HTTPRequest* req) {
 	char temp[MAX_ENCODING_CHAR_LEN + 1] = { 0 };
-	HTTPWeightedField* res_arr = req->headers->accept_encoding;
+	Array* res_arr = req->headers->accept_encoding;
 	return http_process_weighted_list(value, req, http_encoding_lookup_table, HTTP_ENCODING_TABLE_COUNT, temp, MAX_ENCODING_CHAR_LEN + 1, res_arr);
 }

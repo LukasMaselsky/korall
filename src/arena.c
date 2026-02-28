@@ -23,6 +23,12 @@ Arena arena_init(size_t capacity) {
     return arena;
 }
 
+void arena_clear(Arena* arena) {
+    memset(arena->base, 0, arena->capacity);
+    arena->size = 0;
+    arena->cur = arena->base;
+}
+
 void arena_free(Arena* arena) {
     free(arena->base);
     arena->base = NULL;
@@ -40,7 +46,8 @@ void* arena_alloc(Arena *arena, size_t size) {
     unsigned int ali_size = new_cur - (uintptr_t)arena->base;
 
     if (ali_size + size > arena->capacity) {
-        return 0;
+        fprintf(stderr, "Fatal: failed to allocate %zu bytes in arena, over capacity.\n", size);
+        exit(EXIT_FAILURE);
     }
 
     arena->size = ali_size + size;
