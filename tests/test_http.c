@@ -163,7 +163,7 @@ TEST("http_process_protocol") {
 	const char* str = "HTTP/1.1";
 	int res;
 	res = http_process_protocol(&str);
-	ASSERT(res == 0);
+	ASSERT(res == -1);
 
 	str = " HTTP/1.1";
 	res = http_process_protocol(&str);
@@ -173,13 +173,13 @@ TEST("http_process_protocol") {
 	res = http_process_protocol(&str);
 	ASSERT(res == -1);
 
-	str = "HTTP/1.1 ";
-	res = http_process_protocol(&str);
-	ASSERT(res == 0);
-
 	str = "HTTP/1.1\r\n";
 	res = http_process_protocol(&str);
 	ASSERT(res == 0);
+
+	str = "HTTP/1.11\r\n";
+	res = http_process_protocol(&str);
+	ASSERT(res == -1);
 
 	str = "";
 	res = http_process_protocol(&str);
@@ -232,6 +232,10 @@ TEST("http_process_method") {
 	ASSERT(res == HTTP_BADMETHOD);
 
 	str = "GET";
+	res = http_process_method(&str, http_method_lookup_table, table_len);
+	ASSERT(res == HTTP_BADMETHOD);
+	
+	str = "GET ";
 	res = http_process_method(&str, http_method_lookup_table, table_len);
 	ASSERT(res == HTTP_GET);
 

@@ -59,20 +59,15 @@ int http_process_header(const char** str, HTTPRequest* req) {
 	// process field
 
 	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
-	int len = MAX_HTTP_HEADER_FIELD_LEN;
-	int i = 0;
-	const char* s = *str;
-	for (char c = *s; c != ':' && i < len; c = *(++s)) {
-		if (c == '\0' || c == '\n') return -1;
-		field[i] = c;
-		i++;
-	}
-	field[i] = '\0';
-	if (*s != ':') return -1; // field too long
+	
+	int res = fill_string_char(str, field, MAX_HTTP_HEADER_FIELD_LEN, ':');
+	if (res == -1) return -1;
+	const char *s = *str;
 
 	HTTPRequestHeaderField header_field = lookup_str_int(field, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true);
 	if (header_field == HTTP_RQH_BADFIELD) return -1;
 
+	
 	s++; // skip colon
 	// process value
 
@@ -83,14 +78,10 @@ int http_process_header(const char** str, HTTPRequest* req) {
 	if (*s == '\0' || *s == '\n') return -1; // empty field e.g. "Host:    ";
 
 	char value[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
-	len = MAX_HTTP_HEADER_FIELD_LEN;
-	i = 0;
-	for (char c = *s; c != '\r' && c != '\0' && i < len; c = *(++s)) {
-		value[i] = c;
-		i++;
-	}
-	value[i] = '\0';
-	if (*s != '\r' || s[1] != '\n') return -1; // newline always needed
+	*str = s;
+	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n");
+	if (res == -1) return -1;
+	s = *str;
 
 	if (http_process_header_value(header_field, value, req) == -1) return -1;
 
@@ -103,22 +94,16 @@ int http_process_headers(const char** str, HTTPRequest* req) {
 
 	while (true) {
 		if (http_process_header(str, req) == -1) return -1;
-		if (**str == '\r' && (*str)[1] == '\n') return 0; // empty newline at end of headers
+		if ((*str)[0] == '\r' && (*str)[1] == '\n') return 0; // empty newline at end of headers, required
 	}
 
 }
 
 int http_process_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
-	int len = HTTP_PROT_LEN;
-	int i = 0;
-	const char* s = *str;
-	for (char c = *s; c != '\0' && c != '\n' && i < len; c = *(++s)) {
-		prot[i] = c;
-		i++;
-	}
-	prot[i] = '\0';
-	*str = s;
+
+	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n");
+	if (res == -1) return -1;
 
 	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0) return 0;
 	return -1;
@@ -171,18 +156,12 @@ int http_process_request_target(const char **str, HTTPRequest *req) {
 		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
 		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		bool with_port = false;
-		char value[MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN + 1];
-		const char* s = *str;
-		int i = 0;
+		char value[MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		int len = MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN;
-		for (char c = *s; c != '\0' && c != ' ' && i < len; c = *(++s)) {
-			value[i] = c;
-			i++;
-		}
-		value[i] = '\0';
-		*str = s;
+		int res = fill_string_char(str, value, len, ' ');
+		if (res == -1) return -1;
 
-		int res = http_domain_port(value, domain, port, &with_port);
+		res = http_domain_port(value, domain, port, &with_port);
 		if (res == -1 || !with_port) return -1;
 
 		strncpy(req->start_line->request_target, value, len);
@@ -194,7 +173,7 @@ int http_process_request_target(const char **str, HTTPRequest *req) {
 		// relative path
 		return http_process_request_target_relative(str, req);
 	}
-	else if (first_c == 'h' || first_c == 'H') {
+	else if (first_c == 'h' || first_c == 'H') { // http...
 		// absolute path
 		// todo
 		printf("Absolute paths not supported");
@@ -211,14 +190,10 @@ HTTPMethod http_process_method(const char **str, const LookupEntry *table, const
 	
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 	int len = MAX_HTTP_METHOD_STR_LEN;
-	int i = 0;
-	const char* s = *str;
-	for (char c = *s; c != '\0' && c != ' ' && i < len; c = *(++s)) {
-		method[i] = c;
-		i++;
-	}
-	method[i] = '\0';
-	*str = s;
+
+	int res = fill_string_char(str, method, len, ' ');
+	if (res == -1) return -1;
+
 	return lookup_str_int(method, table, table_len, false);
 }
 

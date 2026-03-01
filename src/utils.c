@@ -110,3 +110,31 @@ bool starts_with(const char* pre, const char* str)
 {
     return strncmp(pre, str, strlen(pre)) == 0;
 }
+
+/*
+    Fills char array with substring based on matching
+*/
+int fill_string_char(const char **str, char *arr, size_t arr_len, char match) {
+    const char* s = *str;
+    const char* end = strchr(s, match);
+    if (end == NULL) return -1;
+
+    return fill_str(str, s, end, arr, arr_len);
+}
+
+int fill_string_str(const char** str, char* arr, size_t arr_len, char *match) {
+    const char* s = *str;
+    const char* end = strstr(s, match);
+    if (end == NULL) return -1;
+
+    return fill_str(str, s, end, arr, arr_len);
+}
+
+static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
+    size_t sub_len = end - s;
+    if (sub_len > arr_len) return -1;
+    memcpy(arr, s, sub_len);
+    arr[sub_len] = '\0';
+    *str = end;
+    return 0;
+}
