@@ -37,6 +37,7 @@ int http_validate_request(const char* data, int data_len, HTTPRequest* req) {
 	res = http_process_headers(&data, req);
 	if (res == -1) return -1;
 
+	printf(data);
 	// todo: body
 	// Only patch, put and post has body
 
@@ -50,6 +51,10 @@ int http_process_header_value(const HTTPRequestHeaderField field, const char* va
 			return http_process_host(value, req);
 		case HTTP_RQH_ACCEPT:
 			return http_process_accept(value, req);
+		case HTTP_RQH_CONTENT_LENGTH:
+			return http_process_content_length(value, req);
+		case HTTP_RQH_CONTENT_TYPE:
+			return http_process_content_type(value, req);
 		default:
 			return -1; // todo: allow custom headers
 	}
@@ -153,7 +158,7 @@ int http_process_request_target(const char **str, HTTPRequest *req) {
 	}
 	if (method == HTTP_CONNECT) {
 		// rt has to be domain:port format
-		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
+		char domain[MAX_DOMAIN_LEN + 1] = { 0 }; // todo: not using these ???
 		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		bool with_port = false;
 		char value[MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
@@ -218,7 +223,7 @@ HTTPRequest* http_request_init(Arena *arena) {
 	hh->port = port;
 
 	HTTPWeightedField* mtw_data;
-	mtw_data = (HTTPWeightedField*)arena_alloc(arena, HTTP_MEDIA_TYPE_TABLE_COUNT * sizeof(*mtw_data)); // todo: capacity
+	mtw_data = (HTTPWeightedField*)arena_alloc(arena, HTTP_MEDIA_TYPE_TABLE_COUNT * sizeof(*mtw_data));
 	Array* mtw;
 	mtw = (Array*)arena_alloc(arena, sizeof(*mtw)); // todo: change count ?
 	array_init(mtw, mtw_data, sizeof(*mtw_data), HTTP_MEDIA_TYPE_TABLE_COUNT);
@@ -230,11 +235,20 @@ HTTPRequest* http_request_init(Arena *arena) {
 	array_init(ew, ew_data, sizeof(*ew_data), HTTP_ENCODING_TABLE_COUNT);
 
 
+	char* boundary;
+	boundary = (char*)arena_alloc(arena, (MAX_HTTP_BOUNDARY_LEN + 1) * sizeof(*boundary));
+
+	HTTPContentType* ct;
+	ct = (HTTPContentType*)arena_alloc(arena, 1 * sizeof(*ct));
+	ct->boundary = boundary;
+
+
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
 	headers->host = hh;
 	headers->accept = mtw;
 	headers->accept_encoding = ew;
+	headers->content_type = ct;
 
 	// body
 

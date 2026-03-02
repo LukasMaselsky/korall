@@ -16,6 +16,9 @@
 #define MAX_DOMAIN_NAME_LEN 253
 #define MAX_MEDIA_TYPE_LEN 74
 #define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2
+#define MAX_HTTP_BOUNDARY_LEN 70
+#define MAX_ENCODING_CHAR_LEN 9
+#define MAX_HTTP_CHARSET_LEN 13
 
 #define HTTP_RES_SIZE MAX_HTTP_BODY_LEN * 2
 #define HTTP_REQ_SIZE HTTP_RES_SIZE
@@ -25,8 +28,13 @@
 #define MAX_DATE_STR_LEN 29
 // https://stackoverflow.com/questions/161738/what-is-the-best-regular-expression-to-check-if-a-string-is-a-valid-url#comment117272662_55468411
 
-#define INVALID_HOST_RESPONSE_BODY "{\n\t\"error\": \"Bad request\",\n\t\"message\" : \"Invalid Host header\",\n}"
-#define INVALID_SYNTAX_RESPONSE_BODY "{\n\t\"error\": \"Bad request\",\n\t\"message\" : \"Request body could not be read properly.\",\n}"
+#define ERROR_MESSAGE(err, msg) \
+    "{\n" \
+    "\t\"error\": \"" err "\",\n" \
+    "\t\"message\": \"" msg "\"\n" \
+    "}"
+#define INVALID_SYNTAX_RESPONSE_BODY ERROR_MESSAGE("Bad request", "Request body could not be read properly.")
+#define INVALID_HOST_RESPONSE_BODY ERROR_MESSAGE("Bad request", "Invalid Host header.")
 
 typedef enum {
 	HTTP_BADMETHOD = -1,
@@ -268,6 +276,34 @@ typedef enum {
 	HTTP_ENC_COUNT
 } HTTPEncoding;
 
+typedef enum {
+	HTTP_CHS_BIG5,
+	HTTP_CHS_EUC_KR,
+	HTTP_CHS_ISO_8859_1,
+	HTTP_CHS_ISO_8859_2,
+	HTTP_CHS_ISO_8859_3,
+	HTTP_CHS_ISO_8859_4,
+	HTTP_CHS_ISO_8859_5,
+	HTTP_CHS_ISO_8859_6,
+	HTTP_CHS_ISO_8859_7,
+	HTTP_CHS_ISO_8859_8,
+	HTTP_CHS_KOI8_R,
+	HTTP_CHS_SHIFT_JIS,
+	HTTP_CHS_X_EUC,
+	HTTP_CHS_UTF_8,
+	HTTP_CHS_WINDOWS_1250,
+	HTTP_CHS_WINDOWS_1251,
+	HTTP_CHS_WINDOWS_1252,
+	HTTP_CHS_WINDOWS_1253,
+	HTTP_CHS_WINDOWS_1254,
+	HTTP_CHS_WINDOWS_1255,
+	HTTP_CHS_WINDOWS_1256,
+	HTTP_CHS_WINDOWS_1257,
+	HTTP_CHS_WINDOWS_1258,
+	HTTP_CHS_WINDOWS_874,
+	HTTP_CHS_COUNT,
+} HTTPCharset;
+
 typedef struct {
 	char* body;
 } HTTPBody;
@@ -292,9 +328,17 @@ typedef struct {
 } HTTPWeightedField;
 
 typedef struct {
+	HTTPMediaType media_type;
+	char* boundary;
+	HTTPCharset charset;
+} HTTPContentType;
+
+typedef struct {
 	HTTPHeaderHost *host;
 	Array *accept;
 	Array *accept_encoding;
+	int content_length;
+	HTTPContentType* content_type;
 } HTTPRequestHeaders;
 
 // Request
@@ -324,6 +368,14 @@ typedef struct {
 	HTTPResponseHeaders* headers;
 	HTTPBody* body;
 } HTTPResponse;
+
+// errors
+
+typedef enum {
+	HTTP_ERROR = -1,
+	HTTP_SUCCESS = 0,
+	// todo
+} HTTPError;
 
 int http_validate_request(const char* data, int data_len, HTTPRequest* req);
 

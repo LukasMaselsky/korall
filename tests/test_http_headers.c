@@ -97,4 +97,69 @@ TEST("http_process_accept_encoding") {
 
 }
 
+TEST("http_process_content_length") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	str = "10000";
+	res = http_process_content_length(str, req);
+	ASSERT(res == 0);
+	ASSERT(req->headers->content_length == 10000);
+	http_request_clear(&arena, &req);
+
+	str = "10000a";
+	res = http_process_content_length(str, req);
+	ASSERT(res == -1);
+	http_request_clear(&arena, &req);
+
+	str = "";
+	res = http_process_content_length(str, req);
+	ASSERT(res == -1);
+	http_request_clear(&arena, &req);
+
+	str = " ";
+	res = http_process_content_length(str, req);
+	ASSERT(res == -1);
+	http_request_clear(&arena, &req);
+
+}
+
+TEST("http_process_content_type") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	str = "text/html";
+	res = http_process_content_type(str, req);
+	ASSERT(res == 0);
+	ASSERT(req->headers->content_type->media_type == HTTP_MT_TXT_HTML);
+	http_request_clear(&arena, &req);
+
+	str = "text/html; charset=UTF-8";
+	res = http_process_content_type(str, req);
+	ASSERT(res == 0);
+	ASSERT(req->headers->content_type->media_type == HTTP_MT_TXT_HTML);
+	ASSERT(req->headers->content_type->charset == HTTP_CHS_UTF_8);
+	http_request_clear(&arena, &req);
+
+	str = "text/html; charsets=UTF-8";
+	res = http_process_content_type(str, req);
+	ASSERT(res == -1);
+	http_request_clear(&arena, &req);
+
+	str = "";
+	res = http_process_content_type(str, req);
+	ASSERT(res == -1);
+	http_request_clear(&arena, &req);
+
+	str = " ";
+	res = http_process_content_type(str, req);
+	ASSERT(res == -1);
+	http_request_clear(&arena, &req);
+
+}
+
 #endif

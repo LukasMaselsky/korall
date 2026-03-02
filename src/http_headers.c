@@ -34,7 +34,7 @@ int http_domain_port(const char* value, char* domain, char* port, bool *with_por
 		temp[i - 1] = '\0'; // remove ]
 		const char* temp_p = temp;
 		if (is_valid_ipv6(temp)) {
-			strcpy(domain, ++temp_p);
+			strcpy(domain, ++temp_p); // todo: test
 		}
 	}
 	else if (is_valid_ipv4(temp)) {
@@ -88,7 +88,7 @@ int http_process_weighted_list(
 	LookupEntry *table, 
 	int table_len, 
 	char *field_arr, 
-	int field_arr_len, 
+	const int field_arr_len, 
 	Array* res_arr
 ) {
 	int i = 0;
@@ -142,13 +142,70 @@ int http_process_weighted_list(
 }
 
 int http_process_accept(const char* value, HTTPRequest* req) {
-	char temp[MAX_MEDIA_TYPE_CHAR_LEN + 1] = { 0 };
+	char temp[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
 	Array* res_arr = req->headers->accept;
-	return http_process_weighted_list(value, req, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, temp, MAX_MEDIA_TYPE_CHAR_LEN + 1, res_arr);
+	return http_process_weighted_list(value, req, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, temp, MAX_MEDIA_TYPE_LEN + 1, res_arr);
 }
 
 int http_process_accept_encoding(const char* value, HTTPRequest* req) {
 	char temp[MAX_ENCODING_CHAR_LEN + 1] = { 0 };
 	Array* res_arr = req->headers->accept_encoding;
 	return http_process_weighted_list(value, req, http_encoding_lookup_table, HTTP_ENCODING_TABLE_COUNT, temp, MAX_ENCODING_CHAR_LEN + 1, res_arr);
+}
+
+int http_process_content_length(const char* value, HTTPRequest* req) {
+	int val;
+	str_to_int_errno res = str_to_int(&val, value, 10);
+	if (res != STR_TO_INT_SUCCESS) return -1;
+
+	req->headers->content_length = val;
+	return 0;
+}
+
+int http_process_content_type(const char* value, HTTPRequest* req) {
+	char type[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
+	int colon = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, ';');
+	if (colon == -1) {
+		int res = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, '\0');
+		if (res == -1) return -1;
+	}
+
+	int mt = lookup_str_int(type, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, false);
+	if (mt == -1) return -1;
+
+	req->headers->content_type->media_type = mt;
+	if (colon == -1) return 0; // no boundary/charset
+
+	// skip spaces
+	value++;
+	while (*value == ' ')
+		value++;
+
+	if (mt == HTTP_MT_MTP || mt == HTTP_MT_MTP_FORM_DATA) {
+		// boundary
+		const char* pre = "boundary=";
+		const int pre_len = 10;
+		if (!starts_with(pre, value)) return -1;
+		value += (pre_len - 1);
+
+		int boundary_res = fill_string_char(&value, req->headers->content_type->boundary, MAX_HTTP_BOUNDARY_LEN, '\0');
+		if (boundary_res == -1) return -1;
+		return 0;
+	}
+	else {
+		// charset
+		const char* pre = "charset=";
+		const int pre_len = 9;
+		if (!starts_with(pre, value)) return -1;
+		value += (pre_len - 1);
+
+		char charset[MAX_HTTP_CHARSET_LEN + 1] = { 0 };
+		int charset_res = fill_string_char(&value, charset, MAX_HTTP_CHARSET_LEN, '\0');
+		if (charset_res == -1) return -1;
+
+		int charset_int = lookup_str_int(charset, http_charset_lookup_table, HTTP_CHARSET_TABLE_COUNT, true);
+		if (charset_int == -1) return -1;
+		req->headers->content_type->charset = charset_int;
+		return 0;
+	}
 }

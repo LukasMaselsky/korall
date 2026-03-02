@@ -65,17 +65,16 @@ static int strcmp_ci(const char* str1, const char* str2) {
 int lookup_str_int(const char* key, const LookupEntry *table, const unsigned int table_count, const bool case_insensitive) {
     if (key[0] == '\0') return -1;
     for (LookupEntry* entry = table; entry != table + table_count; entry++) {
-        if (*(entry->string) == *key) {
-            if (case_insensitive) {
-                if (strcmp_ci(entry->string, key) == 0)
-                    return entry->integer;
-            }
-            else {
-                if (strcmp(entry->string, key) == 0)
-                    return entry->integer;
-            }
+        if (case_insensitive) {
+            if (strcmp_ci(entry->string, key) == 0)
+                return entry->integer;
         }
-        
+        else {
+            if (*(entry->string) != *key) continue;
+
+            if (strcmp(entry->string, key) == 0)
+                return entry->integer;
+        }
     }
 
     return -1;

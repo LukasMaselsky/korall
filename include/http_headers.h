@@ -12,12 +12,16 @@ int http_process_weighted_list(
 	LookupEntry* table,
 	int table_len,
 	char* field_arr,
-	int field_arr_len,
+	const int field_arr_len,
 	Array* res_arr
 );
 
 int http_process_accept(const char* value, HTTPRequest* req);
 
 int http_process_accept_encoding(const char* value, HTTPRequest* req);
+
+int http_process_content_length(const char* value, HTTPRequest* req);
+
+int http_process_content_type(const char* value, HTTPRequest* req);
 
 #endif

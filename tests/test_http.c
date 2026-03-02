@@ -112,6 +112,14 @@ TEST("http_process_request_target") {
 	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
 	ASSERT(strcmp(req->start_line->request_target, "localhost:3500") == 0);
 
+	http_request_clear(&arena, &req);
+	str = "localhost:3500 HTTP/1.1\r\n";
+	req->start_line->method = HTTP_CONNECT;
+	res = http_process_request_target(&str, req);
+	ASSERT(res == 0);
+	ASSERT(strcmp(str, " HTTP/1.1\r\n") == 0);
+	ASSERT(strcmp(req->start_line->request_target, "localhost:3500") == 0);
+
 	// connect, rt too long
 	http_request_clear(&arena, &req);
 	str = "localhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhostlocalhost:3500 HTTP/1.1\r\n";
