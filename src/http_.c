@@ -9,42 +9,46 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-int http_validate_request(const char* data, int data_len, HTTPRequest* req) {
-	const LookupEntry* table = &http_method_lookup_table;
+HTTPError http_validate_request(const char* data, int data_len, HTTPRequest* req) {
+	const LookupEntry *table = http_method_lookup_table;
 	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
 
-	HTTPMethod method = http_process_method(&data, table, table_len);
-	if (method == HTTP_BADMETHOD || data[0] == '\0') return -1;
-	req->start_line->method = method;
+	HTTPMethod res = http_process_method(&data, req);
+	if (res != HTTP_SUCCESS) return res;
+	
 	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process rt
-	int res = http_process_request_target(&data, req);
-	if (res == -1) return -1;
+	res = http_process_request_target(&data, req);
+	if (res != HTTP_SUCCESS) return res;
+
 	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process prot
 	res = http_process_protocol(&data);
-	if (res == -1) return -1;
+	if (res != HTTP_SUCCESS) return res;
 
-	if (*data != '\r' || data[1] != '\n') return -1; // must have \r\n
+	if (*data != '\r' || data[1] != '\n') return HTTP_BAD_REQUEST; // must have \r\n
 	data += 2;
 
-	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return 0; // no header, no body
+	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return HTTP_SUCCESS; // no header, no body
 
 	res = http_process_headers(&data, req);
-	if (res == -1) return -1;
+	if (res != HTTP_SUCCESS) return res;
+
+	if (data[0] == '\0') return HTTP_SUCCESS; // no body
 
 	printf(data);
+
 	// todo: body
 	// Only patch, put and post has body
 
-	return 0;
+	return HTTP_SUCCESS;
 }
 
-int http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
+HTTPError http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_HOST:
@@ -56,21 +60,21 @@ int http_process_header_value(const HTTPRequestHeaderField field, const char* va
 		case HTTP_RQH_CONTENT_TYPE:
 			return http_process_content_type(value, req);
 		default:
-			return -1; // todo: allow custom headers
+			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
 }
 
-int http_process_header(const char** str, HTTPRequest* req) {
+HTTPError http_process_header(const char** str, HTTPRequest* req) {
 	// process field
 
 	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
 	
 	int res = fill_string_char(str, field, MAX_HTTP_HEADER_FIELD_LEN, ':');
-	if (res == -1) return -1;
+	if (res == -1) return HTTP_BAD_HEADER;
 	const char *s = *str;
 
-	HTTPRequestHeaderField header_field = lookup_str_int(field, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true);
-	if (header_field == HTTP_RQH_BADFIELD) return -1;
+	int header_field = lookup_str_int(field, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true);
+	if (header_field == -1) return HTTP_BAD_HEADER;
 
 	
 	s++; // skip colon
@@ -80,38 +84,44 @@ int http_process_header(const char** str, HTTPRequest* req) {
 	while (*s == ' ')
 		s++;
 
-	if (*s == '\0' || *s == '\n') return -1; // empty field e.g. "Host:    ";
+	if (*s == '\0' || *s == '\n') return HTTP_BAD_HEADER_VAL; // empty field e.g. "Host:    ";
 
 	char value[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
 	*str = s;
 	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n");
-	if (res == -1) return -1;
+	if (res == -1) return HTTP_BAD_HEADER_VAL;
 	s = *str;
 
-	if (http_process_header_value(header_field, value, req) == -1) return -1;
+	HTTPError hv_res = http_process_header_value(header_field, value, req);
+	if (hv_res != HTTP_SUCCESS) return hv_res;
 
 	s += 2; // \r\n
 	*str = s;
-	return 0;
+	return HTTP_SUCCESS;
 }
 
-int http_process_headers(const char** str, HTTPRequest* req) {
+HTTPError http_process_headers(const char** str, HTTPRequest* req) {
 
 	while (true) {
-		if (http_process_header(str, req) == -1) return -1;
-		if ((*str)[0] == '\r' && (*str)[1] == '\n') return 0; // empty newline at end of headers, required
+		HTTPError res = http_process_header(str, req);
+		if (res != HTTP_SUCCESS) return res;
+		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
+			*str += 2;
+			return HTTP_SUCCESS;
+		}
+		// empty newline at end of headers, required
 	}
 
 }
 
-int http_process_protocol(const char** str) {
+HTTPError http_process_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
 
 	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n");
-	if (res == -1) return -1;
+	if (res == -1) return HTTP_BAD_PROT;
 
-	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0) return 0;
-	return -1;
+	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0) return HTTP_SUCCESS;
+	return HTTP_BAD_PROT;
 }
 
 static bool is_valid_request_target_relative(char c) {
@@ -126,16 +136,16 @@ static bool is_valid_request_target_relative(char c) {
 	return false;
 }
 
-int http_process_request_target_relative(const char** str, HTTPRequest* req) {
+HTTPError http_process_request_target_relative(const char** str, HTTPRequest* req) {
 	// todo: query string
 	int len = MAX_HTTP_URL_LEN;
 	int i = 0;
 	char* rt = req->start_line->request_target;
 	const char* s = *str;
 	for (char c = *s; c != '\0' && c != ' ' && i < len - 1; c = *(++s)) {
-		if (!is_valid_request_target_relative(c)) return -1;
+		if (!is_valid_request_target_relative(c)) return HTTP_BAD_REQUEST_TARGET;
 		if (i != 0) {
-			if (c == '/' && *(s - 1) == '/') return -1;
+			if (c == '/' && *(s - 1) == '/') return HTTP_BAD_REQUEST_TARGET;
 		}
 		rt[i] = c;
 		i++;
@@ -143,18 +153,18 @@ int http_process_request_target_relative(const char** str, HTTPRequest* req) {
 	rt[i] = '\0';
 	*str = s;
 
-	return 0;
+	return HTTP_SUCCESS;
 }
 
-int http_process_request_target(const char **str, HTTPRequest *req) {
+HTTPError http_process_request_target(const char **str, HTTPRequest *req) {
 	HTTPMethod method = req->start_line->method;
-	if (method == HTTP_BADMETHOD) return -1;
+	if (method == -1) return HTTP_ERROR; // for testing purposes, never actually -1
 	const char* s = *str;
 	if (method == HTTP_OPTIONS && s[0] == '*') {
 		(req->start_line->request_target)[0] = '*';
 		(req->start_line->request_target)[1] = '\0';
 		*str = ++s;
-		return 0;
+		return HTTP_SUCCESS;
 	}
 	if (method == HTTP_CONNECT) {
 		// rt has to be domain:port format
@@ -164,13 +174,14 @@ int http_process_request_target(const char **str, HTTPRequest *req) {
 		char value[MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		int len = MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN;
 		int res = fill_string_char(str, value, len, ' ');
-		if (res == -1) return -1;
+		if (res == -1) return HTTP_BAD_REQUEST_TARGET;
 
-		res = http_domain_port(value, domain, port, &with_port);
-		if (res == -1 || !with_port) return -1;
+		HTTPError dp_res = http_domain_port(value, domain, port, &with_port);
+		if (dp_res != HTTP_SUCCESS) return dp_res;
+		if (!with_port) return HTTP_BAD_PORT;
 
 		strncpy(req->start_line->request_target, value, len);
-		return 0;
+		return HTTP_SUCCESS;
 	}
 
 	const char first_c = s[0];
@@ -182,24 +193,25 @@ int http_process_request_target(const char **str, HTTPRequest *req) {
 		// absolute path
 		// todo
 		printf("Absolute paths not supported");
-		return -1;
-	}
-	else {
-		return -1;
+		return HTTP_BAD_REQUEST_TARGET;
 	}
 
-	return -1;
+	return HTTP_BAD_REQUEST_TARGET;
 }
 
-HTTPMethod http_process_method(const char **str, const LookupEntry *table, const int table_len) {
-	
+HTTPError http_process_method(const char **str, HTTPRequest *req) {
+
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 	int len = MAX_HTTP_METHOD_STR_LEN;
 
 	int res = fill_string_char(str, method, len, ' ');
-	if (res == -1) return -1;
+	if (res == -1) return HTTP_BAD_METHOD;
 
-	return lookup_str_int(method, table, table_len, false);
+	int method_int = lookup_str_int(method, http_method_lookup_table, HTTP_METHOD_LOOKUP_TABLE_COUNT, false);
+	if (method_int == -1) return HTTP_BAD_METHOD;
+
+	req->start_line->method = method_int;
+	return HTTP_SUCCESS;
 }
 
 HTTPRequest* http_request_init(Arena *arena) {

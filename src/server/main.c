@@ -166,7 +166,8 @@ static void http_process_request(
 	HTTPRequest *req = http_request_init(&req_arena);
 
 	// first validate format
-	if (http_validate_request(data, data_len, req) == -1) {
+	// todo: change name from validate to something else
+	if (http_validate_request(data, data_len, req) != HTTP_SUCCESS) {
 		printf("server: invalid HTTP request received, syntax\n");
 		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, INVALID_SYNTAX_RESPONSE_BODY);
 		if (res == NULL) return;

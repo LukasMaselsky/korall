@@ -37,7 +37,6 @@
 #define INVALID_HOST_RESPONSE_BODY ERROR_MESSAGE("Bad request", "Invalid Host header.")
 
 typedef enum {
-	HTTP_BADMETHOD = -1,
 	HTTP_CONNECT,
 	HTTP_DELETE,
 	HTTP_GET,
@@ -51,7 +50,6 @@ typedef enum {
 } HTTPMethod;
 
 typedef enum {
-	HTTP_RQH_BADFIELD = -1,
 	HTTP_RQH_A_IM,
 	HTTP_RQH_ACCEPT,
 	HTTP_RQH_ACCEPT_CHARSET,
@@ -372,26 +370,39 @@ typedef struct {
 // errors
 
 typedef enum {
+	// todo
+	HTTP_BAD_REQUEST = -14,
+	HTTP_BAD_CONTENT_TYPE = -13,
+	HTTP_BAD_CONTENT_LENGTH = -12,
+	HTTP_BAD_ACCEPT_ENC = -11,
+	HTTP_BAD_ACCEPT = -10,
+	HTTP_BAD_PROT = -9,
+	HTTP_BAD_HEADER_VAL = -8,
+	HTTP_BAD_HEADER = -7,
+	HTTP_BAD_PORT = -6,
+	HTTP_BAD_DOMAIN = -5,
+	HTTP_BAD_DOMAIN_PORT = -4,
+	HTTP_BAD_REQUEST_TARGET = -3,
+	HTTP_BAD_METHOD = -2,
 	HTTP_ERROR = -1,
 	HTTP_SUCCESS = 0,
-	// todo
 } HTTPError;
 
-int http_validate_request(const char* data, int data_len, HTTPRequest* req);
+HTTPError http_validate_request(const char* data, int data_len, HTTPRequest* req);
 
-int http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
+HTTPError http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
 
-int http_process_header(const char** str, HTTPRequest* req);
+HTTPError http_process_header(const char** str, HTTPRequest* req);
 
-int http_process_headers(const char** str, HTTPRequest* req);
+HTTPError http_process_headers(const char** str, HTTPRequest* req);
 
-HTTPMethod http_process_method(const char** str, const LookupEntry* table, const int table_len);
+HTTPError http_process_method(const char** str, HTTPRequest* req);
 
-int http_process_request_target_relative(const char** str, HTTPRequest* req);
+HTTPError http_process_request_target_relative(const char** str, HTTPRequest* req);
 
-int http_process_request_target(const char** str, HTTPRequest* req);
+HTTPError http_process_request_target(const char** str, HTTPRequest* req);
 
-int http_process_protocol(const char** str);
+HTTPError http_process_protocol(const char** str);
 
 HTTPRequest* http_request_init(Arena* arena);
 

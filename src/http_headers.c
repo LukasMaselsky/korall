@@ -7,8 +7,8 @@
 /*
 	Make sure domain:port or domain is valid format
 */
-int http_domain_port(const char* value, char* domain, char* port, bool *with_port) {
-	if (*value == '\0') return -1;
+HTTPError http_domain_port(const char* value, char* domain, char* port, bool *with_port) {
+	if (*value == '\0') return HTTP_BAD_DOMAIN_PORT;
 	char temp[MAX_DOMAIN_LEN + 1] = { 0 };
 
 	*with_port = false;
@@ -41,10 +41,10 @@ int http_domain_port(const char* value, char* domain, char* port, bool *with_por
 		strcpy(domain, temp);
 	}
 	else {
-		return -1;
+		return HTTP_BAD_DOMAIN;
 	}
 
-	if (!(*with_port)) return 0;
+	if (!(*with_port)) return HTTP_SUCCESS;
 
 	// process port
 
@@ -62,27 +62,27 @@ int http_domain_port(const char* value, char* domain, char* port, bool *with_por
 
 	if (is_valid_port(port_temp)) {
 		strcpy(port, port_temp);
-		return 0;
+		return HTTP_SUCCESS;
 	};
 
 
-	return -1;
+	return HTTP_BAD_PORT;
 }
 
-int http_process_host(const char* value, HTTPRequest* req) {
+HTTPError http_process_host(const char* value, HTTPRequest* req) {
 
 	char domain[MAX_DOMAIN_LEN + 1] = { 0 };
 	char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 	bool with_port = false; // needed since function is used elsewhere, here can throw away
-	int res = http_domain_port(value, domain, port, &with_port);
-	if (res == -1) return -1;
+	HTTPError res = http_domain_port(value, domain, port, &with_port);
+	if (res != HTTP_SUCCESS) return res;
 
 	strncpy(req->headers->host->domain, domain, MAX_DOMAIN_LEN);
 	strncpy(req->headers->host->port, port, MAX_PORT_NUM_CHAR_LEN);
-	return 0;
+	return HTTP_SUCCESS;
 }
 
-int http_process_weighted_list(
+static int http_process_weighted_list(
 	const char* value, 
 	HTTPRequest* req, 
 	LookupEntry *table, 
@@ -141,40 +141,44 @@ int http_process_weighted_list(
 	return 0;
 }
 
-int http_process_accept(const char* value, HTTPRequest* req) {
+HTTPError http_process_accept(const char* value, HTTPRequest* req) {
 	char temp[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
 	Array* res_arr = req->headers->accept;
-	return http_process_weighted_list(value, req, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, temp, MAX_MEDIA_TYPE_LEN + 1, res_arr);
+	int res = http_process_weighted_list(value, req, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, temp, MAX_MEDIA_TYPE_LEN + 1, res_arr);
+	if (res == -1) return HTTP_BAD_ACCEPT;
+	return HTTP_SUCCESS;
 }
 
-int http_process_accept_encoding(const char* value, HTTPRequest* req) {
+HTTPError http_process_accept_encoding(const char* value, HTTPRequest* req) {
 	char temp[MAX_ENCODING_CHAR_LEN + 1] = { 0 };
 	Array* res_arr = req->headers->accept_encoding;
-	return http_process_weighted_list(value, req, http_encoding_lookup_table, HTTP_ENCODING_TABLE_COUNT, temp, MAX_ENCODING_CHAR_LEN + 1, res_arr);
+	int res = http_process_weighted_list(value, req, http_encoding_lookup_table, HTTP_ENCODING_TABLE_COUNT, temp, MAX_ENCODING_CHAR_LEN + 1, res_arr);
+	if (res == -1) return HTTP_BAD_ACCEPT_ENC;
+	return HTTP_SUCCESS;
 }
 
-int http_process_content_length(const char* value, HTTPRequest* req) {
+HTTPError http_process_content_length(const char* value, HTTPRequest* req) {
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
-	if (res != STR_TO_INT_SUCCESS) return -1;
+	if (res != STR_TO_INT_SUCCESS) return HTTP_BAD_CONTENT_LENGTH;
 
 	req->headers->content_length = val;
-	return 0;
+	return HTTP_SUCCESS;
 }
 
-int http_process_content_type(const char* value, HTTPRequest* req) {
+HTTPError http_process_content_type(const char* value, HTTPRequest* req) {
 	char type[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
 	int colon = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, ';');
 	if (colon == -1) {
 		int res = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, '\0');
-		if (res == -1) return -1;
+		if (res == -1) return HTTP_BAD_CONTENT_TYPE;
 	}
 
 	int mt = lookup_str_int(type, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT, false);
-	if (mt == -1) return -1;
+	if (mt == -1) return HTTP_BAD_CONTENT_TYPE;
 
 	req->headers->content_type->media_type = mt;
-	if (colon == -1) return 0; // no boundary/charset
+	if (colon == -1) return HTTP_SUCCESS; // no boundary/charset
 
 	// skip spaces
 	value++;
@@ -185,27 +189,27 @@ int http_process_content_type(const char* value, HTTPRequest* req) {
 		// boundary
 		const char* pre = "boundary=";
 		const int pre_len = 10;
-		if (!starts_with(pre, value)) return -1;
+		if (!starts_with(pre, value)) return HTTP_BAD_CONTENT_TYPE;
 		value += (pre_len - 1);
 
 		int boundary_res = fill_string_char(&value, req->headers->content_type->boundary, MAX_HTTP_BOUNDARY_LEN, '\0');
-		if (boundary_res == -1) return -1;
-		return 0;
+		if (boundary_res == -1) return HTTP_BAD_CONTENT_TYPE;
+		return HTTP_SUCCESS;
 	}
 	else {
 		// charset
 		const char* pre = "charset=";
 		const int pre_len = 9;
-		if (!starts_with(pre, value)) return -1;
+		if (!starts_with(pre, value)) return HTTP_BAD_CONTENT_TYPE;
 		value += (pre_len - 1);
 
 		char charset[MAX_HTTP_CHARSET_LEN + 1] = { 0 };
 		int charset_res = fill_string_char(&value, charset, MAX_HTTP_CHARSET_LEN, '\0');
-		if (charset_res == -1) return -1;
+		if (charset_res == -1) return HTTP_BAD_CONTENT_TYPE;
 
 		int charset_int = lookup_str_int(charset, http_charset_lookup_table, HTTP_CHARSET_TABLE_COUNT, true);
-		if (charset_int == -1) return -1;
+		if (charset_int == -1) return HTTP_BAD_CONTENT_TYPE;
 		req->headers->content_type->charset = charset_int;
-		return 0;
+		return HTTP_SUCCESS;
 	}
 }
