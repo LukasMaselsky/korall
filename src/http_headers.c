@@ -213,3 +213,11 @@ HTTPError http_process_content_type(const char* value, HTTPRequest* req) {
 		return HTTP_SUCCESS;
 	}
 }
+
+HTTPError http_process_access_control_request_method(const char* value, HTTPRequest* req) {
+	int res = lookup_str_int(value, http_method_lookup_table, HTTP_METHOD_LOOKUP_TABLE_COUNT, true);
+	if (res == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD;
+	req->headers->access_control_request_method = res;
+
+	return HTTP_SUCCESS;
+}

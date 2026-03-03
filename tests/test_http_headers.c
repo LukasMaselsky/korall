@@ -162,4 +162,14 @@ TEST("http_process_content_type") {
 
 }
 
+TEST("http_process_access_control_request_method") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	// todo
+
+}
+
 #endif

@@ -4,7 +4,7 @@
 #include "arena.h"
 #elif defined TESTS
 
-TEST("http_validate_request") {
+TEST("http_parse_request") {
 	
 	Arena arena = arena_init(HTTP_REQ_SIZE);
 	HTTPRequest* req = http_request_init(&arena);
@@ -12,27 +12,27 @@ TEST("http_validate_request") {
 	char* str;
 
 	str = "GET / HTTP/1.1\r\n\r\n";
-	res = http_validate_request(str, strlen(str), req);
+	res = http_parse_request(str, strlen(str), req);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-	res = http_validate_request(str, strlen(str), req);
+	res = http_parse_request(str, strlen(str), req);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\nHost: \r\n\r\n";
-	res = http_validate_request(str, strlen(str), req);
+	res = http_parse_request(str, strlen(str), req);
 	ASSERT(res == HTTP_BAD_DOMAIN_PORT);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1";
-	res = http_validate_request(str, strlen(str), req);
+	res = http_parse_request(str, strlen(str), req);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\n";
-	res = http_validate_request(str, strlen(str), req);
+	res = http_parse_request(str, strlen(str), req);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 

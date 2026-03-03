@@ -9,7 +9,7 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-HTTPError http_validate_request(const char* data, int data_len, HTTPRequest* req) {
+HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req) {
 	const LookupEntry *table = http_method_lookup_table;
 	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
 
@@ -59,6 +59,8 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 			return http_process_content_length(value, req);
 		case HTTP_RQH_CONTENT_TYPE:
 			return http_process_content_type(value, req);
+		case HTTP_RQH_ACCESS_CONTROL_REQUEST_METHOD:
+			return http_process_access_control_request_method(value, req);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -459,4 +461,44 @@ void http_get_current_date(char *str, size_t str_len) {
 	get_current_time_gmt(&timeinfo);
 
 	strftime(str, str_len, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+}
+
+/* 
+	Get response info based on HTTPError
+*/
+const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, HTTPMediaType* mt) {
+	*sc = HTTP_SC_400;
+	*mt = HTTP_MT_APP_JSON;
+
+	switch (error_code) {
+		case HTTP_BAD_CONTENT_TYPE:
+			return ERROR_MESSAGE("Bad request", "Invalid Content-Type header.");
+		case HTTP_BAD_CONTENT_LENGTH:
+			return ERROR_MESSAGE("Bad request", "Invalid Content-Length header.");
+		case HTTP_BAD_ACCEPT_ENC:
+			return ERROR_MESSAGE("Bad request", "Invalid Accept-Encoding header.");
+		case HTTP_BAD_ACCEPT:
+			return ERROR_MESSAGE("Bad request", "Invalid Accept header.");
+		case HTTP_BAD_PROT:
+			return ERROR_MESSAGE("Bad request", "Invalid HTTP protocol.");
+		case HTTP_BAD_HEADER_VAL:
+			return ERROR_MESSAGE("Bad request", "Unsupported header.");
+		case HTTP_BAD_HEADER:
+			return ERROR_MESSAGE("Bad request", "Invalid header.");
+		case HTTP_BAD_PORT:
+			return ERROR_MESSAGE("Bad request", "Invalid port.");
+		case HTTP_BAD_DOMAIN:
+			return ERROR_MESSAGE("Bad request", "Invalid domain.");
+		case HTTP_BAD_DOMAIN_PORT:
+			return ERROR_MESSAGE("Bad request", "Invalid domain or port.");
+		case HTTP_BAD_REQUEST:
+			return ERROR_MESSAGE("Bad request", "Invalid request format.");
+		case HTTP_BAD_REQUEST_TARGET:
+			return ERROR_MESSAGE("Bad request", "Invalid request target.");
+		case HTTP_BAD_METHOD:
+			return ERROR_MESSAGE("Bad request", "Invalid method.");
+		case HTTP_ERROR:
+		default:
+			return ERROR_MESSAGE("Bad request", "Invalid request.");
+	}
 }

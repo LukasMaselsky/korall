@@ -126,7 +126,7 @@ target_include_directories(tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/cli
 # Compiler flags
 
 if(MSVC)
-    add_compile_options("/W4" "$<$<CONFIG:RELEASE>:/O2>")
+    add_compile_options("/Wall" "$<$<CONFIG:RELEASE>:/O2>" "/WX")
 else()
     add_compile_options("-Wall" "-Wextra" "-Werror" "$<$<CONFIG:RELEASE>:-O3>")
     if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")

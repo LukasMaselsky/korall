@@ -34,7 +34,6 @@
     "\t\"message\": \"" msg "\"\n" \
     "}"
 #define INVALID_SYNTAX_RESPONSE_BODY ERROR_MESSAGE("Bad request", "Request body could not be read properly.")
-#define INVALID_HOST_RESPONSE_BODY ERROR_MESSAGE("Bad request", "Invalid Host header.")
 
 typedef enum {
 	HTTP_CONNECT,
@@ -337,6 +336,7 @@ typedef struct {
 	Array *accept_encoding;
 	int content_length;
 	HTTPContentType* content_type;
+	HTTPMethod access_control_request_method; // todo
 } HTTPRequestHeaders;
 
 // Request
@@ -371,24 +371,25 @@ typedef struct {
 
 typedef enum {
 	// todo
-	HTTP_BAD_REQUEST = -14,
-	HTTP_BAD_CONTENT_TYPE = -13,
-	HTTP_BAD_CONTENT_LENGTH = -12,
-	HTTP_BAD_ACCEPT_ENC = -11,
-	HTTP_BAD_ACCEPT = -10,
-	HTTP_BAD_PROT = -9,
-	HTTP_BAD_HEADER_VAL = -8,
-	HTTP_BAD_HEADER = -7,
-	HTTP_BAD_PORT = -6,
-	HTTP_BAD_DOMAIN = -5,
-	HTTP_BAD_DOMAIN_PORT = -4,
-	HTTP_BAD_REQUEST_TARGET = -3,
-	HTTP_BAD_METHOD = -2,
+	HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD = -15,
+	HTTP_BAD_CONTENT_TYPE = -14,
+	HTTP_BAD_CONTENT_LENGTH = -13,
+	HTTP_BAD_ACCEPT_ENC = -12,
+	HTTP_BAD_ACCEPT = -11,
+	HTTP_BAD_PROT = -10,
+	HTTP_BAD_HEADER_VAL = -9,
+	HTTP_BAD_HEADER = -8,
+	HTTP_BAD_PORT = -7,
+	HTTP_BAD_DOMAIN = -6,
+	HTTP_BAD_DOMAIN_PORT = -5,
+	HTTP_BAD_REQUEST_TARGET = -4,
+	HTTP_BAD_METHOD = -3,
+	HTTP_BAD_REQUEST = -2,
 	HTTP_ERROR = -1,
 	HTTP_SUCCESS = 0,
 } HTTPError;
 
-HTTPError http_validate_request(const char* data, int data_len, HTTPRequest* req);
+HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req);
 
 HTTPError http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
 
@@ -432,5 +433,6 @@ void http_response_clear(Arena* arena, HTTPResponse** res);
 
 void http_get_current_date(char* str, size_t str_len);
 
+const char* http_error_response_info(HTTPError err, HTTPStatusCode* sc, HTTPMediaType* mt);
 
 #endif

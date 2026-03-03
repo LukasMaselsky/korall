@@ -166,10 +166,15 @@ static void http_process_request(
 	HTTPRequest *req = http_request_init(&req_arena);
 
 	// first validate format
-	// todo: change name from validate to something else
-	if (http_validate_request(data, data_len, req) != HTTP_SUCCESS) {
+	HTTPError parse_res = http_parse_request(data, data_len, req);
+	if (parse_res != HTTP_SUCCESS) {
 		printf("server: invalid HTTP request received, syntax\n");
-		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, INVALID_SYNTAX_RESPONSE_BODY);
+
+		HTTPStatusCode sc;
+		HTTPMediaType mt;
+		const char* message = http_error_response_info(parse_res, &sc, &mt);
+
+		HTTPResponse* res = http_response_construct(&res_arena, sc, SERVER_NAME, mt, message);
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
@@ -180,7 +185,7 @@ static void http_process_request(
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
 	if (!http_domain_port_match_server(si, req)) { 
 		printf("server: invalid HTTP request received, host\n");
-		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, INVALID_HOST_RESPONSE_BODY);
+		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);

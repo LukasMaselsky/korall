@@ -14,4 +14,6 @@ HTTPError http_process_content_length(const char* value, HTTPRequest* req);
 
 HTTPError http_process_content_type(const char* value, HTTPRequest* req);
 
+HTTPError http_process_access_control_request_method(const char* value, HTTPRequest* req);
+
 #endif
