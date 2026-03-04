@@ -168,7 +168,87 @@ TEST("http_process_access_control_request_method") {
 	int res;
 	const char* str;
 
-	// todo
+	str = "GET";
+	res = http_process_access_control_request_method(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(req->headers->access_control_request_method == HTTP_GET);
+	http_request_clear(&arena, &req);
+
+	str = "OPTIONS";
+	res = http_process_access_control_request_method(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(req->headers->access_control_request_method == HTTP_OPTIONS);
+	http_request_clear(&arena, &req);
+
+	str = "POST";
+	res = http_process_access_control_request_method(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(req->headers->access_control_request_method == HTTP_POST);
+	http_request_clear(&arena, &req);
+
+}
+
+TEST("http_process_access_control_request_headers") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	Array* arr = req->headers->access_control_request_headers;
+
+	str = "content-type, a-im";
+	res = http_process_access_control_request_headers(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 2);
+	ASSERT(*((HTTPRequestHeaderField*)array_get(arr, 0)) == HTTP_RQH_CONTENT_TYPE);
+	ASSERT(*((HTTPRequestHeaderField*)array_get(arr, 1)) == HTTP_RQH_A_IM);
+	http_request_clear(&arena, &req);
+
+	str = "content-type,a-im";
+	res = http_process_access_control_request_headers(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 2);
+	ASSERT(*((HTTPRequestHeaderField*)array_get(arr, 0)) == HTTP_RQH_CONTENT_TYPE);
+	ASSERT(*((HTTPRequestHeaderField*)array_get(arr, 1)) == HTTP_RQH_A_IM);
+	http_request_clear(&arena, &req);
+
+	str = "content-type";
+	res = http_process_access_control_request_headers(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 1);
+	ASSERT(*((HTTPRequestHeaderField*)array_get(arr, 0)) == HTTP_RQH_CONTENT_TYPE);
+	http_request_clear(&arena, &req);
+
+	str = "content-typ";
+	res = http_process_access_control_request_headers(str, req);
+	ASSERT(res == HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS);
+	ASSERT(arr->size == 0);
+	http_request_clear(&arena, &req);
+
+}
+
+TEST("http_process_connection") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	str = "keep-alive";
+	res = http_process_connection(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(req->headers->connection == HTTP_CON_KEEP_ALIVE);
+	http_request_clear(&arena, &req);
+
+	str = "close";
+	res = http_process_connection(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(req->headers->connection == HTTP_CON_CLOSE);
+	http_request_clear(&arena, &req);
+
+	str = "clos";
+	res = http_process_connection(str, req);
+	ASSERT(res == HTTP_BAD_CONNECTION);
+	http_request_clear(&arena, &req);
 
 }
 

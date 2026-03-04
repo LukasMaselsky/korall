@@ -10,9 +10,7 @@
 	Check if the format of the HTTP request is correct
 */
 HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req) {
-	const LookupEntry *table = http_method_lookup_table;
-	const int table_len = HTTP_METHOD_LOOKUP_TABLE_COUNT;
-
+	
 	HTTPMethod res = http_process_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 	
@@ -55,12 +53,20 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 			return http_process_host(value, req);
 		case HTTP_RQH_ACCEPT:
 			return http_process_accept(value, req);
+		case HTTP_RQH_ACCEPT_ENCODING:
+			return http_process_accept_encoding(value, req);
 		case HTTP_RQH_CONTENT_LENGTH:
 			return http_process_content_length(value, req);
 		case HTTP_RQH_CONTENT_TYPE:
 			return http_process_content_type(value, req);
 		case HTTP_RQH_ACCESS_CONTROL_REQUEST_METHOD:
 			return http_process_access_control_request_method(value, req);
+		case HTTP_RQH_ACCESS_CONTROL_REQUEST_HEADERS:
+			return http_process_access_control_request_headers(value, req);
+		case HTTP_RQH_CONNECTION:
+			return http_process_connection(value, req);
+		case HTTP_RQH_CACHE_CONTROL:
+			return http_process_cache_control(value, req);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -209,7 +215,7 @@ HTTPError http_process_method(const char **str, HTTPRequest *req) {
 	int res = fill_string_char(str, method, len, ' ');
 	if (res == -1) return HTTP_BAD_METHOD;
 
-	int method_int = lookup_str_int(method, http_method_lookup_table, HTTP_METHOD_LOOKUP_TABLE_COUNT, false);
+	int method_int = lookup_str_int(method, http_method_lookup_table, HTTP_METHOD_TABLE_COUNT, false);
 	if (method_int == -1) return HTTP_BAD_METHOD;
 
 	req->start_line->method = method_int;
@@ -227,7 +233,29 @@ HTTPRequest* http_request_init(Arena *arena) {
 
 	// headers
 
-	char *domain, *port;
+	HTTPRequestHeaders* headers = http_request_init_headers(arena);
+
+	// body
+
+	char* body;
+	body = (char*)arena_alloc(arena, (MAX_HTTP_BODY_LEN + 1) * sizeof(*body));
+	HTTPBody* rq_body;
+	rq_body = (HTTPBody*)arena_alloc(arena, 1 * sizeof(*rq_body));
+	rq_body->body = body;
+
+	// all
+
+	HTTPRequest *req;
+	req = (HTTPRequest*)arena_alloc(arena, 1 * sizeof(*req));
+	req->start_line = sl;
+	req->headers = headers;
+	req->body = rq_body;
+	return req;
+}
+
+HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
+
+	char* domain, * port;
 	domain = (char*)arena_alloc(arena, (MAX_DOMAIN_LEN + 1) * sizeof(*domain));
 	port = (char*)arena_alloc(arena, (MAX_PORT_NUM_CHAR_LEN + 1) * sizeof(*port));
 
@@ -256,6 +284,12 @@ HTTPRequest* http_request_init(Arena *arena) {
 	ct = (HTTPContentType*)arena_alloc(arena, 1 * sizeof(*ct));
 	ct->boundary = boundary;
 
+	HTTPRequestHeaderField* acrh_data;
+	acrh_data = (HTTPRequestHeaderField*)arena_alloc(arena, HTTP_RQH_COUNT * sizeof(*acrh_data));
+	Array* acrh;
+	acrh = (Array*)arena_alloc(arena, sizeof(*acrh));
+	array_init(acrh, acrh_data, sizeof(*acrh_data), HTTP_RQH_COUNT);
+
 
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
@@ -263,23 +297,10 @@ HTTPRequest* http_request_init(Arena *arena) {
 	headers->accept = mtw;
 	headers->accept_encoding = ew;
 	headers->content_type = ct;
-
-	// body
-
-	char* body;
-	body = (char*)arena_alloc(arena, (MAX_HTTP_BODY_LEN + 1) * sizeof(*body));
-	HTTPBody* rq_body;
-	rq_body = (HTTPBody*)arena_alloc(arena, 1 * sizeof(*rq_body));
-	rq_body->body = body;
-
-	// all
-
-	HTTPRequest *req;
-	req = (HTTPRequest*)arena_alloc(arena, 1 * sizeof(*req));
-	req->start_line = sl;
-	req->headers = headers;
-	req->body = rq_body;
-	return req;
+	headers->access_control_request_method = HTTP_METHOD_UNUSED;
+	headers->access_control_request_headers = acrh;
+	headers->connection = HTTP_CON_UNUSED;
+	return headers;
 }
 
 void http_request_free(Arena *arena, HTTPRequest* req) {
@@ -471,6 +492,14 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_CACHE_CONTROL:
+			return ERROR_MESSAGE("Bad request", "Invalid Cache-Control header.");
+		case HTTP_BAD_CONNECTION:
+			return ERROR_MESSAGE("Bad request", "Invalid Connection header.");
+		case HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS:
+			return ERROR_MESSAGE("Bad request", "Invalid Access-Control-Request-Headers header.");
+		case HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD:
+			return ERROR_MESSAGE("Bad request", "Invalid Access-Control-Request-Method header.");
 		case HTTP_BAD_CONTENT_TYPE:
 			return ERROR_MESSAGE("Bad request", "Invalid Content-Type header.");
 		case HTTP_BAD_CONTENT_LENGTH:

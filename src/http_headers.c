@@ -215,9 +215,42 @@ HTTPError http_process_content_type(const char* value, HTTPRequest* req) {
 }
 
 HTTPError http_process_access_control_request_method(const char* value, HTTPRequest* req) {
-	int res = lookup_str_int(value, http_method_lookup_table, HTTP_METHOD_LOOKUP_TABLE_COUNT, true);
+	int res = lookup_str_int(value, http_method_lookup_table, HTTP_METHOD_TABLE_COUNT, true);
 	if (res == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD;
 	req->headers->access_control_request_method = res;
+
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_access_control_request_headers(const char* value, HTTPRequest* req) {
+	char val[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
+	HTTPRequestHeaderField field;
+	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1) {
+		if ((field = lookup_str_int(val, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+		if (!array_add(req->headers->access_control_request_headers, &field)) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+		value++; // skip ,
+		while (value[0] == ' ')
+			value++;
+		memset(val, 0, MAX_HTTP_HEADER_FIELD_LEN + 1);
+	};
+
+	if (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+	if ((field = lookup_str_int(val, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+	if (!array_add(req->headers->access_control_request_headers, &field)) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_connection(const char* value, HTTPRequest* req) {
+	int res = lookup_str_int(value, http_connection_lookup_table, HTTP_CONNECTION_TABLE_COUNT, false);
+	if (res == -1) return HTTP_BAD_CONNECTION;
+	req->headers->connection = res;
+
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_cache_control(const char* value, HTTPRequest* req) {
+	// todo
 
 	return HTTP_SUCCESS;
 }

@@ -33,9 +33,9 @@
     "\t\"error\": \"" err "\",\n" \
     "\t\"message\": \"" msg "\"\n" \
     "}"
-#define INVALID_SYNTAX_RESPONSE_BODY ERROR_MESSAGE("Bad request", "Request body could not be read properly.")
 
 typedef enum {
+	HTTP_METHOD_UNUSED = -1,
 	HTTP_CONNECT,
 	HTTP_DELETE,
 	HTTP_GET,
@@ -58,7 +58,7 @@ typedef enum {
 	HTTP_RQH_ACCESS_CONTROL_REQUEST_METHOD,
 	HTTP_RQH_ACCESS_CONTROL_REQUEST_HEADERS,
 	HTTP_RQH_AUTHORIZATION,
-	HTTP_RQH_CACHECONTROL,
+	HTTP_RQH_CACHE_CONTROL,
 	HTTP_RQH_CONNECTION,
 	HTTP_RQH_CONTENT_ENCODING,
 	HTTP_RQH_CONTENT_LENGTH,
@@ -301,6 +301,28 @@ typedef enum {
 	HTTP_CHS_COUNT,
 } HTTPCharset;
 
+typedef enum {
+	HTTP_CON_UNUSED = -1,
+	HTTP_CON_KEEP_ALIVE,
+	HTTP_CON_CLOSE,
+	HTTP_CON_COUNT,
+} HTTPConnection;
+
+typedef enum {
+	HTTP_REQ_CC_UNUSED = -1,
+	HTTP_REQ_CC_MAX_AGE,
+	HTTP_REQ_CC_MAX_STALE,
+	HTTP_REQ_CC_MIN_FRESH,
+	HTTP_REQ_CC_NO_CACHE,
+	HTTP_REQ_CC_NO_STORE,
+	HTTP_REQ_CC_NO_TRANSFORM,
+	HTTP_REQ_CC_ONLY_IF_CACHED,
+	HTTP_REQ_CC_STALE_IF_ERROR,
+	HTTP_REQ_CC_COUNT,
+} HTTPRequestCacheControl;
+
+#define HTTP_REQ_CC_HAS_VAL(x) (x == HTTP_REQ_CC_MAX_AGE || x == HTTP_REQ_CC_MAX_STALE || x == HTTP_REQ_CC_MIN_FRESH || x == HTTP_REQ_CC_STALE_IF_ERROR)
+
 typedef struct {
 	char* body;
 } HTTPBody;
@@ -336,7 +358,9 @@ typedef struct {
 	Array *accept_encoding;
 	int content_length;
 	HTTPContentType* content_type;
-	HTTPMethod access_control_request_method; // todo
+	HTTPMethod access_control_request_method;
+	Array* access_control_request_headers;
+	HTTPConnection connection;
 } HTTPRequestHeaders;
 
 // Request
@@ -371,6 +395,9 @@ typedef struct {
 
 typedef enum {
 	// todo
+	HTTP_BAD_CACHE_CONTROL = -18,
+	HTTP_BAD_CONNECTION = -17,
+	HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS = -16,
 	HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD = -15,
 	HTTP_BAD_CONTENT_TYPE = -14,
 	HTTP_BAD_CONTENT_LENGTH = -13,
@@ -406,6 +433,8 @@ HTTPError http_process_request_target(const char** str, HTTPRequest* req);
 HTTPError http_process_protocol(const char** str);
 
 HTTPRequest* http_request_init(Arena* arena);
+
+HTTPRequestHeaders* http_request_init_headers(Arena* arena);
 
 void http_request_free(Arena *arena, HTTPRequest* req);
 

@@ -6,7 +6,7 @@ const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {
 	{F_HTTP, "http"},
 };
 
-const LookupEntry http_method_lookup_table[HTTP_METHOD_LOOKUP_TABLE_COUNT] = {
+const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT] = {
 	{ HTTP_CONNECT, "CONNECT" },
 	{ HTTP_DELETE, "DELETE" },
 	{ HTTP_GET, "GET" },
@@ -28,7 +28,7 @@ const LookupEntry http_req_header_field_lookup_table[HTTP_REQ_HEADER_FIELD_TABLE
 	{ HTTP_RQH_ACCESS_CONTROL_REQUEST_METHOD, "Access-Control-Request-Method" },
 	{ HTTP_RQH_ACCESS_CONTROL_REQUEST_HEADERS, "Access-Control-Request-Headers" },
 	{ HTTP_RQH_AUTHORIZATION, "Authorization" },
-	{ HTTP_RQH_CACHECONTROL, "Cache-Control" },
+	{ HTTP_RQH_CACHE_CONTROL, "Cache-Control" },
 	{ HTTP_RQH_CONNECTION, "Connection" },
 	{ HTTP_RQH_CONTENT_ENCODING, "Encoding" },
 	{ HTTP_RQH_CONTENT_LENGTH, "Content-Length" },
@@ -261,3 +261,20 @@ const LookupEntry http_charset_lookup_table[HTTP_CHARSET_TABLE_COUNT] = {
 	{ HTTP_CHS_WINDOWS_1258, "windows-1258" },
 	{ HTTP_CHS_WINDOWS_874, "windows-874" },
 };
+
+const LookupEntry http_connection_lookup_table[HTTP_CONNECTION_TABLE_COUNT] = {
+	{ HTTP_CON_KEEP_ALIVE, "keep-alive" },
+	{ HTTP_CON_CLOSE, "close" },
+};
+
+const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT] = {
+	{ HTTP_REQ_CC_MAX_AGE, "max-age" },
+	{ HTTP_REQ_CC_MAX_STALE, "max-stale" },
+	{ HTTP_REQ_CC_MIN_FRESH, "min-fresh" },
+	{ HTTP_REQ_CC_NO_CACHE, "no-cache" },
+	{ HTTP_REQ_CC_NO_STORE, "no-store" },
+	{ HTTP_REQ_CC_NO_TRANSFORM, "no-transform" },
+	{ HTTP_REQ_CC_ONLY_IF_CACHED, "only-if-cached" },
+	{ HTTP_REQ_CC_STALE_IF_ERROR, "stale-if-error" },
+};
+
