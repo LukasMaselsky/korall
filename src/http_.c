@@ -67,6 +67,8 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 			return http_process_connection(value, req);
 		case HTTP_RQH_CACHE_CONTROL:
 			return http_process_cache_control(value, req);
+		case HTTP_RQH_USER_AGENT:
+			return http_process_user_agent(value, req);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -296,6 +298,8 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	cc = (Array*)arena_alloc(arena, sizeof(*cc));
 	array_init(cc, cc_data, sizeof(*cc_data), HTTP_REQ_CC_COUNT);
 
+	char* user_agent;
+	user_agent = (char*)arena_alloc(arena, (MAX_HTTP_USER_AGENT + 1) * sizeof(*user_agent));
 
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
@@ -307,6 +311,7 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	headers->access_control_request_headers = acrh;
 	headers->connection = HTTP_CON_UNUSED;
 	headers->cache_control = cc;
+	headers->user_agent = user_agent;
 	return headers;
 }
 
@@ -499,6 +504,9 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_USER_AGENT:
+			*sc = HTTP_SC_413;
+			return ERROR_MESSAGE("Bad request", "Maximum User-Agent field value is 4KB.");
 		case HTTP_BAD_CACHE_CONTROL:
 			return ERROR_MESSAGE("Bad request", "Invalid Cache-Control header.");
 		case HTTP_BAD_CONNECTION:

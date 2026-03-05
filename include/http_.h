@@ -20,6 +20,7 @@
 #define MAX_ENCODING_CHAR_LEN 9
 #define MAX_HTTP_CHARSET_LEN 13
 #define MAX_HTTP_REQ_CC_LEN 15
+#define MAX_HTTP_USER_AGENT (KILOBYTE * 4)
 
 #define HTTP_RES_SIZE MAX_HTTP_BODY_LEN * 2
 #define HTTP_REQ_SIZE HTTP_RES_SIZE
@@ -368,6 +369,7 @@ typedef struct {
 	Array* access_control_request_headers;
 	HTTPConnection connection;
 	Array* cache_control;
+	char* user_agent;
 } HTTPRequestHeaders;
 
 // Request
@@ -402,6 +404,7 @@ typedef struct {
 
 typedef enum {
 	// todo
+	HTTP_BAD_USER_AGENT = -19,
 	HTTP_BAD_CACHE_CONTROL = -18,
 	HTTP_BAD_CONNECTION = -17,
 	HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS = -16,

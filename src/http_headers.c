@@ -285,3 +285,8 @@ HTTPError http_process_cache_control(const char* value, HTTPRequest* req) {
 
 	return HTTP_SUCCESS;
 }
+
+HTTPError http_process_user_agent(const char* value, HTTPRequest* req) {
+	if (fill_string_char(&value, req->headers->user_agent, MAX_HTTP_USER_AGENT, '\0') == -1) return HTTP_BAD_USER_AGENT;
+	return HTTP_SUCCESS;
+}

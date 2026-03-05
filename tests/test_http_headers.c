@@ -316,4 +316,19 @@ TEST("http_process_cache_control") {
 
 }
 
+TEST("http_process_user_agent") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	str = "Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0";
+	res = http_process_user_agent(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(strcmp(str, req->headers->user_agent) == 0);
+	http_request_clear(&arena, &req);
+
+
+}
+
 #endif
