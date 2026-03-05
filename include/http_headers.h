@@ -24,6 +24,7 @@ HTTPError http_process_cache_control(const char* value, HTTPRequest* req);
 
 HTTPError http_process_user_agent(const char* value, HTTPRequest* req);
 
+HTTPError http_process_date(const char* value, HTTPRequest* req);
 
 
 #endif

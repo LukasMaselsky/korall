@@ -23,6 +23,33 @@
 #define KILOBYTE 1024
 
 typedef enum {
+    DAY_MON,
+    DAY_TUE,
+    DAY_WED,
+    DAY_THU,
+    DAY_FRI,
+    DAY_SAT,
+    DAY_SUN,
+    DAY_COUNT
+} Day;
+
+typedef enum {
+    MONTH_JAN,
+    MONTH_FEB,
+    MONTH_MAR,
+    MONTH_APR,
+    MONTH_MAY,
+    MONTH_JUN,
+    MONTH_JUL,
+    MONTH_AUG,
+    MONTH_SEP,
+    MONTH_OCT,
+    MONTH_NOV,
+    MONTH_DEC,
+    MONTH_COUNT
+} Month;
+
+typedef enum {
     STR_TO_INT_SUCCESS,
     STR_TO_INT_OVERFLOW,
     STR_TO_INT_UNDERFLOW,

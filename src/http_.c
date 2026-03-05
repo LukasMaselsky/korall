@@ -69,6 +69,8 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 			return http_process_cache_control(value, req);
 		case HTTP_RQH_USER_AGENT:
 			return http_process_user_agent(value, req);
+		case HTTP_RQH_DATE:
+			return http_process_date(value, req);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -285,6 +287,8 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	HTTPContentType* ct;
 	ct = (HTTPContentType*)arena_alloc(arena, 1 * sizeof(*ct));
 	ct->boundary = boundary;
+	ct->charset = HTTP_CHS_UNUSED;
+	ct->media_type = HTTP_MT_UNUSED;
 
 	HTTPRequestHeaderField* acrh_data;
 	acrh_data = (HTTPRequestHeaderField*)arena_alloc(arena, HTTP_RQH_COUNT * sizeof(*acrh_data));
@@ -301,17 +305,23 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	char* user_agent;
 	user_agent = (char*)arena_alloc(arena, (MAX_HTTP_USER_AGENT + 1) * sizeof(*user_agent));
 
+	HTTPDate* date;
+	date = (HTTPDate*)arena_alloc(arena, 1 * sizeof(*date));
+	date->used = false;
+
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
 	headers->host = hh;
 	headers->accept = mtw;
 	headers->accept_encoding = ew;
 	headers->content_type = ct;
+	headers->content_length = -1;
 	headers->access_control_request_method = HTTP_METHOD_UNUSED;
 	headers->access_control_request_headers = acrh;
 	headers->connection = HTTP_CON_UNUSED;
 	headers->cache_control = cc;
 	headers->user_agent = user_agent;
+	headers->date = date;
 	return headers;
 }
 
@@ -504,6 +514,8 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_DATE:
+			return ERROR_MESSAGE("Bad request", "Invalid Date header.");
 		case HTTP_BAD_USER_AGENT:
 			*sc = HTTP_SC_413;
 			return ERROR_MESSAGE("Bad request", "Maximum User-Agent field value is 4KB.");

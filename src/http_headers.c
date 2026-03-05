@@ -3,6 +3,7 @@
 #include "http_.h"
 #include "lookup_tables.h"
 #include "sockets.h"
+#include "date.h"
 
 /*
 	Make sure domain:port or domain is valid format
@@ -288,5 +289,88 @@ HTTPError http_process_cache_control(const char* value, HTTPRequest* req) {
 
 HTTPError http_process_user_agent(const char* value, HTTPRequest* req) {
 	if (fill_string_char(&value, req->headers->user_agent, MAX_HTTP_USER_AGENT, '\0') == -1) return HTTP_BAD_USER_AGENT;
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_date(const char* value, HTTPRequest* req) {
+	HTTPDate* date = req->headers->date;
+
+	char day_name[3 + 1] = { 0 };
+	if (fill_string_char(&value, day_name, 3, ',') == -1) return HTTP_BAD_DATE;
+	value++; // skip ,
+	if (value[0] == '\0') return HTTP_BAD_DATE;
+	value++; // skip space
+
+	if ((date->day_name = lookup_str_int(day_name, day_lookup_table, DAY_TABLE_COUNT, false)) == -1) return HTTP_BAD_DATE;
+
+
+	char day[2 + 1] = { 0 };
+	if (fill_string_char(&value, day, 2, ' ') == -1) return HTTP_BAD_DATE;
+	value++; // skip space
+
+	int day_num;
+	if (str_to_int(&day_num, day, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+
+
+	char month[3 + 1] = { 0 };
+	if (fill_string_char(&value, month, 3, ' ') == -1) return HTTP_BAD_DATE;
+	value++;
+
+	if ((date->month = lookup_str_int(month, month_lookup_table, MONTH_TABLE_COUNT, false)) == -1) return HTTP_BAD_DATE;
+	int month_num = date->month + 1;
+
+
+	char year[4 + 1] = { 0 };
+	if (fill_string_char(&value, year, 4, ' ') == -1) return HTTP_BAD_DATE;
+	value++;
+
+	int year_num;
+	if (str_to_int(&year_num, year, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+
+	if (!is_valid_date(day_num, month_num, year_num)) return HTTP_BAD_DATE;
+
+
+
+	char hour[2 + 1] = { 0 };
+	if (fill_string_char(&value, hour, 2, ':') == -1) return HTTP_BAD_DATE;	
+	value++;
+
+	int hour_num;
+	if (str_to_int(&hour_num, hour, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+
+	if (hour_num < 0 || hour_num > 23) return HTTP_BAD_DATE;
+
+
+
+
+	char minute[2 + 1] = { 0 };
+	if (fill_string_char(&value, minute, 2, ':') == -1) return HTTP_BAD_DATE;	
+	value++;
+
+	int minute_num;
+	if (str_to_int(&minute_num, minute, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+
+	if (minute_num < 0 || minute_num > 59) return HTTP_BAD_DATE;
+
+
+
+	char second[2 + 1] = { 0 };
+	if (fill_string_char(&value, second, 2, ' ') == -1) return HTTP_BAD_DATE;	
+	value++;
+
+	int second_num;
+	if (str_to_int(&second_num, second, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+
+	if (second_num < 0 || second_num > 59) return HTTP_BAD_DATE;
+
+
+	if (strstr(value, "GMT") == NULL) return HTTP_BAD_DATE;
+
+	date->day = (unsigned short)day_num;
+	date->year = (unsigned short)year_num;
+	date->hour = (unsigned short)hour_num;
+	date->minute = (unsigned short)minute_num;
+	date->second = (unsigned short)second_num;
+
 	return HTTP_SUCCESS;
 }

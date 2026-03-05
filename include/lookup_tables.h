@@ -3,6 +3,7 @@
 
 #include "utils.h"
 #include "server/main.h"
+#include "http_.h"
 
 #define MIN_FLAG_CHAR_LEN 3 // --x
 #define FLAG_LOOKUP_TABLE_COUNT F_COUNT
@@ -15,6 +16,8 @@
 #define HTTP_CHARSET_TABLE_COUNT HTTP_CHS_COUNT
 #define HTTP_CONNECTION_TABLE_COUNT HTTP_CON_COUNT
 #define HTTP_REQ_CACHE_CONTROL_TABLE_COUNT HTTP_REQ_CC_COUNT
+#define DAY_TABLE_COUNT DAY_COUNT
+#define MONTH_TABLE_COUNT MONTH_COUNT
 
 extern const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT];
 extern const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT];
@@ -26,5 +29,7 @@ extern const LookupEntry http_encoding_lookup_table[HTTP_ENCODING_TABLE_COUNT];
 extern const LookupEntry http_charset_lookup_table[HTTP_CHARSET_TABLE_COUNT];
 extern const LookupEntry http_connection_lookup_table[HTTP_CONNECTION_TABLE_COUNT];
 extern const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT];
+extern const LookupEntry day_lookup_table[DAY_TABLE_COUNT];
+extern const LookupEntry month_lookup_table[MONTH_TABLE_COUNT];
 extern Flags default_flags;
 #endif

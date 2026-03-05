@@ -331,4 +331,45 @@ TEST("http_process_user_agent") {
 
 }
 
+TEST("http_process_date") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+	HTTPDate* date = req->headers->date;
+
+	str = "Tue, 29 Oct 2024 16:56:32 GMT";
+	res = http_process_date(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(date->day_name == DAY_TUE);
+	ASSERT(date->day == 29);
+	ASSERT(date->month == MONTH_OCT);
+	ASSERT(date->year == 2024);
+	ASSERT(date->hour == 16);
+	ASSERT(date->minute == 56);
+	ASSERT(date->second == 32);
+	http_request_clear(&arena, &req);
+
+	str = "Thu, 05 Mar 2026 16:40:31 GMT";
+	res = http_process_date(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(date->day_name == DAY_THU);
+	ASSERT(date->day == 5);
+	ASSERT(date->month == MONTH_MAR);
+	ASSERT(date->year == 2026);
+	ASSERT(date->hour == 16);
+	ASSERT(date->minute == 40);
+	ASSERT(date->second == 31);
+	http_request_clear(&arena, &req);
+
+	str = "Thu,";
+	res = http_process_date(str, req);
+	ASSERT(res == HTTP_BAD_DATE);
+	http_request_clear(&arena, &req);
+
+
+
+}
+
 #endif

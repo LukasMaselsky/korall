@@ -220,6 +220,7 @@ typedef enum {
 } HTTPStatusCode;
 
 typedef enum {
+	HTTP_MT_UNUSED = -1,
 	HTTP_MT_ANY,
 	HTTP_MT_APP,
 	HTTP_MT_APP_JSON,
@@ -276,6 +277,7 @@ typedef enum {
 } HTTPEncoding;
 
 typedef enum {
+	HTTP_CHS_UNUSED = -1,
 	HTTP_CHS_BIG5,
 	HTTP_CHS_EUC_KR,
 	HTTP_CHS_ISO_8859_1,
@@ -323,11 +325,6 @@ typedef enum {
 	HTTP_REQ_CC_COUNT,
 } HTTPRequestCacheControl;
 
-typedef struct {
-	HTTPRequestCacheControl name;
-	int seconds;
-} HTTPRequestCacheControlPair;
-
 #define HTTP_REQ_CC_HAS_VAL(x) (x == HTTP_REQ_CC_MAX_AGE || x == HTTP_REQ_CC_MAX_STALE || x == HTTP_REQ_CC_MIN_FRESH || x == HTTP_REQ_CC_STALE_IF_ERROR)
 
 typedef struct {
@@ -354,10 +351,26 @@ typedef struct {
 } HTTPWeightedField;
 
 typedef struct {
-	HTTPMediaType media_type;
 	char* boundary;
+	HTTPMediaType media_type;
 	HTTPCharset charset;
 } HTTPContentType;
+
+typedef struct {
+	HTTPRequestCacheControl name;
+	int seconds;
+} HTTPRequestCacheControlPair;
+
+typedef struct {
+	Day day_name;
+	Month month;
+	unsigned short day;
+	unsigned short year;
+	unsigned short hour;
+	unsigned short minute;
+	unsigned short second;
+	bool used;
+} HTTPDate;
 
 typedef struct {
 	HTTPHeaderHost *host;
@@ -370,6 +383,7 @@ typedef struct {
 	HTTPConnection connection;
 	Array* cache_control;
 	char* user_agent;
+	HTTPDate* date;
 } HTTPRequestHeaders;
 
 // Request
@@ -404,6 +418,7 @@ typedef struct {
 
 typedef enum {
 	// todo
+	HTTP_BAD_DATE = -20,
 	HTTP_BAD_USER_AGENT = -19,
 	HTTP_BAD_CACHE_CONTROL = -18,
 	HTTP_BAD_CONNECTION = -17,

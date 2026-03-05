@@ -1,4 +1,3 @@
-#include "http_.h"
 #include "lookup_tables.h"
 
 const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {
@@ -278,3 +277,27 @@ const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TAB
 	{ HTTP_REQ_CC_STALE_IF_ERROR, "stale-if-error" },
 };
 
+const LookupEntry day_lookup_table[DAY_TABLE_COUNT] = {
+	{ DAY_MON, "Mon" },
+	{ DAY_TUE, "Tue" },
+	{ DAY_WED, "Wed" },
+	{ DAY_THU, "Thu" },
+	{ DAY_FRI, "Fri" },
+	{ DAY_SAT, "Sat" },
+	{ DAY_SUN, "Sun" },
+};
+
+const LookupEntry month_lookup_table[MONTH_TABLE_COUNT] = {
+	{ MONTH_JAN, "Jan" },
+	{ MONTH_FEB, "Feb" },
+	{ MONTH_MAR, "Mar" },
+	{ MONTH_APR, "Apr" },
+	{ MONTH_MAY, "May" },
+	{ MONTH_JUN, "Jun" },
+	{ MONTH_JUL, "Jul" },
+	{ MONTH_AUG, "Aug" },
+	{ MONTH_SEP, "Sept" },
+	{ MONTH_OCT, "Oct" },
+	{ MONTH_NOV, "Nov" },
+	{ MONTH_DEC, "Dec" },
+};
