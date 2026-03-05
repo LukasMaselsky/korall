@@ -225,18 +225,15 @@ HTTPError http_process_access_control_request_method(const char* value, HTTPRequ
 HTTPError http_process_access_control_request_headers(const char* value, HTTPRequest* req) {
 	char val[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
 	HTTPRequestHeaderField field;
-	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1) {
+	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1 || fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') != -1) {
 		if ((field = lookup_str_int(val, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
 		if (!array_add(req->headers->access_control_request_headers, &field)) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+		if (value[0] == '\0') return HTTP_SUCCESS;
 		value++; // skip ,
 		while (value[0] == ' ')
 			value++;
 		memset(val, 0, MAX_HTTP_HEADER_FIELD_LEN + 1);
 	};
-
-	if (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
-	if ((field = lookup_str_int(val, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
-	if (!array_add(req->headers->access_control_request_headers, &field)) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
 
 	return HTTP_SUCCESS;
 }
@@ -250,7 +247,41 @@ HTTPError http_process_connection(const char* value, HTTPRequest* req) {
 }
 
 HTTPError http_process_cache_control(const char* value, HTTPRequest* req) {
-	// todo
+
+	char val[MAX_HTTP_REQ_CC_LEN + 1] = { 0 };
+	HTTPRequestCacheControlPair field = { .name = HTTP_REQ_CC_UNUSED, .seconds = -1 };
+	size_t len = MAX_HTTP_REQ_CC_LEN;
+	while (
+		fill_string_char(&value, val, len, '=') != -1
+		|| fill_string_char(&value, val, len, ',') != -1
+		|| fill_string_char(&value, val, len, '\0') != -1
+	) {
+		if ((field.name = lookup_str_int(val, http_req_cache_control_lookup_table, HTTP_REQ_CACHE_CONTROL_TABLE_COUNT, true)) == -1) return HTTP_BAD_CACHE_CONTROL;
+		if (value[0] == '=') {
+			value++; // skip =
+			char sec[24 + 1] = { 0 }; // todo: change 24
+			size_t sec_len = 24;
+
+			if (!(fill_string_char(&value, sec, sec_len, ',') != -1 || fill_string_char(&value, sec, sec_len, '\0') != -1)) return HTTP_BAD_CACHE_CONTROL;
+			
+			int sec_num;
+			str_to_int_errno res = str_to_int(&sec_num, sec, 10);
+			if (res != STR_TO_INT_SUCCESS) return HTTP_BAD_CACHE_CONTROL;
+			field.seconds = sec_num;
+		}
+		
+		if (!array_add(req->headers->cache_control, &field)) return HTTP_BAD_CACHE_CONTROL;
+		
+		if (value[0] == '\0') return HTTP_SUCCESS;
+		value++; // skip ,
+		while (value[0] == ' ')
+			value++;
+		memset(val, 0, len + 1);
+
+		// reset field temp
+		field.name = HTTP_REQ_CC_UNUSED;
+		field.seconds = -1;
+	};
 
 	return HTTP_SUCCESS;
 }

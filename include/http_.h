@@ -19,6 +19,7 @@
 #define MAX_HTTP_BOUNDARY_LEN 70
 #define MAX_ENCODING_CHAR_LEN 9
 #define MAX_HTTP_CHARSET_LEN 13
+#define MAX_HTTP_REQ_CC_LEN 15
 
 #define HTTP_RES_SIZE MAX_HTTP_BODY_LEN * 2
 #define HTTP_REQ_SIZE HTTP_RES_SIZE
@@ -321,6 +322,11 @@ typedef enum {
 	HTTP_REQ_CC_COUNT,
 } HTTPRequestCacheControl;
 
+typedef struct {
+	HTTPRequestCacheControl name;
+	int seconds;
+} HTTPRequestCacheControlPair;
+
 #define HTTP_REQ_CC_HAS_VAL(x) (x == HTTP_REQ_CC_MAX_AGE || x == HTTP_REQ_CC_MAX_STALE || x == HTTP_REQ_CC_MIN_FRESH || x == HTTP_REQ_CC_STALE_IF_ERROR)
 
 typedef struct {
@@ -361,6 +367,7 @@ typedef struct {
 	HTTPMethod access_control_request_method;
 	Array* access_control_request_headers;
 	HTTPConnection connection;
+	Array* cache_control;
 } HTTPRequestHeaders;
 
 // Request

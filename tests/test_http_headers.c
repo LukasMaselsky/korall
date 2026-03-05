@@ -252,4 +252,68 @@ TEST("http_process_connection") {
 
 }
 
+TEST("http_process_cache_control") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+	HTTPRequestCacheControlPair* pair;
+
+	Array* arr = req->headers->cache_control;
+
+	str = "no-transform";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 1);
+	pair = (HTTPRequestCacheControlPair*)array_get(arr, 0);
+	ASSERT(pair->name == HTTP_REQ_CC_NO_TRANSFORM);
+	ASSERT(pair->seconds == -1);
+	http_request_clear(&arena, &req);
+
+	str = "min-fresh=3600";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 1);
+	pair = (HTTPRequestCacheControlPair*)array_get(arr, 0);
+	ASSERT(pair->name == HTTP_REQ_CC_MIN_FRESH);
+	ASSERT(pair->seconds == 3600);
+	http_request_clear(&arena, &req);
+
+	str = "min-fresh=3600, no-transform";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 2);
+	pair = (HTTPRequestCacheControlPair*)array_get(arr, 0);
+	ASSERT(pair->name == HTTP_REQ_CC_MIN_FRESH);
+	ASSERT(pair->seconds == 3600);
+	pair = (HTTPRequestCacheControlPair*)array_get(arr, 1);
+	ASSERT(pair->name == HTTP_REQ_CC_NO_TRANSFORM);
+	ASSERT(pair->seconds == -1);
+	http_request_clear(&arena, &req);
+
+	str = "no-transform, min-fresh=3600";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(arr->size == 2);
+	pair = (HTTPRequestCacheControlPair*)array_get(arr, 0);
+	ASSERT(pair->name == HTTP_REQ_CC_NO_TRANSFORM);
+	ASSERT(pair->seconds == -1);
+	pair = (HTTPRequestCacheControlPair*)array_get(arr, 1);
+	ASSERT(pair->name == HTTP_REQ_CC_MIN_FRESH);
+	ASSERT(pair->seconds == 3600);
+	http_request_clear(&arena, &req);
+
+	str = "no-transform, min-fresh=3600a";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_BAD_CACHE_CONTROL);
+	http_request_clear(&arena, &req);
+
+	str = "";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_BAD_CACHE_CONTROL);
+	http_request_clear(&arena, &req);
+
+
+}
+
 #endif

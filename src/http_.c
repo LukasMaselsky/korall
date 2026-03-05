@@ -290,6 +290,12 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	acrh = (Array*)arena_alloc(arena, sizeof(*acrh));
 	array_init(acrh, acrh_data, sizeof(*acrh_data), HTTP_RQH_COUNT);
 
+	HTTPRequestCacheControlPair* cc_data;
+	cc_data = (HTTPRequestCacheControlPair*)arena_alloc(arena, HTTP_REQ_CC_COUNT * sizeof(*cc_data));
+	Array* cc;
+	cc = (Array*)arena_alloc(arena, sizeof(*cc));
+	array_init(cc, cc_data, sizeof(*cc_data), HTTP_REQ_CC_COUNT);
+
 
 	HTTPRequestHeaders* headers;
 	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
@@ -300,6 +306,7 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	headers->access_control_request_method = HTTP_METHOD_UNUSED;
 	headers->access_control_request_headers = acrh;
 	headers->connection = HTTP_CON_UNUSED;
+	headers->cache_control = cc;
 	return headers;
 }
 
