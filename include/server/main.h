@@ -1,13 +1,14 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "utils.h"
+#include <stdlib.h>
+#include "http_.h"
 
 #define READ_BUFFER_LEN 1024
 #define RESPONSE_BUFFER_LEN 1024
 
 #define DEFAULT_SERVER_NAME "MyServer"
-#define MAX_SERVER_NAME_LEN 100 // ?
+#define MAX_SERVER_NAME_LEN 100 // todo 
 
 typedef enum {
 	ST_TCP,
@@ -21,6 +22,17 @@ typedef struct {
 	char* name;
 } ServerConfig;
 
-void http_server_run(ServerConfig* config);
+typedef struct {
+	const char* path;
+	const HTTPMethod method;
+	void (*const callback)(HTTPRequest*, HTTPResponse*);
+} Route;
+
+typedef struct {
+	Route* routes;
+	size_t route_count;
+} Routes;
+
+void http_server_run(ServerConfig* config, Routes *routes);
 
 #endif

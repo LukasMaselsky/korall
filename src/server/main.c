@@ -1,5 +1,4 @@
 #include "server/main.h"
-#include "utils.h"
 #include "sockets.h"
 #include "http_.h"
 #include "arena.h"
@@ -8,6 +7,22 @@
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
 
+/*
+	Finds which route the request is targeting and returns it
+*/
+static Route* http_route_select(HTTPRequest *req, const Routes *routes) {
+	const char *path = req->start_line->request_target;
+	const HTTPMethod method = req->start_line->method;
+
+	for (Route* route = routes->routes; route != routes->routes + routes->route_count; route++) {
+		if (route->method != method) continue;
+
+		if (strcmp(route->path, path) != 0) continue;
+
+		return route;
+	}
+	return NULL;
+}
 
 static bool http_domain_port_match_server(ServerConfig* config, HTTPRequest* req) {
 
@@ -39,13 +54,14 @@ static bool http_domain_port_match_server(ServerConfig* config, HTTPRequest* req
 }
 
 static void http_process_request(
-	SOCKET inc_sock, 
-	SOCKET server_sock, 
+	const SOCKET inc_sock, 
+	const SOCKET server_sock, 
 	const char* data, 
-	int data_len, 
-	fd_set* main, 
-	SOCKET fd_max,
-	ServerConfig *config
+	const int data_len, 
+	const fd_set* main, 
+	const SOCKET fd_max,
+	const ServerConfig *config,
+	const Routes *routes
 ) {
 
 	Arena req_arena = arena_init(HTTP_REQ_SIZE);
@@ -83,12 +99,31 @@ static void http_process_request(
 	printf("server: valid HTTP request received\n");
 	printf("server: sending HTTP response\n\n");
 
+	if (routes == NULL) return; // no route handlers
+
 	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, config->name, HTTP_MT_TXT_PLAIN, "Hello World!");
-	if (res == NULL) return;
-	if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
+	if (res == NULL) { 
+		http_response_free(&res_arena, res);
+		http_request_free(&req_arena, req);
+		return;
+	}
+
+	const Route* route = http_route_select(req, routes);
+	// discard request if no matching route
+	if (route == NULL) {
+		http_response_free(&res_arena, res);
+		http_request_free(&req_arena, req);
+		return;
+	}
+	route->callback(req, res); // CALL CALLBACK
+
+	if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+		http_response_free(&res_arena, res);
+		http_request_free(&req_arena, req);
+		return;
+	}
+
 	http_response_free(&res_arena, res);
-
-
 	http_request_free(&req_arena, req);
 
 	return;
@@ -199,7 +234,13 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 	}
 }
 
-static void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max, ServerConfig *config) {
+static void process_incoming_data(
+	const SOCKET inc_sock, 
+	const SOCKET server_sock, 
+	const fd_set* main, 
+	const SOCKET fd_max, 
+	const ServerConfig *config, 
+	const Routes *routes) {
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
 
 	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
@@ -227,7 +268,7 @@ static void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* m
 
 	// TODO
 	if (config->type == ST_HTTP) {
-		http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, config);
+		http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, config, routes);
 	}
 	else {
 		//broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
@@ -237,7 +278,7 @@ static void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* m
 	return;
 }
 
-void http_server_run(ServerConfig *config) {
+void http_server_run(ServerConfig *config, const Routes *routes) {
 	ServerConfig default_config = {
 		.port = DEFAULT_PORT,
 		.domain = NULL,
@@ -248,7 +289,7 @@ void http_server_run(ServerConfig *config) {
 	if (config == NULL) {
 		config = &default_config;
 	}
-	
+
 	//
 
 	int res = socket_init();
@@ -287,7 +328,7 @@ void http_server_run(ServerConfig *config) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, fd_max, config);
+				process_incoming_data(i, server_sock, &main_fds, fd_max, config, routes);
 			}
 
 		}
@@ -302,18 +343,25 @@ void http_server_run(ServerConfig *config) {
 	return;
 }
 
+static void my_route(HTTPRequest *req, HTTPResponse *res) {
+	res->start_line->status_code = HTTP_SC_401;
+}
+
 int main(int argc, char *argv[]) {
 	
-	/*
 	ServerConfig config = {
 		.domain = NULL,
-		.port = "3501",
+		.port = "3500",
 		.name = "CustomServer",
 		.type = ST_HTTP
 	};
-	*/
 
-	http_server_run(NULL);
+	const Route route_arr[1] = {
+		{ .path = "/", .method = HTTP_GET, .callback = my_route }
+	};
+	const Routes routes = { .routes = route_arr, .route_count = 1 };
+
+	http_server_run(&config, &routes);
 
 	return 0;
 }
