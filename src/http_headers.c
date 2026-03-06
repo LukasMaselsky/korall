@@ -259,6 +259,7 @@ HTTPError http_process_cache_control(const char* value, HTTPRequest* req) {
 	) {
 		if ((field.name = lookup_str_int(val, http_req_cache_control_lookup_table, HTTP_REQ_CACHE_CONTROL_TABLE_COUNT, true)) == -1) return HTTP_BAD_CACHE_CONTROL;
 		if (value[0] == '=') {
+			if (!HTTP_REQ_CC_HAS_VAL(field.name)) return HTTP_BAD_CACHE_CONTROL;
 			value++; // skip =
 			char sec[24 + 1] = { 0 }; // todo: change 24
 			size_t sec_len = 24;
@@ -372,5 +373,11 @@ HTTPError http_process_date(const char* value, HTTPRequest* req) {
 	date->minute = (unsigned short)minute_num;
 	date->second = (unsigned short)second_num;
 
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_expect(const char* value, HTTPRequest* req) {
+	if (strncmp(value, "100-continue", 13) != 0) return HTTP_BAD_EXPECT;
+	req->headers->expect = HTTP_EXP_100_CONTINUE;
 	return HTTP_SUCCESS;
 }

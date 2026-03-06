@@ -308,6 +308,11 @@ TEST("http_process_cache_control") {
 	ASSERT(res == HTTP_BAD_CACHE_CONTROL);
 	http_request_clear(&arena, &req);
 
+	str = "no-transform=3600, min-fresh=3600";
+	res = http_process_cache_control(str, req);
+	ASSERT(res == HTTP_BAD_CACHE_CONTROL);
+	http_request_clear(&arena, &req);
+
 	str = "";
 	res = http_process_cache_control(str, req);
 	ASSERT(res == HTTP_BAD_CACHE_CONTROL);
@@ -369,6 +374,27 @@ TEST("http_process_date") {
 	http_request_clear(&arena, &req);
 
 
+
+}
+
+TEST("http_process_expect") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
+	int res;
+	const char* str;
+
+
+
+	str = "100-continue";
+	res = http_process_expect(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(req->headers->expect == HTTP_EXP_100_CONTINUE);
+	http_request_clear(&arena, &req);
+
+	str = "100";
+	res = http_process_expect(str, req);
+	ASSERT(res == HTTP_BAD_EXPECT);
+	http_request_clear(&arena, &req);
 
 }
 

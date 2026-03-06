@@ -1,10 +1,5 @@
 #include "lookup_tables.h"
 
-const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT] = {
-	{F_TCP, "tcp"},
-	{F_HTTP, "http"},
-};
-
 const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT] = {
 	{ HTTP_CONNECT, "CONNECT" },
 	{ HTTP_DELETE, "DELETE" },

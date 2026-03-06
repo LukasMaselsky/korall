@@ -6,29 +6,21 @@
 #define READ_BUFFER_LEN 1024
 #define RESPONSE_BUFFER_LEN 1024
 
-#define SERVER_NAME "MyServer" // todo: put into si ?
+#define DEFAULT_SERVER_NAME "MyServer"
+#define MAX_SERVER_NAME_LEN 100 // ?
 
 typedef enum {
 	ST_TCP,
 	ST_HTTP,
 } ServerType;
 
-typedef enum {
-	F_BADFLAG = -1,
-	F_TCP,
-	F_HTTP,
-	F_COUNT
-} Flag;
-
-typedef struct {
-	ServerType server_type;
-} Flags;
-
 typedef struct {
 	ServerType type;
 	char* domain;
 	char* port;
-} ServerInfo;
+	char* name;
+} ServerConfig;
 
+void http_server_run(ServerConfig* config);
 
 #endif

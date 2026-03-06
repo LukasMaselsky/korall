@@ -325,11 +325,13 @@ typedef enum {
 	HTTP_REQ_CC_COUNT,
 } HTTPRequestCacheControl;
 
+typedef enum {
+	HTTP_EXP_UNUSED = -1,
+	HTTP_EXP_100_CONTINUE
+} HTTPExpect;
+
 #define HTTP_REQ_CC_HAS_VAL(x) (x == HTTP_REQ_CC_MAX_AGE || x == HTTP_REQ_CC_MAX_STALE || x == HTTP_REQ_CC_MIN_FRESH || x == HTTP_REQ_CC_STALE_IF_ERROR)
 
-typedef struct {
-	char* body;
-} HTTPBody;
 
 // Request
 
@@ -369,7 +371,7 @@ typedef struct {
 	unsigned short hour;
 	unsigned short minute;
 	unsigned short second;
-	bool used;
+	bool used; // if this header used in req
 } HTTPDate;
 
 typedef struct {
@@ -384,6 +386,7 @@ typedef struct {
 	Array* cache_control;
 	char* user_agent;
 	HTTPDate* date;
+	HTTPExpect expect;
 } HTTPRequestHeaders;
 
 // Request
@@ -391,7 +394,7 @@ typedef struct {
 typedef struct {
 	HTTPRequestStartLine *start_line;
 	HTTPRequestHeaders* headers;
-	HTTPBody* body;
+	char* body;
 } HTTPRequest;
 
 // Response
@@ -411,13 +414,16 @@ typedef struct {
 typedef struct {
 	HTTPResponseStartLine* start_line;
 	HTTPResponseHeaders* headers;
-	HTTPBody* body;
+	char* body;
 } HTTPResponse;
 
 // errors
 
 typedef enum {
 	// todo
+	HTTP_BODY_TOO_LONG = -23,
+	HTTP_BODY_NOT_ALLOWED = -22,
+	HTTP_BAD_EXPECT = -21,
 	HTTP_BAD_DATE = -20,
 	HTTP_BAD_USER_AGENT = -19,
 	HTTP_BAD_CACHE_CONTROL = -18,
@@ -448,6 +454,8 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 HTTPError http_process_header(const char** str, HTTPRequest* req);
 
 HTTPError http_process_headers(const char** str, HTTPRequest* req);
+
+HTTPError http_process_body(const char* str, HTTPRequest* req);
 
 HTTPError http_process_method(const char** str, HTTPRequest* req);
 

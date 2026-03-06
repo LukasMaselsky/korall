@@ -1,17 +1,13 @@
 #include "http_.h"
-#include "utils.h"
 #include "lookup_tables.h"
-#include "sockets.h"
 #include "http_headers.h"
-#include "arena.h"
-#include "array.h"
 
 /*
 	Check if the format of the HTTP request is correct
 */
 HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req) {
 	
-	HTTPMethod res = http_process_method(&data, req);
+	HTTPError res = http_process_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 	
 	if (*data != ' ') return -1;
@@ -38,10 +34,7 @@ HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req) {
 
 	if (data[0] == '\0') return HTTP_SUCCESS; // no body
 
-	printf(data);
-
-	// todo: body
-	// Only patch, put and post has body
+	http_process_body(data, req);
 
 	return HTTP_SUCCESS;
 }
@@ -71,6 +64,8 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 			return http_process_user_agent(value, req);
 		case HTTP_RQH_DATE:
 			return http_process_date(value, req);
+		case HTTP_RQH_EXPECT:
+			return http_process_expect(value, req);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -124,6 +119,21 @@ HTTPError http_process_headers(const char** str, HTTPRequest* req) {
 		// empty newline at end of headers, required
 	}
 
+}
+
+HTTPError http_process_body(const char* str, HTTPRequest* req) {
+	// todo
+
+	HTTPMethod method = req->start_line->method;
+	if (!(method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_POST)) return HTTP_BODY_NOT_ALLOWED;
+
+	size_t body_len = strlen(str);
+	if (body_len > MAX_HTTP_BODY_LEN) return HTTP_BODY_TOO_LONG;
+	
+	memcpy(req->body, str, body_len);
+	req->body[body_len] = '\0';
+	
+	return HTTP_SUCCESS;
 }
 
 HTTPError http_process_protocol(const char** str) {
@@ -234,6 +244,7 @@ HTTPRequest* http_request_init(Arena *arena) {
 	HTTPRequestStartLine* sl;
 	sl = (HTTPRequestStartLine*)arena_alloc(arena, 1 * sizeof(*sl));
 	sl->request_target = request_target;
+	sl->method = HTTP_METHOD_UNUSED;
 
 	// headers
 
@@ -243,9 +254,6 @@ HTTPRequest* http_request_init(Arena *arena) {
 
 	char* body;
 	body = (char*)arena_alloc(arena, (MAX_HTTP_BODY_LEN + 1) * sizeof(*body));
-	HTTPBody* rq_body;
-	rq_body = (HTTPBody*)arena_alloc(arena, 1 * sizeof(*rq_body));
-	rq_body->body = body;
 
 	// all
 
@@ -253,7 +261,7 @@ HTTPRequest* http_request_init(Arena *arena) {
 	req = (HTTPRequest*)arena_alloc(arena, 1 * sizeof(*req));
 	req->start_line = sl;
 	req->headers = headers;
-	req->body = rq_body;
+	req->body = body;
 	return req;
 }
 
@@ -322,6 +330,7 @@ HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
 	headers->cache_control = cc;
 	headers->user_agent = user_agent;
 	headers->date = date;
+	headers->expect = HTTP_EXP_UNUSED;
 	return headers;
 }
 
@@ -368,12 +377,12 @@ HTTPResponse* http_response_construct(
 		}
 		strncpy(res->headers->content_type, ct_str, MAX_MEDIA_TYPE_LEN);
 		res->headers->content_length = body_len;
-		strncpy(res->body->body, body, MAX_HTTP_BODY_LEN);
+		strncpy(res->body, body, MAX_HTTP_BODY_LEN);
 	}
 	else {
 		res->headers->content_type = NULL;
 		res->headers->content_length = 0;
-		res->body->body = NULL;
+		res->body = NULL;
 	}
 
 	return res;
@@ -418,9 +427,9 @@ char* http_response_to_str(HTTPResponse* res) {
 		return NULL;
 	};
 
-	if (res->body->body == NULL) return data_start;
+	if (res->body == NULL) return data_start;
 
-	sprintf(data, "\r\n%s", res->body->body);
+	sprintf(data, "\r\n%s", res->body);
 
 	return data_start;
 }
@@ -476,9 +485,6 @@ HTTPResponse* http_response_init(Arena *arena) {
 
 	char* body;
 	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char*));
-	HTTPBody* rs_body;
-	rs_body = (HTTPBody*)safe_calloc(1, sizeof(*rs_body));
-	rs_body->body = body;
 
 	// all
 
@@ -486,7 +492,7 @@ HTTPResponse* http_response_init(Arena *arena) {
 	req = (HTTPResponse*)safe_calloc(1, sizeof(*req));
 	req->start_line = sl;
 	req->headers = headers;
-	req->body = rs_body;
+	req->body = body;
 	return req;
 }
 
@@ -514,6 +520,12 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BODY_TOO_LONG:
+			return ERROR_MESSAGE("Bad request", "Maximum body length is 1MB.");
+		case HTTP_BODY_NOT_ALLOWED:
+			return ERROR_MESSAGE("Bad request", "Body is only allowed for PUT, PATCH and POST requests.");
+		case HTTP_BAD_EXPECT:
+			return ERROR_MESSAGE("Bad request", "Invalid Expect header.");
 		case HTTP_BAD_DATE:
 			return ERROR_MESSAGE("Bad request", "Invalid Date header.");
 		case HTTP_BAD_USER_AGENT:

@@ -5,124 +5,11 @@
 #include "arena.h"
 #include "lookup_tables.h"
 
-Flags default_flags = {
-	.server_type = ST_HTTP,
-};
-
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
 
-static Flag flag_str_to_val(char* key)
-{
-	// check for "--"
-	for (int i = 0; i < 2; i++) {
-		char c = key[0];
-		if (c == '\0') return F_BADFLAG;
-		if (c != '-') return F_BADFLAG;
-		key++;
-	}
-	// + 1 extra char at least ("--" only invalid)
-	if (key[0] == '\0') return F_BADFLAG;
 
-	int val = lookup_str_int(key, flag_lookup_table, FLAG_LOOKUP_TABLE_COUNT, true);
-	if (val == -1) {
-		return F_BADFLAG;
-	}
-	return val;
-}
-
-static int process_flag(char* flag, Flags* flags) {
-
-	int flag_val = flag_str_to_val(flag);
-
-	switch (flag_val) {
-		case F_TCP:
-			flags->server_type = ST_TCP;
-			break;
-		case F_HTTP:
-			flags->server_type = ST_HTTP;
-			break;
-		case F_BADFLAG:
-		default:
-			return -1;
-	}
-
-	return 0;
-}
-
-static int process_args(
-	int argc,
-	char* argv[],
-	char* node,
-	size_t max_node_len,
-	char* service,
-	size_t max_service_len,
-	Flags* flags
-) {
-	// options:
-	// 1. no ip no port (default ip (NULL), default port)
-	// 2. ip without port (default port)
-	// 3. no ip with port (default ip (NULL))
-	// 4. ip and port
-
-	int arg_count = argc - 1;
-
-	if (arg_count == 0) {
-		strncpy(service, DEFAULT_PORT, max_service_len);
-		return 0;
-	}
-
-	for (int arg_i = 1; arg_i <= arg_count; arg_i++) {
-		char* arg = argv[arg_i];
-
-		if (arg_i == 1) {
-			if (is_valid_ip(arg)) {
-				strncpy(node, arg, max_node_len);
-				strncpy(service, DEFAULT_PORT, max_service_len);
-				continue;
-			}
-
-			if (is_valid_port(arg)) {
-				strncpy(service, arg, max_service_len);
-				continue;
-			}
-
-			if (process_flag(arg, flags) != -1) {
-				strncpy(service, DEFAULT_PORT, max_service_len);
-				continue;
-			}
-
-			printf("Not a valid port or IP address or flag\n");
-			return -1;
-		}
-
-		if (arg_i == 2) {
-			if (is_valid_ip(argv[1]) && is_valid_port(arg)) {
-				strncpy(service, arg, max_service_len);
-				continue;
-
-
-				if (process_flag(arg, flags) != -1) {
-					continue;
-				}
-
-				return -1;
-			}
-
-			if (arg_i < 3) continue; // safety 
-
-			if (process_flag(arg, flags) != -1) {
-				continue;
-			}
-
-			return -1;
-		}
-	}
-	
-	return 0;
-}
-
-static bool http_domain_port_match_server(ServerInfo* si, HTTPRequest* req) {
+static bool http_domain_port_match_server(ServerConfig* config, HTTPRequest* req) {
 
 	if (req->start_line->method == HTTP_CONNECT) {
 		// know rt is valid domain:port
@@ -140,12 +27,12 @@ static bool http_domain_port_match_server(ServerInfo* si, HTTPRequest* req) {
 			port[i] = c;
 			i++;
 		}
-		if (strcmp(si->domain, domain) != 0 ||
-			strcmp(si->port, port) != 0) return false;
+		if (strcmp(config->domain, domain) != 0 ||
+			strcmp(config->port, port) != 0) return false;
 	}
 	
-	if (strcmp(si->domain, req->headers->host->domain) != 0 ||
-		strcmp(si->port, req->headers->host->port) != 0) return false;
+	if (strcmp(config->domain, req->headers->host->domain) != 0 ||
+		strcmp(config->port, req->headers->host->port) != 0) return false;
 	
 
 	return true;
@@ -158,7 +45,7 @@ static void http_process_request(
 	int data_len, 
 	fd_set* main, 
 	SOCKET fd_max,
-	ServerInfo *si
+	ServerConfig *config
 ) {
 
 	Arena req_arena = arena_init(HTTP_REQ_SIZE);
@@ -174,7 +61,7 @@ static void http_process_request(
 		HTTPMediaType mt;
 		const char* message = http_error_response_info(parse_res, &sc, &mt);
 
-		HTTPResponse* res = http_response_construct(&res_arena, sc, SERVER_NAME, mt, message);
+		HTTPResponse* res = http_response_construct(&res_arena, sc, config->name, mt, message);
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
@@ -183,9 +70,9 @@ static void http_process_request(
 	}
 
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
-	if (!http_domain_port_match_server(si, req)) { 
+	if (!http_domain_port_match_server(config, req)) { 
 		printf("server: invalid HTTP request received, host\n");
-		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, SERVER_NAME, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
+		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
@@ -196,7 +83,7 @@ static void http_process_request(
 	printf("server: valid HTTP request received\n");
 	printf("server: sending HTTP response\n\n");
 
-	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, SERVER_NAME, HTTP_MT_TXT_PLAIN, "Hello World!");
+	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, config->name, HTTP_MT_TXT_PLAIN, "Hello World!");
 	if (res == NULL) return;
 	if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 	http_response_free(&res_arena, res);
@@ -210,15 +97,16 @@ static void http_process_request(
 /*
 	Initialise a socket for listening
 */
-SOCKET init_listen_socket(const char* node, const char* service, ServerInfo *si) {
+static SOCKET init_listen_socket(ServerConfig *config) {
 	int res;
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
 
-
+	const char* node = config->domain;
+	const char* service = config->port;
 	if (node == NULL || strcmp(node, "localhost") == 0) {
 		node = LOCALHOST_NODE; // default server to localhost
-		si->domain = "localhost";
+		config->domain = "localhost";
 	}
 	res = get_addr_info(node, service, &serverinfo);
 	
@@ -273,7 +161,7 @@ SOCKET init_listen_socket(const char* node, const char* service, ServerInfo *si)
 	return sock;
 }
 
-void process_incoming_connection(SOCKET sock, fd_set* main, SOCKET* fd_max) {
+static void process_incoming_connection(SOCKET sock, fd_set* main, SOCKET* fd_max) {
 	SOCKET incoming;
 	struct sockaddr_storage incoming_addr;
 	socklen_t incoming_addr_len = sizeof(incoming_addr);
@@ -295,7 +183,7 @@ void process_incoming_connection(SOCKET sock, fd_set* main, SOCKET* fd_max) {
 	printf("server: got connection from %s (%s)\n", ip, ipver);
 }
 
-void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_len, fd_set* main, SOCKET fd_max) {
+static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_len, fd_set* main, SOCKET fd_max) {
 	// send data received to every other connection except incoming and server
 	for (SOCKET fd = 0; fd <= fd_max; fd++) {
 		if (!FD_ISSET(fd, main)) continue;
@@ -311,7 +199,7 @@ void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_l
 	}
 }
 
-void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max, Flags* flags, ServerInfo *si) {
+static void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SOCKET fd_max, ServerConfig *config) {
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
 
 	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
@@ -338,60 +226,55 @@ void process_incoming_data(SOCKET inc_sock, SOCKET server_sock, fd_set* main, SO
 	printf("\n'%s'\n", buffer);
 
 	// TODO
-	if (flags->server_type == ST_HTTP) {
-		http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, si);
+	if (config->type == ST_HTTP) {
+		http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, config);
 	}
 	else {
-		broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
+		//broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
 	}
 	
 
 	return;
 }
 
-int main(int argc, char *argv[]) {
-	
-	Flags flags = default_flags;
-	char node_arr[IPV6_ADDRSTRLEN + 1] = "\0";
-	char service[MAX_PORT_NUM_CHAR_LEN + 1]; // todo: test overflow?
-	int res = process_args(argc, argv, node_arr, IPV6_ADDRSTRLEN, service, MAX_PORT_NUM_CHAR_LEN, &flags);
-	if (res == -1) {
-		printf("Could not process args");
-		exit(EXIT_FAILURE);
+void http_server_run(ServerConfig *config) {
+	ServerConfig default_config = {
+		.port = DEFAULT_PORT,
+		.domain = NULL,
+		.name = DEFAULT_SERVER_NAME,
+		.type = ST_HTTP,
+	};
+
+	if (config == NULL) {
+		config = &default_config;
 	}
-	char* node = strlen(node_arr) == 0 ? NULL : node_arr;
-
-	ServerInfo si;
-	si.domain = node;
-	si.port = service;
-	si.type = flags.server_type;
-
+	
 	//
 
-	res = socket_init();
+	int res = socket_init();
 	if (res != 0) {
 		perror("server: socket initialisation failed, exiting");
 		exit(EXIT_FAILURE);
 	}
 
 
-	fd_set main_fds;
-	fd_set read_fds; // temps 
+	fd_set main_fds = { 0 };
+	fd_set read_fds = { 0 }; // temps 
 	SOCKET fd_max; // biggest fd
 
-	
+
 	FD_ZERO(&main_fds);
 	FD_ZERO(&read_fds);
 
-	SOCKET server_sock = init_listen_socket(node, service, &si);
-	
+	SOCKET server_sock = init_listen_socket(config);
+
 	FD_SET(server_sock, &main_fds);
 	fd_max = server_sock;
 
 	while (true) {
 		read_fds = main_fds; // copy
 
-		int res = socket_select_read_only(fd_max+1, &read_fds, SELECT_NO_TIMEOUT);
+		int res = socket_select_read_only(fd_max + 1, &read_fds, SELECT_NO_TIMEOUT);
 		if (res == -1) {
 			perror("Couldn't select");
 			exit(EXIT_FAILURE);
@@ -404,17 +287,33 @@ int main(int argc, char *argv[]) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, fd_max, &flags, &si);
+				process_incoming_data(i, server_sock, &main_fds, fd_max, config);
 			}
-			
+
 		}
 	}
 
 	socket_close(server_sock);
-	
+
 	printf("server: closed socket\n");
 
 	socket_quit();
+
+	return;
+}
+
+int main(int argc, char *argv[]) {
+	
+	/*
+	ServerConfig config = {
+		.domain = NULL,
+		.port = "3501",
+		.name = "CustomServer",
+		.type = ST_HTTP
+	};
+	*/
+
+	http_server_run(NULL);
 
 	return 0;
 }

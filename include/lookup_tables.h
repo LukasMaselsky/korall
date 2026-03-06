@@ -19,7 +19,6 @@
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
-extern const LookupEntry flag_lookup_table[FLAG_LOOKUP_TABLE_COUNT];
 extern const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT];
 extern const LookupEntry http_req_header_field_lookup_table[HTTP_REQ_HEADER_FIELD_TABLE_COUNT];
 extern const LookupEntry http_res_header_field_lookup_table[HTTP_RES_HEADER_FIELD_TABLE_COUNT];
@@ -31,5 +30,4 @@ extern const LookupEntry http_connection_lookup_table[HTTP_CONNECTION_TABLE_COUN
 extern const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT];
 extern const LookupEntry day_lookup_table[DAY_TABLE_COUNT];
 extern const LookupEntry month_lookup_table[MONTH_TABLE_COUNT];
-extern Flags default_flags;
 #endif
