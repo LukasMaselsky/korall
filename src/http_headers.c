@@ -13,7 +13,7 @@ HTTPError http_domain_port(const char* value, char* domain, char* port, bool *wi
 	char temp[MAX_DOMAIN_LEN + 1] = { 0 };
 
 	*with_port = false;
-	int len = MAX_DOMAIN_NAME_LEN;
+	int len = MAX_DOMAIN_LEN;
 	int i = 0;
 	for (char c = *value; c != '\0' && i < len; c = *(++value)) {
 		if (c == ':') {

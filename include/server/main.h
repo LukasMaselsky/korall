@@ -29,10 +29,10 @@ typedef struct {
 } Route;
 
 typedef struct {
-	Route* routes;
-	size_t route_count;
+	const Route* const routes;
+	const size_t route_count;
 } Routes;
 
-void http_server_run(ServerConfig* config, Routes *routes);
+void http_server_run(ServerConfig* config, const Routes *routes);
 
 #endif

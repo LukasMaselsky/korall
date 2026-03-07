@@ -1,6 +1,7 @@
 #include "http_.h"
 #include "lookup_tables.h"
 #include "http_headers.h"
+#include "sockets.h"
 
 /*
 	Check if the format of the HTTP request is correct
@@ -399,7 +400,7 @@ int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **
 	return 0;
 }
 
-char* http_response_to_str(HTTPResponse* res) {
+char* http_response_to_str(const HTTPResponse* res) {
 	int data_len = MAX_HTTP_RES_LEN;
 	char* data;
 	data = (char*)safe_calloc(MAX_HTTP_RES_LEN + 1, sizeof(*data));
@@ -434,7 +435,7 @@ char* http_response_to_str(HTTPResponse* res) {
 	return data_start;
 }
 
-int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main) {
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse* res, const fd_set* main) {
 	if (inc_sock == server_sock) {
 		printf("server: cannot send HTTP response to itself\n");
 		return -1;
@@ -457,6 +458,7 @@ int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, f
 		printf("\n");
 	}
 	free(data);
+	return 0;
 }
 
 HTTPResponse* http_response_init(Arena *arena) {

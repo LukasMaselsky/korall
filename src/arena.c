@@ -1,4 +1,5 @@
 #include "arena.h"
+#include <utils.h>
 
 uintptr_t align_forward(uintptr_t ptr, size_t alignment) {
     uintptr_t p, a, modulo;

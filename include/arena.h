@@ -1,7 +1,7 @@
 #ifndef ARENA_H
 #define ARENA_H
 
-#include "utils.h"
+#include <stdlib.h>
 #define ALIGNMENT (2 * sizeof(void *))
 #define is_power_of_two(x) ((x != 0) && ((x & (x - 1)) == 0))
 

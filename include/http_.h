@@ -1,9 +1,9 @@
 #ifndef HTTP__H
 #define HTTP__H
-#include "utils.h"
-#include "sockets.h"
 #include "arena.h"
 #include "array.h"
+#include "sockets.h"
+#include "utils.h"
 
 #define MAX_HTTP_METHOD_STR_LEN 7
 #define MAX_HTTP_QUERY_STR_LEN 1024
@@ -13,7 +13,6 @@
 #define MAX_HTTP_BODY_LEN 1000000 // 1mb?
 #define MAX_HTTP_HEADER_FIELD_LEN 32
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
-#define MAX_DOMAIN_NAME_LEN 253
 #define MAX_MEDIA_TYPE_LEN 74
 #define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2
 #define MAX_HTTP_BOUNDARY_LEN 70
@@ -483,9 +482,9 @@ HTTPResponse* http_response_construct(
 
 int http_header_to_str(HTTPResponseHeaderField field, const char* value, char** buf);
 
-char* http_response_to_str(HTTPResponse* res);
+char* http_response_to_str(const HTTPResponse* res);
 
-int http_response_send(SOCKET inc_sock, SOCKET server_sock, HTTPResponse* res, fd_set* main);
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse* res, const fd_set* main);
 
 HTTPResponse* http_response_init(Arena *arena);
 

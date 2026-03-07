@@ -61,7 +61,7 @@ typedef struct {
     char* string;
 } LookupEntry;
 
-str_to_int_errno str_to_int(int* out, char* s, int base);
+str_to_int_errno str_to_int(int* out, const char* s, int base);
 
 void int_to_str(int value, char* str);
 

@@ -24,7 +24,7 @@ static Route* http_route_select(HTTPRequest *req, const Routes *routes) {
 	return NULL;
 }
 
-static bool http_domain_port_match_server(ServerConfig* config, HTTPRequest* req) {
+static bool http_domain_port_match_server(ServerConfig* config, const HTTPRequest* req) {
 
 	if (req->start_line->method == HTTP_CONNECT) {
 		// know rt is valid domain:port
@@ -77,7 +77,7 @@ static void http_process_request(
 		HTTPMediaType mt;
 		const char* message = http_error_response_info(parse_res, &sc, &mt);
 
-		HTTPResponse* res = http_response_construct(&res_arena, sc, config->name, mt, message);
+		const HTTPResponse* res = http_response_construct(&res_arena, sc, config->name, mt, message);
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
@@ -88,7 +88,7 @@ static void http_process_request(
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
 	if (!http_domain_port_match_server(config, req)) { 
 		printf("server: invalid HTTP request received, host\n");
-		HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
+		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);

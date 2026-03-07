@@ -1,6 +1,8 @@
 #ifndef ARRAY_H
 #define ARRAY_H
-#include "utils.h"
+
+#include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct {
     const void* data;
