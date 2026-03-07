@@ -63,7 +63,7 @@ endif()
 # If using the VS compiler...
 if(MSVC)
     	target_compile_definitions(example1 PUBLIC _CRT_SECURE_NO_WARNINGS)
-		# set_target_properties(server PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console	
+		# set_target_properties(example1 PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console	
 endif()
 
 # Force remove unicode
