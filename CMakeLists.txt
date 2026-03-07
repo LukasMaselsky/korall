@@ -31,8 +31,8 @@ project(websocketexamples LANGUAGES C)
 # ADD SUBDIRECTORIES
 ###############################################################################
 
-add_subdirectory(library)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory("http_server")
 
 ###############################################################################
 # EXECUTABLE TARGETS
@@ -54,7 +54,7 @@ if(PRODUCTION_BUILD)
 	target_compile_definitions(example1 PUBLIC DEVELOPLEMT_BUILD=0) 
 else()
 	# This is useful to get an ASSETS_PATH in your IDE during development
-	target_compile_definitions(example1 PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/examples/resources/example1")
+	target_compile_definitions(example1 PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/examples/resources/example1/")
     #
 	target_compile_definitions(example1 PUBLIC PRODUCTION_BUILD=0) 
 	target_compile_definitions(example1 PUBLIC DEVELOPLEMT_BUILD=1) 
@@ -73,10 +73,10 @@ endif()
 
 
 # Include directories
-target_include_directories(example1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/examples/include/example1")
+target_include_directories(example1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/examples/include/example1/")
 
 # Link libraries that use CMake
-target_link_libraries(example1 PRIVATE websocket)
+target_link_libraries(example1 PRIVATE http_server)
 
 # Compiler flags
 

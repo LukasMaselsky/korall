@@ -1,8 +1,8 @@
-#include "server.h"
 #include "main.h"
+#include "http_server/http_server.h"
 
 static void my_route(HTTPRequest* req, HTTPResponse* res) {
-	res->start_line->status_code = HTTP_SC_401;
+	//res->start_line->status_code = HTTP_SC_401;
 }
 
 int main(int argc, char* argv[]) {
