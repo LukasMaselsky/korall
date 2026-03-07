@@ -2,7 +2,7 @@
 #define LOOKUP_TABLES_H
 
 #include "utils.h"
-#include "server/main.h"
+#include "server.h"
 #include "http_.h"
 
 #define MIN_FLAG_CHAR_LEN 3 // --x
