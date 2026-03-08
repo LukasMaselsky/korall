@@ -1,5 +1,5 @@
 #if defined HEADERS
-#include "http_.h"
+#include "http_internal.h"
 #include "lookup_tables.h"
 #include "http_headers.h"
 #include "array.h"

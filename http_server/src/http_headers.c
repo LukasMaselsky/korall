@@ -1,6 +1,6 @@
 #include "http_headers.h"
 #include "utils.h"
-#include "http_.h"
+#include "http_internal.h"
 #include "lookup_tables.h"
 #include "sockets.h"
 #include "date.h"

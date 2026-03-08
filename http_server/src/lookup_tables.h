@@ -2,11 +2,8 @@
 #define LOOKUP_TABLES_H
 
 #include "utils.h"
-#include "server/main.h"
-#include "http_.h"
+#include "http_internal.h"
 
-#define MIN_FLAG_CHAR_LEN 3 // --x
-#define FLAG_LOOKUP_TABLE_COUNT F_COUNT
 #define HTTP_METHOD_TABLE_COUNT HTTP_METHOD_COUNT
 #define HTTP_REQ_HEADER_FIELD_TABLE_COUNT HTTP_RQH_COUNT
 #define HTTP_RES_HEADER_FIELD_TABLE_COUNT HTTP_RSH_COUNT
