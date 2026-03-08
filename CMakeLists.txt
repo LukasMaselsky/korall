@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_C_STANDARD 23)
+set(project_name "korall_examples")
+
 
 # ! ! ! ! ! ! !
 # set this to ON instead of OFF to ship the game!
@@ -23,7 +25,7 @@ endif()
 # PROJECT SETUP
 ###############################################################################
 
-project(websocketexamples LANGUAGES C)
+project(${project_name} LANGUAGES C)
 # include(cmake/configs.cmake)
 # add_subdirectory(tests)
 
@@ -32,7 +34,7 @@ project(websocketexamples LANGUAGES C)
 ###############################################################################
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory("http_server")
+add_subdirectory(korall)
 
 ###############################################################################
 # EXECUTABLE TARGETS
@@ -76,7 +78,7 @@ endif()
 target_include_directories(example1 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/examples/include/example1/")
 
 # Link libraries that use CMake
-target_link_libraries(example1 PRIVATE http_server)
+target_link_libraries(example1 PRIVATE korall)
 
 # Compiler flags
 

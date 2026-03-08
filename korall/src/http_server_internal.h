@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include "http_internal.h"
-#include "http_server/http_server.h"
+#include "korall/server.h"
 
 #define READ_BUFFER_LEN 1024
 #define RESPONSE_BUFFER_LEN 1024

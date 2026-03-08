@@ -1,11 +1,10 @@
 #include "main.h"
-#include "http_server/http_server.h"
-#include "http_server/http.h"
+#include "korall/server.h"
 #include <stdio.h>
 
 static void my_route(const HTTPRequest* req, HTTPResponse* res) {
 	//res->start_line->status_code = HTTP_SC_401;
-	printf("HELLOOOOOOO\n\n\n");
+	printf("HELLO\n\n\n");
 }
 
 int main(int argc, char* argv[]) {

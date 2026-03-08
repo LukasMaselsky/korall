@@ -4,7 +4,7 @@
 #include "array.h"
 #include "sockets.h"
 #include "utils.h"
-#include "http_server/http.h"
+#include "korall/http.h"
 
 #define MAX_HTTP_METHOD_STR_LEN 7
 #define MAX_HTTP_QUERY_STR_LEN 1024
