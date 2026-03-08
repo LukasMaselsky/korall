@@ -285,10 +285,47 @@ static void process_incoming_data(
 
 // PUBLIC FUNCTIONS
 
-void http_server_run(ServerConfig *config, const Routes *routes) {
+static void http_config_free(ServerConfig* config) {
+	free(config);
+}
+
+ServerConfig* http_config_init(const char* domain, const char* port, const char* name) {
+	ServerConfig* config = (ServerConfig*)safe_calloc(1, sizeof(ServerConfig));
+	config->domain = domain;
+	config->name = name;
+	config->port = port;
+	return config;
+}
+
+static void http_routes_free(Routes* routes) {
+	free(routes->routes);
+	free(routes);
+}
+
+Routes* http_routes_init(const size_t capacity) {
+	Routes* routes = (Routes*)safe_calloc(1, sizeof(Routes));
+	routes->routes = (Route*)safe_calloc(capacity, sizeof(Route));
+	routes->capacity = capacity;
+	routes->route_count = 0;
+	return routes;
+}
+
+Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
+	size_t count = routes->route_count;
+	if (count >= routes->capacity) {
+		perror("Cannot add route");
+		exit(EXIT_FAILURE);
+	}
+	Route route = { .path = path, .method = method, .callback = callback };
+	memcpy(routes->routes + count, &route, sizeof(route));
+	routes->route_count = count + 1;
+	return routes;
+}
+
+void http_server_run(ServerConfig* config, const Routes* routes) {
 
 	if (config == NULL) {
-		ServerConfig *default_config = http_config_init(NULL, DEFAULT_PORT, DEFAULT_SERVER_NAME);
+		ServerConfig* default_config = http_config_init(NULL, DEFAULT_PORT, DEFAULT_SERVER_NAME);
 		config = default_config;
 	}
 
@@ -348,43 +385,6 @@ void http_server_run(ServerConfig *config, const Routes *routes) {
 	http_routes_free(routes);
 
 	return;
-}
-
-static void http_config_free(ServerConfig* config) {
-	free(config);
-}
-
-ServerConfig* http_config_init(const char* domain, const char* port, const char* name) {
-	ServerConfig* config = (ServerConfig*)safe_calloc(1, sizeof(ServerConfig));
-	config->domain = domain;
-	config->name = name;
-	config->port = port;
-	return config;
-}
-
-static void http_routes_free(Routes* routes) {
-	free(routes->routes);
-	free(routes);
-}
-
-Routes* http_routes_init(const size_t capacity) {
-	Routes* routes = (Routes*)safe_calloc(1, sizeof(Routes));
-	routes->routes = (Route*)safe_calloc(capacity, sizeof(Route));
-	routes->capacity = capacity;
-	routes->route_count = 0;
-	return routes;
-}
-
-Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
-	size_t count = routes->route_count;
-	if (count >= routes->capacity) {
-		perror("Cannot add route");
-		exit(EXIT_FAILURE);
-	}
-	Route route = { .path = path, .method = method, .callback = callback };
-	memcpy(routes->routes + count, &route, sizeof(route));
-	routes->route_count = count + 1;
-	return routes;
 }
 
 // todo: setters getters

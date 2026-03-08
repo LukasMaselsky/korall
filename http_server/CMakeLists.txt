@@ -22,6 +22,7 @@ add_executable(tests)
 target_sources(tests PRIVATE ${MY_SOURCES_TESTS})
 
 # Include directories
+target_include_directories(tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/")
 target_link_libraries(tests PRIVATE http_server)
 
 # If using the VS compiler...
