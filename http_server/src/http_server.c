@@ -1,6 +1,6 @@
-#include "http_server/http_server.h"
+#include "http_server_internal.h"
 #include "sockets.h"
-#include "http_.h"
+#include "http_internal.h"
 #include "arena.h"
 #include "lookup_tables.h"
 
@@ -109,8 +109,12 @@ static void http_process_request(
 	}
 
 	const Route* route = http_route_select(req, routes);
-	// discard request if no matching route
 	if (route == NULL) {
+		// send 404 if no matching route
+		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_404, config->name, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
+		if (res == NULL) return;
+		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
+		
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
 		return;
@@ -118,6 +122,7 @@ static void http_process_request(
 	route->callback(req, res); // CALL CALLBACK
 
 	if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+		// todo: handle all sends failing
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
 		return;
@@ -266,28 +271,25 @@ static void process_incoming_data(
 	socket_print(inc_sock);
 	printf("\n'%s'\n", buffer);
 
+	http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, config, routes);
 	// TODO
-	if (config->type == ST_HTTP) {
-		http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, config, routes);
-	}
-	else {
+	//if (config->type == ST_HTTP) {
+	//}
+	//else {
 		//broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
-	}
+	//}
 	
 
 	return;
 }
 
+// PUBLIC FUNCTIONS
+
 void http_server_run(ServerConfig *config, const Routes *routes) {
-	ServerConfig default_config = {
-		.port = DEFAULT_PORT,
-		.domain = NULL,
-		.name = DEFAULT_SERVER_NAME,
-		.type = ST_HTTP,
-	};
 
 	if (config == NULL) {
-		config = &default_config;
+		ServerConfig *default_config = http_config_init(NULL, DEFAULT_PORT, DEFAULT_SERVER_NAME);
+		config = default_config;
 	}
 
 	//
@@ -340,5 +342,49 @@ void http_server_run(ServerConfig *config, const Routes *routes) {
 
 	socket_quit();
 
+	// free config and routes
+
+	http_config_free(config);
+	http_routes_free(routes);
+
 	return;
 }
+
+static void http_config_free(ServerConfig* config) {
+	free(config);
+}
+
+ServerConfig* http_config_init(const char* domain, const char* port, const char* name) {
+	ServerConfig* config = (ServerConfig*)safe_calloc(1, sizeof(ServerConfig));
+	config->domain = domain;
+	config->name = name;
+	config->port = port;
+	return config;
+}
+
+static void http_routes_free(Routes* routes) {
+	free(routes->routes);
+	free(routes);
+}
+
+Routes* http_routes_init(const size_t capacity) {
+	Routes* routes = (Routes*)safe_calloc(1, sizeof(Routes));
+	routes->routes = (Route*)safe_calloc(capacity, sizeof(Route));
+	routes->capacity = capacity;
+	routes->route_count = 0;
+	return routes;
+}
+
+Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
+	size_t count = routes->route_count;
+	if (count >= routes->capacity) {
+		perror("Cannot add route");
+		exit(EXIT_FAILURE);
+	}
+	Route route = { .path = path, .method = method, .callback = callback };
+	memcpy(routes->routes + count, &route, sizeof(route));
+	routes->route_count = count + 1;
+	return routes;
+}
+
+// todo: setters getters
