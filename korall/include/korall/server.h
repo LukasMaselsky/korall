@@ -4,15 +4,11 @@
 #include <stdlib.h>
 #include "http.h"
 
-typedef struct ServerConfigPrivate ServerConfig;
-
 typedef struct RoutePrivate Route;
 
 typedef struct RoutesPrivate Routes;
 
-void http_server_run(ServerConfig* config, const Routes *routes);
-
-ServerConfig* http_config_init(const char* domain, const char* port, const char* name);
+void http_server_run(const Routes *routes);
 
 Routes* http_routes_init(const size_t capacity);
 

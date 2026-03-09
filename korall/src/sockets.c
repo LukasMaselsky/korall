@@ -294,16 +294,16 @@ void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ips
     inet_ntop(sa->sa_family, addr, ipstr, ipstr_len);
 }
 
+bool is_valid_port_num(const int port) {
+    return (port >= MIN_PORT_NUM && port <= MAX_PORT_NUM);
+}
 
 bool is_valid_port(char* port) {
     int service_num;
     str_to_int_errno res = str_to_int(&service_num, port, 10);
-    if (res == STR_TO_INT_SUCCESS) {
-        if (service_num >= MIN_PORT_NUM && service_num <= MAX_PORT_NUM) {
-            return true;
-        }
-    }
-    return false;
+    if (res != STR_TO_INT_SUCCESS) return false;
+
+    return is_valid_port_num(service_num);
 }
 
 bool is_valid_service(char* service) {

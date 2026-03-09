@@ -3,9 +3,16 @@
 #include "http_internal.h"
 #include "arena.h"
 #include "lookup_tables.h"
+#include "cJSON.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
+
+const ServerConfig default_config = {
+	.domain = DEFAULT_DOMAIN,
+	.port = DEFAULT_PORT,
+	.name = DEFAULT_SERVER_NAME,
+};
 
 /*
 	Finds which route the request is targeting and returns it
@@ -42,12 +49,12 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 			port[i] = c;
 			i++;
 		}
-		if (strcmp(config->domain, domain) != 0 ||
-			strcmp(config->port, port) != 0) return false;
+		if (strcmp(config->domain.chars, domain) != 0 ||
+			strcmp(config->port.chars, port) != 0) return false;
 	}
 	
-	if (strcmp(config->domain, req->headers->host->domain) != 0 ||
-		strcmp(config->port, req->headers->host->port) != 0) return false;
+	if (strcmp(config->domain.chars, req->headers->host->domain) != 0 ||
+		strcmp(config->port.chars, req->headers->host->port) != 0) return false;
 	
 
 	return true;
@@ -76,7 +83,7 @@ static void http_process_request(
 		HTTPMediaType mt;
 		const char* message = http_error_response_info(parse_res, &sc, &mt);
 
-		const HTTPResponse* res = http_response_construct(&res_arena, sc, config->name, mt, message);
+		const HTTPResponse* res = http_response_construct(&res_arena, sc, config->name.chars, mt, message);
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
@@ -87,7 +94,7 @@ static void http_process_request(
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
 	if (!http_domain_port_match_server(config, req)) { 
 		printf("server: invalid HTTP request received, host\n");
-		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
+		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
@@ -100,7 +107,7 @@ static void http_process_request(
 
 	if (routes == NULL) return; // no route handlers
 
-	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, config->name, HTTP_MT_TXT_PLAIN, "Hello World!");
+	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, config->name.chars, HTTP_MT_TXT_PLAIN, "Hello World!");
 	if (res == NULL) { 
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
@@ -110,7 +117,7 @@ static void http_process_request(
 	const Route* route = http_route_select(req, routes);
 	if (route == NULL) {
 		// send 404 if no matching route
-		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_404, config->name, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
+		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 		if (res == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		
@@ -141,11 +148,10 @@ static SOCKET init_listen_socket(ServerConfig *config) {
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
 
-	const char* node = config->domain;
-	const char* service = config->port;
+	const char* node = config->domain.chars;
+	const char* service = config->port.chars;
 	if (node == NULL || strcmp(node, "localhost") == 0) {
 		node = LOCALHOST_NODE; // default server to localhost
-		config->domain = "localhost";
 	}
 	res = get_addr_info(node, service, &serverinfo);
 	
@@ -189,6 +195,7 @@ static SOCKET init_listen_socket(ServerConfig *config) {
 	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
 	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
+	printf("server: started \"%s\"\n", config->name.chars);
 	printf("server: opened socket on %s PORT %s (%s)\n", ip, service, ipver);
 
 	res = socket_listen(sock);
@@ -244,7 +251,8 @@ static void process_incoming_data(
 	const fd_set* main, 
 	const SOCKET fd_max, 
 	const ServerConfig *config, 
-	const Routes *routes) {
+	const Routes *routes
+) {
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
 
 	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
@@ -284,16 +292,73 @@ static void process_incoming_data(
 
 // PUBLIC FUNCTIONS
 
-static void http_config_free(ServerConfig* config) {
-	free(config);
-}
+HTTPConfigError http_config_init(ServerConfig *config) {
 
-ServerConfig* http_config_init(const char* domain, const char* port, const char* name) {
-	ServerConfig* config = (ServerConfig*)safe_calloc(1, sizeof(ServerConfig));
-	config->domain = domain;
-	config->name = name;
-	config->port = port;
-	return config;
+	// todo: !!!
+	FILE* fp = fopen("C:/Users/kukub/source/repos/korall/examples/resources/example1/korall_config.json", "r");
+	if (fp == NULL) { 
+		printf("Could not find a korall_config.json, file using default config.\nIf you are using a custom config, make sure the path is correct.");
+		return HTTP_CONF_DEFAULT;
+	};
+
+	// read the file contents into a string
+	char buffer[HTTP_CONFIG_BUFFER_LEN + 1];
+	size_t len = fread(buffer, 1, sizeof(buffer), fp);
+	fclose(fp);
+
+	// parse the JSON data
+	cJSON* json = cJSON_Parse(buffer);
+	if (json == NULL) {
+		const char* error_ptr = cJSON_GetErrorPtr();
+		if (error_ptr != NULL) {
+			printf("%s\n", error_ptr);
+		}
+		cJSON_Delete(json);
+		return HTTP_CONF_ERROR;
+	}
+
+	// access the JSON data
+
+	// go through all ServerConfig
+
+	// server name
+
+	cJSON* name = cJSON_GetObjectItemCaseSensitive(json, "name");
+	if (!(cJSON_IsString(name) && (name->valuestring != NULL))) {
+		printf("Config \"name\" field is not valid.\n");
+		return HTTP_CONF_ERROR;
+	}
+	strncpy(config->name.chars, name->valuestring, config->name.size);
+	
+	// domain
+
+	cJSON* domain = cJSON_GetObjectItemCaseSensitive(json, "domain");
+	if (!(cJSON_IsString(domain) && (domain->valuestring != NULL))) {
+		printf("Config \"domain\" field is not valid.\n");
+		return HTTP_CONF_ERROR;
+	}
+	strncpy(config->domain.chars, domain->valuestring, config->domain.size);
+
+	// port
+
+	cJSON* port = cJSON_GetObjectItemCaseSensitive(json, "port");
+	if (!(cJSON_IsNumber(port))) {
+		printf("Config \"port\" field is not valid.\n");
+		return HTTP_CONF_ERROR;
+	}
+	if (!is_valid_port_num(port->valueint)) {
+		printf("Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
+		return HTTP_CONF_ERROR;
+	};
+
+	char* port_str[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+	int_to_str(port->valueint, port_str);
+	strncpy(config->port.chars, port_str, config->port.size);
+
+	//
+
+	cJSON_Delete(json);
+	return HTTP_CONF_SUCCESS;
 }
 
 static void http_routes_free(Routes* routes) {
@@ -321,14 +386,33 @@ Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod metho
 	return routes;
 }
 
-void http_server_run(ServerConfig* config, const Routes* routes) {
+void http_server_run(const Routes* routes) {
 
-	if (config == NULL) {
-		ServerConfig* default_config = http_config_init(NULL, DEFAULT_PORT, DEFAULT_SERVER_NAME);
-		config = default_config;
+	// config
+
+	char* domain[MAX_DOMAIN_LEN + 1] = { 0 };
+	char* port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+	char* name[MAX_SERVER_NAME_LEN + 1] = { 0 };
+
+	ServerConfig config = {
+		.domain = {.chars = domain, .size = MAX_DOMAIN_LEN },
+		.port = {.chars = port, .size = MAX_PORT_NUM_CHAR_LEN },
+		.name = {.chars = name, .size = MAX_SERVER_NAME_LEN },
+	};
+	HTTPConfigError conf_res = http_config_init(&config);
+	
+	switch (conf_res) {
+		case HTTP_CONF_SUCCESS:
+			break;
+		case HTTP_CONF_DEFAULT:
+			config = default_config;
+			break;
+		case HTTP_CONF_ERROR:
+		default:
+			return;
 	}
-
-	//
+	
+	// sockets
 
 	int res = socket_init();
 	if (res != 0) {
@@ -345,7 +429,7 @@ void http_server_run(ServerConfig* config, const Routes* routes) {
 	FD_ZERO(&main_fds);
 	FD_ZERO(&read_fds);
 
-	SOCKET server_sock = init_listen_socket(config);
+	SOCKET server_sock = init_listen_socket(&config);
 
 	FD_SET(server_sock, &main_fds);
 	fd_max = server_sock;
@@ -366,7 +450,7 @@ void http_server_run(ServerConfig* config, const Routes* routes) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, fd_max, config, routes);
+				process_incoming_data(i, server_sock, &main_fds, fd_max, &config, routes);
 			}
 
 		}
@@ -380,7 +464,6 @@ void http_server_run(ServerConfig* config, const Routes* routes) {
 
 	// free config and routes
 
-	http_config_free(config);
 	http_routes_free(routes);
 
 	return;

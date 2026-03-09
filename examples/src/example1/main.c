@@ -9,12 +9,10 @@ static void my_route(const HTTPRequest* req, HTTPResponse* res) {
 
 int main(int argc, char* argv[]) {
 
-	ServerConfig* config = http_config_init(NULL, "3500", "CustomServer");
-	
 	const Routes* routes = http_routes_init(1);
 	http_routes_add(routes, "/", HTTP_GET, my_route);
-
-	http_server_run(config, routes);
+	
+	http_server_run(routes);
 
 	return 0;
 }

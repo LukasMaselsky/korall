@@ -78,7 +78,7 @@ typedef struct {
 
 str_to_int_errno str_to_int(int* out, const char* s, int base);
 
-void int_to_str(const int value, const char* str);
+void int_to_str(const int value, char* str);
 
 bool is_digit(const char c);
 

@@ -11,12 +11,25 @@
 #define DEFAULT_SERVER_NAME "MyServer"
 #define MAX_SERVER_NAME_LEN 100 // todo 
 
+#define DEFAULT_PORT "3500"
+#define DEFAULT_DOMAIN "localhost"
 
-struct ServerConfigPrivate {
-	char* domain;
-	char* port;
-	char* name;
-};
+#define HTTP_CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?
+
+typedef struct ServerConfig {
+	String domain;
+	String port;
+	String name;
+} ServerConfig;
+
+typedef enum HTTPConfigError {
+	HTTP_CONF_ERROR = -1,
+	HTTP_CONF_SUCCESS,
+	HTTP_CONF_DEFAULT,
+} HTTPConfigError;
+
+HTTPConfigError http_config_init(ServerConfig* config);
+
 
 struct RoutePrivate {
 	const char* path;

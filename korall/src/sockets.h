@@ -62,7 +62,6 @@ typedef struct {
 #define IPV6_ADDRSTRLEN INET6_ADDRSTRLEN - 1
 #define MAX_LISTEN_QUEUE_LEN 10
 #define IP_VER_STR_LEN 5
-#define DEFAULT_PORT "3500"
 #define SELECT_NO_TIMEOUT -1.0
 #define LOCALHOST_NODE "127.0.0.1"
 
@@ -144,6 +143,8 @@ void get_ip_info_addr(struct addrinfo* addrinfo, char* ipstr, size_t ipstr_len, 
 void get_ip_info_storage(struct sockaddr_storage* addrs, char* ipstr, size_t ipstr_len, char* ipver, size_t ipver_len);
 
 void sigchild_handler(int s);
+
+bool is_valid_port_num(const int port);
 
 bool is_valid_port(char* port);
 

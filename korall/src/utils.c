@@ -39,7 +39,7 @@ str_to_int_errno str_to_int(int* out, const char* s, int base) {
     return STR_TO_INT_SUCCESS;
 }
 
-void int_to_str(const int value, const char* str) {
+void int_to_str(const int value, char* str) {
     sprintf(str, "%d", value);
 }
 
