@@ -66,9 +66,19 @@ typedef struct {
     const size_t size;
 } LookupTable;
 
+typedef struct {
+    char* chars;
+    size_t size;
+} String;
+
+typedef struct {
+    const char* chars;
+    const size_t size;
+} ConstString;
+
 str_to_int_errno str_to_int(int* out, const char* s, int base);
 
-void int_to_str(int value, char* str);
+void int_to_str(const int value, const char* str);
 
 bool is_digit(const char c);
 

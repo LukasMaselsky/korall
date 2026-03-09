@@ -123,7 +123,7 @@ struct HTTPResponseInternal {
 	char* body;
 };
 
-HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req);
+HTTPError http_parse_request(const char* data, HTTPRequest* req);
 
 HTTPError http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
 
@@ -169,7 +169,7 @@ void http_response_free(Arena* arena, HTTPResponse* res);
 
 void http_response_clear(Arena* arena, HTTPResponse** res);
 
-void http_get_current_date(char* str, size_t str_len);
+void http_get_current_date(ConstString str);
 
 const char* http_error_response_info(HTTPError err, HTTPStatusCode* sc, HTTPMediaType* mt);
 

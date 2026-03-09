@@ -39,7 +39,7 @@ str_to_int_errno str_to_int(int* out, const char* s, int base) {
     return STR_TO_INT_SUCCESS;
 }
 
-void int_to_str(int value, char* str) {
+void int_to_str(const int value, const char* str) {
     sprintf(str, "%d", value);
 }
 
@@ -130,7 +130,7 @@ int fill_string_str(const char** str, char* arr, size_t arr_len, char *match) {
 }
 
 static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
-    size_t sub_len = end - s;
+    const size_t sub_len = end - s;
     if (sub_len > arr_len) return -1;
     memcpy(arr, s, sub_len);
     arr[sub_len] = '\0';

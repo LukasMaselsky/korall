@@ -56,8 +56,7 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 static void http_process_request(
 	const SOCKET inc_sock, 
 	const SOCKET server_sock, 
-	const char* data, 
-	const int data_len, 
+	const char* data,
 	const fd_set* main, 
 	const SOCKET fd_max,
 	const ServerConfig *config,
@@ -69,7 +68,7 @@ static void http_process_request(
 	HTTPRequest *req = http_request_init(&req_arena);
 
 	// first validate format
-	HTTPError parse_res = http_parse_request(data, data_len, req);
+	HTTPError parse_res = http_parse_request(data, req);
 	if (parse_res != HTTP_SUCCESS) {
 		printf("server: invalid HTTP request received, syntax\n");
 
@@ -271,7 +270,7 @@ static void process_incoming_data(
 	socket_print(inc_sock);
 	printf("\n'%s'\n", buffer);
 
-	http_process_request(inc_sock, server_sock, buffer, bytes_read, main, fd_max, config, routes);
+	http_process_request(inc_sock, server_sock, buffer, main, fd_max, config, routes);
 	// TODO
 	//if (config->type == ST_HTTP) {
 	//}

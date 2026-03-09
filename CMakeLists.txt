@@ -83,9 +83,9 @@ target_link_libraries(example1 PRIVATE korall)
 # Compiler flags
 
 if(MSVC)
-    add_compile_options("/Wall" "$<$<CONFIG:RELEASE>:/O2>" "/WX")
+    add_compile_options("/Wall" "$<$<CONFIG:RELEASE>:/O2>" "/WX" "/fsanitize=address")
 else()
-    add_compile_options("-Wall" "-Wextra" "-Werror" "$<$<CONFIG:RELEASE>:-O3>")
+    add_compile_options("-Wall" "-Wextra" "-Werror" "$<$<CONFIG:RELEASE>:-O3>" "-fsanitize=address")
     if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options("-stdlib=libc++")
     else()

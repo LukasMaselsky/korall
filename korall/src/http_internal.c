@@ -6,7 +6,7 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-HTTPError http_parse_request(const char* data, int data_len, HTTPRequest* req) {
+HTTPError http_parse_request(const char* data, HTTPRequest* req) {
 	
 	HTTPError res = http_process_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
@@ -362,7 +362,7 @@ HTTPResponse* http_response_construct(
 	}
 	strncpy(res->start_line->reason_phrase, code_str, MAX_REASON_PHRASE_LEN);
 
-	http_get_current_date(res->headers->date, MAX_DATE_STR_LEN + 1); // + 1 needed, \0 included for strftime
+	http_get_current_date((ConstString){ res->headers->date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
 	strncpy(res->headers->server, server_name, MAX_HTTP_HEADER_VALUE_LEN);
 
 	if (body != NULL) {
@@ -421,7 +421,7 @@ char* http_response_to_str(const HTTPResponse* res) {
 		free(data);
 		return NULL;
 	};
-	char cl[20];
+	const char cl[20];
 	int_to_str(res->headers->content_length, cl);
 	if (http_header_to_str(HTTP_RSH_CONTENT_LENGTH, cl, &data) == -1) {
 		free(data);
@@ -507,11 +507,11 @@ void http_response_clear(Arena* arena, HTTPResponse** res) {
 	*res = http_response_init(arena);
 }
 
-void http_get_current_date(char *str, size_t str_len) {
+void http_get_current_date(ConstString str) {
 	struct tm* timeinfo;
 	get_current_time_gmt(&timeinfo);
 
-	strftime(str, str_len, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	strftime(str.chars, str.size, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 }
 
 /* 

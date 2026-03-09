@@ -22,7 +22,6 @@ TEST("is_digits_only") {
 
 	res = is_digits_only("");
 	ASSERT(!res);
-
 }
 
 TEST("get_current_time_gmt") {

@@ -12,27 +12,27 @@ TEST("http_parse_request") {
 	char* str;
 
 	str = "GET / HTTP/1.1\r\n\r\n";
-	res = http_parse_request(str, strlen(str), req);
+	res = http_parse_request(str, req);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-	res = http_parse_request(str, strlen(str), req);
+	res = http_parse_request(str, req);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\nHost: \r\n\r\n";
-	res = http_parse_request(str, strlen(str), req);
+	res = http_parse_request(str, req);
 	ASSERT(res == HTTP_BAD_DOMAIN_PORT);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1";
-	res = http_parse_request(str, strlen(str), req);
+	res = http_parse_request(str, req);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\n";
-	res = http_parse_request(str, strlen(str), req);
+	res = http_parse_request(str, req);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 
@@ -287,8 +287,8 @@ TEST("http_process_method") {
 }
 
 TEST("http_get_current_date") {
-	char buf[MAX_DATE_STR_LEN + 1];
-	http_get_current_date(buf, MAX_DATE_STR_LEN + 1);
+	const char buf[MAX_DATE_STR_LEN + 1];
+	http_get_current_date((ConstString){ buf, MAX_DATE_STR_LEN + 1 });
 	// todo
 }
 
