@@ -1,6 +1,6 @@
 #include "lookup_tables.h"
 
-const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT] = {
+const LookupEntry http_method_lookup_table_entries[HTTP_METHOD_TABLE_COUNT] = {
 	{ HTTP_CONNECT, "CONNECT" },
 	{ HTTP_DELETE, "DELETE" },
 	{ HTTP_GET, "GET" },
@@ -12,7 +12,7 @@ const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT] = {
 	{ HTTP_TRACE, "TRACE" }
 };
 
-const LookupEntry http_req_header_field_lookup_table[HTTP_REQ_HEADER_FIELD_TABLE_COUNT] = {
+const LookupEntry http_req_header_field_lookup_table_entries[HTTP_REQ_HEADER_FIELD_TABLE_COUNT] = {
 	{ HTTP_RQH_A_IM, "A-IM" },
 	{ HTTP_RQH_ACCEPT, "Accept" },
 	{ HTTP_RQH_ACCEPT_CHARSET, "Accept-Charset" },
@@ -56,7 +56,7 @@ const LookupEntry http_req_header_field_lookup_table[HTTP_REQ_HEADER_FIELD_TABLE
 	{ HTTP_RQH_WARNING, "Warning" },
 };
 
-const LookupEntry http_status_code_lookup_table[HTTP_STATUS_CODE_TABLE_COUNT] = {
+const LookupEntry http_status_code_lookup_table_entries[HTTP_STATUS_CODE_TABLE_COUNT] = {
 	{ HTTP_SC_100, "Continue"},
 	{ HTTP_SC_101, "Switching Protocols"},
 	{ HTTP_SC_102, "Processing"},
@@ -124,7 +124,7 @@ const LookupEntry http_status_code_lookup_table[HTTP_STATUS_CODE_TABLE_COUNT] = 
 	{ HTTP_SC_599, "Network Connect Timeout Error"}
 };
 
-const LookupEntry http_res_header_field_lookup_table[HTTP_RES_HEADER_FIELD_TABLE_COUNT] = {
+const LookupEntry http_res_header_field_lookup_table_entries[HTTP_RES_HEADER_FIELD_TABLE_COUNT] = {
 	{ HTTP_RSH_ACCEPT_CH, "Accept-CH" },
 	{ HTTP_RSH_ACCESS_CONTROL_ALLOW_ORIGIN, "Access-Control-Allow-Origin" },
 	{ HTTP_RSH_ACCESS_CONTROL_ALLOW_CREDENTIALS, "Access-Control-Allow-Credentials" },
@@ -175,7 +175,7 @@ const LookupEntry http_res_header_field_lookup_table[HTTP_RES_HEADER_FIELD_TABLE
 	{ HTTP_RSH_X_FRAME_OPTIONS, "X-Frame-Options" },
 };
 
-const LookupEntry http_media_type_lookup_table[HTTP_MEDIA_TYPE_TABLE_COUNT] = {
+const LookupEntry http_media_type_lookup_table_entries[HTTP_MEDIA_TYPE_TABLE_COUNT] = {
 	{ HTTP_MT_ANY, "*/*" },
 	{ HTTP_MT_APP, "application/*" },
 	{ HTTP_MT_APP_JSON, "application/json" },
@@ -217,7 +217,7 @@ const LookupEntry http_media_type_lookup_table[HTTP_MEDIA_TYPE_TABLE_COUNT] = {
 	{ HTTP_MT_TXT_XML, "text/xml" },
 };	  
 
-const LookupEntry http_encoding_lookup_table[HTTP_ENCODING_TABLE_COUNT] = {
+const LookupEntry http_encoding_lookup_table_entries[HTTP_ENCODING_TABLE_COUNT] = {
 	{ HTTP_ENC_ANY, "*" },
 	{ HTTP_ENC_GZIP, "gzip" },
 	{ HTTP_ENC_COMPRESS, "compress" },
@@ -229,7 +229,7 @@ const LookupEntry http_encoding_lookup_table[HTTP_ENCODING_TABLE_COUNT] = {
 	{ HTTP_ENC_IDENTITY, "identity" },
 };
 
-const LookupEntry http_charset_lookup_table[HTTP_CHARSET_TABLE_COUNT] = {
+const LookupEntry http_charset_lookup_table_entries[HTTP_CHARSET_TABLE_COUNT] = {
 	{ HTTP_CHS_BIG5, "big5" },
 	{ HTTP_CHS_EUC_KR, "euc-kr" },
 	{ HTTP_CHS_ISO_8859_1, "iso-8859-1" },
@@ -256,12 +256,12 @@ const LookupEntry http_charset_lookup_table[HTTP_CHARSET_TABLE_COUNT] = {
 	{ HTTP_CHS_WINDOWS_874, "windows-874" },
 };
 
-const LookupEntry http_connection_lookup_table[HTTP_CONNECTION_TABLE_COUNT] = {
+const LookupEntry http_connection_lookup_table_entries[HTTP_CONNECTION_TABLE_COUNT] = {
 	{ HTTP_CON_KEEP_ALIVE, "keep-alive" },
 	{ HTTP_CON_CLOSE, "close" },
 };
 
-const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT] = {
+const LookupEntry http_req_cache_control_lookup_table_entries[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT] = {
 	{ HTTP_REQ_CC_MAX_AGE, "max-age" },
 	{ HTTP_REQ_CC_MAX_STALE, "max-stale" },
 	{ HTTP_REQ_CC_MIN_FRESH, "min-fresh" },
@@ -272,7 +272,7 @@ const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TAB
 	{ HTTP_REQ_CC_STALE_IF_ERROR, "stale-if-error" },
 };
 
-const LookupEntry day_lookup_table[DAY_TABLE_COUNT] = {
+const LookupEntry day_lookup_table_entries[DAY_TABLE_COUNT] = {
 	{ DAY_MON, "Mon" },
 	{ DAY_TUE, "Tue" },
 	{ DAY_WED, "Wed" },
@@ -282,7 +282,7 @@ const LookupEntry day_lookup_table[DAY_TABLE_COUNT] = {
 	{ DAY_SUN, "Sun" },
 };
 
-const LookupEntry month_lookup_table[MONTH_TABLE_COUNT] = {
+const LookupEntry month_lookup_table_entries[MONTH_TABLE_COUNT] = {
 	{ MONTH_JAN, "Jan" },
 	{ MONTH_FEB, "Feb" },
 	{ MONTH_MAR, "Mar" },
@@ -296,3 +296,59 @@ const LookupEntry month_lookup_table[MONTH_TABLE_COUNT] = {
 	{ MONTH_NOV, "Nov" },
 	{ MONTH_DEC, "Dec" },
 };
+
+const LookupTable http_method_lookup_table = {
+	.entries = http_method_lookup_table_entries,
+	.size = HTTP_METHOD_TABLE_COUNT
+};
+
+const LookupTable http_req_header_field_lookup_table = {
+	.entries = http_req_header_field_lookup_table_entries,
+	.size = HTTP_REQ_HEADER_FIELD_TABLE_COUNT
+};
+
+const LookupTable http_status_code_lookup_table = {
+	.entries = http_status_code_lookup_table_entries,
+	.size = HTTP_STATUS_CODE_TABLE_COUNT
+};
+
+const LookupTable http_res_header_field_lookup_table = {
+	.entries = http_res_header_field_lookup_table_entries,
+	.size = HTTP_RES_HEADER_FIELD_TABLE_COUNT
+};
+
+const LookupTable http_media_type_lookup_table = {
+	.entries = http_media_type_lookup_table_entries,
+	.size = HTTP_MEDIA_TYPE_TABLE_COUNT
+};
+
+const LookupTable http_encoding_lookup_table = {
+	.entries = http_encoding_lookup_table_entries,
+	.size = HTTP_ENCODING_TABLE_COUNT
+};
+
+const LookupTable http_charset_lookup_table = {
+	.entries = http_charset_lookup_table_entries,
+	.size = HTTP_CHARSET_TABLE_COUNT
+};
+
+const LookupTable http_connection_lookup_table = {
+	.entries = http_connection_lookup_table_entries,
+	.size = HTTP_CONNECTION_TABLE_COUNT
+};
+
+const LookupTable http_req_cache_control_lookup_table = {
+	.entries = http_req_cache_control_lookup_table_entries,
+	.size = HTTP_REQ_CACHE_CONTROL_TABLE_COUNT
+};
+
+const LookupTable day_lookup_table = {
+	.entries = day_lookup_table_entries,
+	.size = DAY_TABLE_COUNT
+};
+
+const LookupTable month_lookup_table = {
+	.entries = month_lookup_table_entries,
+	.size = MONTH_TABLE_COUNT
+};
+

@@ -81,7 +81,7 @@ HTTPError http_process_header(const char** str, HTTPRequest* req) {
 	if (res == -1) return HTTP_BAD_HEADER;
 	const char *s = *str;
 
-	int header_field = lookup_str_int(field, http_req_header_field_lookup_table, HTTP_REQ_HEADER_FIELD_TABLE_COUNT, true);
+	int header_field = lookup_str_int(field, &http_req_header_field_lookup_table, true);
 	if (header_field == -1) return HTTP_BAD_HEADER;
 
 	
@@ -230,7 +230,7 @@ HTTPError http_process_method(const char **str, HTTPRequest *req) {
 	int res = fill_string_char(str, method, len, ' ');
 	if (res == -1) return HTTP_BAD_METHOD;
 
-	int method_int = lookup_str_int(method, http_method_lookup_table, HTTP_METHOD_TABLE_COUNT, false);
+	int method_int = lookup_str_int(method, &http_method_lookup_table, false);
 	if (method_int == -1) return HTTP_BAD_METHOD;
 
 	req->start_line->method = method_int;
@@ -355,7 +355,7 @@ HTTPResponse* http_response_construct(
 ) {
 	HTTPResponse* res = http_response_init(arena);
 	res->start_line->status_code = code;
-	const char* code_str = lookup_int_str(code, http_status_code_lookup_table, HTTP_STATUS_CODE_TABLE_COUNT);
+	const char* code_str = lookup_int_str(code, &http_status_code_lookup_table);
 	if (code_str == NULL) {
 		printf("server: response construction failed, reason phrase lookup\n");
 		return NULL;
@@ -371,7 +371,7 @@ HTTPResponse* http_response_construct(
 			printf("server: response construction failed, body too long\n");
 			return NULL;
 		}
-		const char* ct_str = lookup_int_str(content_type, http_media_type_lookup_table, HTTP_MEDIA_TYPE_TABLE_COUNT);
+		const char* ct_str = lookup_int_str(content_type, &http_media_type_lookup_table);
 		if (ct_str == NULL) {
 			printf("server: response construction failed, content type lookup\n");
 			return NULL;
@@ -391,7 +391,7 @@ HTTPResponse* http_response_construct(
 
 int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **buf) {
 	const char* field_val;
-	field_val = lookup_int_str(field, http_res_header_field_lookup_table, HTTP_RES_HEADER_FIELD_TABLE_COUNT);
+	field_val = lookup_int_str(field, &http_res_header_field_lookup_table);
 	if (field_val == NULL) {
 		return -1;
 	}

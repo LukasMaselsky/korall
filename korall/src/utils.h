@@ -61,6 +61,11 @@ typedef struct {
     char* string;
 } LookupEntry;
 
+typedef struct {
+    const LookupEntry* entries;
+    const size_t size;
+} LookupTable;
+
 str_to_int_errno str_to_int(int* out, const char* s, int base);
 
 void int_to_str(int value, char* str);
@@ -69,9 +74,9 @@ bool is_digit(const char c);
 
 bool is_digits_only(const char* str);
 
-int lookup_str_int(const char* key, const LookupEntry* table, const unsigned int table_count, const bool case_insensitive);
+int lookup_str_int(const char* key, const LookupTable* table, const bool case_insensitive);
 
-const char* lookup_int_str(const int key, const LookupEntry* table, const unsigned int table_count);
+const char* lookup_int_str(const int key, const LookupTable* table);
 
 void* safe_calloc(size_t count, size_t size);
 

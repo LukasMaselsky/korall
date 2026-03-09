@@ -16,15 +16,16 @@
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
-extern const LookupEntry http_method_lookup_table[HTTP_METHOD_TABLE_COUNT];
-extern const LookupEntry http_req_header_field_lookup_table[HTTP_REQ_HEADER_FIELD_TABLE_COUNT];
-extern const LookupEntry http_res_header_field_lookup_table[HTTP_RES_HEADER_FIELD_TABLE_COUNT];
-extern const LookupEntry http_status_code_lookup_table[HTTP_STATUS_CODE_TABLE_COUNT];
-extern const LookupEntry http_media_type_lookup_table[HTTP_MEDIA_TYPE_TABLE_COUNT];
-extern const LookupEntry http_encoding_lookup_table[HTTP_ENCODING_TABLE_COUNT];
-extern const LookupEntry http_charset_lookup_table[HTTP_CHARSET_TABLE_COUNT];
-extern const LookupEntry http_connection_lookup_table[HTTP_CONNECTION_TABLE_COUNT];
-extern const LookupEntry http_req_cache_control_lookup_table[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT];
-extern const LookupEntry day_lookup_table[DAY_TABLE_COUNT];
-extern const LookupEntry month_lookup_table[MONTH_TABLE_COUNT];
+extern const LookupTable http_method_lookup_table;
+extern const LookupTable http_req_header_field_lookup_table;
+extern const LookupTable http_res_header_field_lookup_table;
+extern const LookupTable http_status_code_lookup_table;
+extern const LookupTable http_media_type_lookup_table;
+extern const LookupTable http_encoding_lookup_table;
+extern const LookupTable http_charset_lookup_table;
+extern const LookupTable http_connection_lookup_table;
+extern const LookupTable http_req_cache_control_lookup_table;
+extern const LookupTable day_lookup_table;
+extern const LookupTable month_lookup_table;
+
 #endif

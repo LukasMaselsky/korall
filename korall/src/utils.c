@@ -62,9 +62,9 @@ static int strcmp_ci(const char* str1, const char* str2) {
 #endif
 }
 
-int lookup_str_int(const char* key, const LookupEntry *table, const unsigned int table_count, const bool case_insensitive) {
+int lookup_str_int(const char* key, const LookupTable *table, const bool case_insensitive) {
     if (key[0] == '\0') return -1;
-    for (const LookupEntry* entry = table; entry != table + table_count; entry++) {
+    for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
         if (case_insensitive) {
             if (strcmp_ci(entry->string, key) == 0)
                 return entry->integer;
@@ -80,8 +80,8 @@ int lookup_str_int(const char* key, const LookupEntry *table, const unsigned int
     return -1;
 }
 
-const char* lookup_int_str(const int key, const LookupEntry* table, const unsigned int table_count) {
-    for (const LookupEntry* entry = table; entry != table + table_count; entry++) {
+const char* lookup_int_str(const int key, const LookupTable* table) {
+    for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
         if (entry->integer == key)
             return entry->string;
     }
