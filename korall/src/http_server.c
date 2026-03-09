@@ -292,10 +292,29 @@ static void process_incoming_data(
 
 // PUBLIC FUNCTIONS
 
-HTTPConfigError http_config_init(ServerConfig *config) {
+HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
 
-	// todo: !!!
-	FILE* fp = fopen("C:/Users/kukub/source/repos/korall/examples/resources/example1/korall_config.json", "r");
+	const char* config_file_name = SERVER_CONFIG_FILE_NAME;
+	char file_path[MAX_FILE_PATH + 1] = { 0 };
+
+	if (path == NULL) {
+		strcpy(file_path, config_file_name);
+	}
+	else {
+		size_t path_len = strlen(path);
+		if (path_len > MAX_FILE_PATH) { 
+			printf("File path too long.");
+			return HTTP_CONF_ERROR; 
+		};
+		strcpy(file_path, path);
+		if (strlen(config_file_name) + path_len > MAX_FILE_PATH) {
+			printf("File path too long.");
+			return HTTP_CONF_ERROR;
+		};
+		strcat(file_path, config_file_name);
+	}
+	
+	FILE* fp = fopen(file_path, "r");
 	if (fp == NULL) { 
 		printf("Could not find a korall_config.json, file using default config.\nIf you are using a custom config, make sure the path is correct.");
 		return HTTP_CONF_DEFAULT;
@@ -386,7 +405,7 @@ Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod metho
 	return routes;
 }
 
-void http_server_run(const Routes* routes) {
+void http_server_run(const char *config_path, const Routes* routes) {
 
 	// config
 
@@ -399,7 +418,7 @@ void http_server_run(const Routes* routes) {
 		.port = {.chars = port, .size = MAX_PORT_NUM_CHAR_LEN },
 		.name = {.chars = name, .size = MAX_SERVER_NAME_LEN },
 	};
-	HTTPConfigError conf_res = http_config_init(&config);
+	HTTPConfigError conf_res = http_config_init(config_path, &config);
 	
 	switch (conf_res) {
 		case HTTP_CONF_SUCCESS:

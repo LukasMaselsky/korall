@@ -20,6 +20,15 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#ifdef _WIN32
+    #include <WinSock2.h>
+    #define MAX_FILE_PATH MAX_PATH
+#else
+    #include <linux/limits.h>
+    #define MAX_FILE_PATH (PATH_MAX + 1)
+
+#endif
+
 #define KILOBYTE 1024
 
 typedef enum {

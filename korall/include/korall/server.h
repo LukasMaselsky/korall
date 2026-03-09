@@ -8,7 +8,7 @@ typedef struct RoutePrivate Route;
 
 typedef struct RoutesPrivate Routes;
 
-void http_server_run(const Routes *routes);
+void http_server_run(const char *config_path, const Routes *routes);
 
 Routes* http_routes_init(const size_t capacity);
 

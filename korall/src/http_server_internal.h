@@ -10,7 +10,7 @@
 
 #define DEFAULT_SERVER_NAME "MyServer"
 #define MAX_SERVER_NAME_LEN 100 // todo 
-
+#define SERVER_CONFIG_FILE_NAME "korall_config.json"
 #define DEFAULT_PORT "3500"
 #define DEFAULT_DOMAIN "localhost"
 
@@ -28,7 +28,7 @@ typedef enum HTTPConfigError {
 	HTTP_CONF_DEFAULT,
 } HTTPConfigError;
 
-HTTPConfigError http_config_init(ServerConfig* config);
+HTTPConfigError http_config_init(const char *path, ServerConfig* config);
 
 
 struct RoutePrivate {
