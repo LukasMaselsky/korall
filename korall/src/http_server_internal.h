@@ -15,6 +15,7 @@
 #define DEFAULT_DOMAIN "localhost"
 
 #define HTTP_CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?
+#define HTTP_ROUTES_CAPACITY 100 // todo: ?
 
 typedef struct ServerConfig {
 	String domain;

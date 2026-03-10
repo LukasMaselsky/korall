@@ -10,7 +10,7 @@ typedef struct RoutesPrivate Routes;
 
 void http_server_run(const char *config_path, const Routes *routes);
 
-Routes* http_routes_init(const size_t capacity);
+Routes* http_routes_init();
 
 Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
 

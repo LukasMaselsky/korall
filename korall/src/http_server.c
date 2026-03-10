@@ -385,7 +385,8 @@ static void http_routes_free(Routes* routes) {
 	free(routes);
 }
 
-Routes* http_routes_init(const size_t capacity) {
+Routes* http_routes_init() {
+	size_t capacity = sizeof(Route) * HTTP_ROUTES_CAPACITY;
 	Routes* routes = (Routes*)safe_calloc(1, sizeof(Routes));
 	routes->routes = (Route*)safe_calloc(capacity, sizeof(Route));
 	routes->capacity = capacity;

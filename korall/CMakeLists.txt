@@ -28,8 +28,8 @@ target_link_libraries(tests PRIVATE ${project_name})
 
 # If using the VS compiler...
 if(MSVC)
-		target_compile_definitions(tests PUBLIC _CRT_SECURE_NO_WARNINGS)
-		# set_target_properties(client PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console
+	target_compile_definitions(tests PUBLIC _CRT_SECURE_NO_WARNINGS)
+	# set_target_properties(client PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console
 endif()
 
 # Force remove unicode
