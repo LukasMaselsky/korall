@@ -1,9 +1,9 @@
-#ifndef HTTP_SERVER_INTERNAL_H
-#define HTTP_SERVER_INTERNAL_H
+#ifndef KORALL_INTERNAL_H
+#define KORALL_INTERNAL_H
 
 #include <stdlib.h>
 #include "http_internal.h"
-#include "korall/server.h"
+#include "korall/korall.h"
 
 #define READ_BUFFER_LEN 1024
 #define RESPONSE_BUFFER_LEN 1024

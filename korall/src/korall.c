@@ -1,4 +1,4 @@
-#include "http_server_internal.h"
+#include "korall_internal.h"
 #include "sockets.h"
 #include "http_internal.h"
 #include "arena.h"
@@ -385,7 +385,7 @@ static void http_routes_free(Routes* routes) {
 	free(routes);
 }
 
-Routes* http_routes_init() {
+Routes* korall_routes_init() {
 	size_t capacity = sizeof(Route) * HTTP_ROUTES_CAPACITY;
 	Routes* routes = (Routes*)safe_calloc(1, sizeof(Routes));
 	routes->routes = (Route*)safe_calloc(capacity, sizeof(Route));
@@ -394,19 +394,30 @@ Routes* http_routes_init() {
 	return routes;
 }
 
-Routes* http_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
+void korall_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
+	if (path == NULL) {
+		printf("Failed to add route, path cannot be NULL.\n");
+		return;
+	}
+	if (callback == NULL) {
+		printf("Failed to add route, callback cannot be NULL.\n");
+		return;
+	}
+	if (lookup_int_str(method, &http_method_lookup_table) == -1) {
+		printf("Failed to add route, method is not valid.\n");
+		return;
+	}
 	size_t count = routes->route_count;
 	if (count >= routes->capacity) {
-		perror("Cannot add route");
-		exit(EXIT_FAILURE);
+		printf("Failed to add route, maximum route count exceeded.\n");
+		return;
 	}
 	Route route = { .path = path, .method = method, .callback = callback };
 	memcpy(routes->routes + count, &route, sizeof(route));
 	routes->route_count = count + 1;
-	return routes;
 }
 
-void http_server_run(const char *config_path, const Routes* routes) {
+void korall_run(const char *config_path, const Routes* routes) {
 
 	// config
 
