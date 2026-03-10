@@ -96,7 +96,9 @@ static void http_process_request(
 		printf("server: invalid HTTP request received, host\n");
 		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (res == NULL) return;
-		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
+		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+			printf("Failed to send responses\n");
+		}
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
 		return;
@@ -109,6 +111,7 @@ static void http_process_request(
 
 	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, config->name.chars, HTTP_MT_TXT_PLAIN, "Hello World!");
 	if (res == NULL) { 
+		printf("Could not construct response");
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
 		return;
@@ -119,7 +122,9 @@ static void http_process_request(
 		// send 404 if no matching route
 		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 		if (res == NULL) return;
-		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
+		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+			printf("Failed to send responses\n");
+		};
 		
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
@@ -128,10 +133,7 @@ static void http_process_request(
 	route->callback(req, res); // CALL CALLBACK
 
 	if (http_response_send(inc_sock, server_sock, res, main) == -1) {
-		// todo: handle all sends failing
-		http_response_free(&res_arena, res);
-		http_request_free(&req_arena, req);
-		return;
+		printf("Failed to send responses\n");
 	}
 
 	http_response_free(&res_arena, res);
