@@ -318,47 +318,29 @@ bool is_valid_service(char* service) {
 }
 
 bool is_valid_ipv4(char* ip) {
-    // todo
     int len = strlen(ip);
     if (len < 7 || len > 15) {
         return false;
     }
+    
+    for (int i = 0; i < 4; i++) {
+        char octet[3 + 1] = { 0 };
+        char match = i == 3 ? '\0' : '.';
+        int res = fill_string_char(&ip, octet, 3, match);
+        if (res == -1) return false;
 
-    int digits = 0;
-    int sect_sum = 0;
-    int groups = 0;
-    for (size_t i = 0; i < len; i++) {
-        char c = ip[i];
-        
-        if (c == '.') {
-            if (sect_sum < 0 || sect_sum > 255 || digits > 3 || digits == 0) {
-                return false;
-            }
+        int octet_num;
+        str_to_int_errno err = str_to_int(&octet_num, octet, 10);
+        if (err != STR_TO_INT_SUCCESS) return false;
 
-            digits = 0;
-            sect_sum = 0;
-            groups++;
-            continue;
-        }
+        if (octet_num < 0 || octet_num > 255) return false;
         
-        if (isdigit(c)) {
-            int num = c - '0';
-            sect_sum *= 10;
-            sect_sum += num;
-            digits++;
-            continue;
-        }
-        
-        return false;
+        // prevent leading 0's
+        if (octet_num == 0 && octet[1] != '\0') return false;
+        ip++; // skip .
     }
-
-    if (sect_sum < 0 || sect_sum > 255 || digits > 3 || digits == 0) {
-        return false;
-    }
-
-    if (groups != 3) return false;
-
     return true;
+
 }
 
 bool is_valid_ipv6(char* ip) {

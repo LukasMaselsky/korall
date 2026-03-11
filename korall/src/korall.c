@@ -73,6 +73,7 @@ static void http_process_request(
 	Arena req_arena = arena_init(HTTP_REQ_SIZE);
 	Arena res_arena = arena_init(HTTP_RES_SIZE);
 	HTTPRequest *req = http_request_init(&req_arena);
+	HTTPResponse *res = http_response_init(&res_arena);
 
 	// first validate format
 	HTTPError parse_res = http_parse_request(data, req);
@@ -83,8 +84,8 @@ static void http_process_request(
 		HTTPMediaType mt;
 		const char* message = http_error_response_info(parse_res, &sc, &mt);
 
-		const HTTPResponse* res = http_response_construct(&res_arena, sc, config->name.chars, mt, message);
-		if (res == NULL) return;
+		int err = http_response_construct(res, sc, config->name.chars, mt, message);
+		if (err == NULL) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
@@ -94,8 +95,8 @@ static void http_process_request(
 	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
 	if (!http_domain_port_match_server(config, req)) { 
 		printf("server: invalid HTTP request received, host\n");
-		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
-		if (res == NULL) return;
+		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
+		if (err == -1) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
 			printf("Failed to send responses\n");
 		}
@@ -109,8 +110,8 @@ static void http_process_request(
 
 	if (routes == NULL) return; // no route handlers
 
-	HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_200, config->name.chars, HTTP_MT_TXT_PLAIN, "Hello World!");
-	if (res == NULL) { 
+	int err = http_response_construct(res, HTTP_SC_200, config->name.chars, HTTP_MT_TXT_PLAIN, "Hello World!");
+	if (err == -1) { 
 		printf("Could not construct response");
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
@@ -120,8 +121,8 @@ static void http_process_request(
 	const Route* route = http_route_select(req, routes);
 	if (route == NULL) {
 		// send 404 if no matching route
-		const HTTPResponse* res = http_response_construct(&res_arena, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
-		if (res == NULL) return;
+		int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
+		if (err == -1) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
 			printf("Failed to send responses\n");
 		};

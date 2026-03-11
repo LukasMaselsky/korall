@@ -30,6 +30,7 @@
 #endif
 
 #define KILOBYTE 1024
+#define MEGABYTE KILOBYTE * 1024
 
 typedef enum {
     DAY_MON,

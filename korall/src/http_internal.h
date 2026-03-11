@@ -11,11 +11,11 @@
 #define MAX_HTTP_URL_LEN 2048 // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
 #define HTTP_PROT_LEN 8
 #define MAX_DOMAIN_LEN 253
-#define MAX_HTTP_BODY_LEN 1000000 // 1mb?
+#define MAX_HTTP_BODY_LEN MEGABYTE // todo: 1mb?
 #define MAX_HTTP_HEADER_FIELD_LEN 32
-#define MAX_HTTP_HEADER_VALUE_LEN 4096 // cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
+#define MAX_HTTP_HEADER_VALUE_LEN 4096 // todo: cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_MEDIA_TYPE_LEN 74
-#define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2
+#define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2 // ????
 #define MAX_HTTP_BOUNDARY_LEN 70
 #define MAX_ENCODING_CHAR_LEN 9
 #define MAX_HTTP_CHARSET_LEN 13
@@ -149,8 +149,8 @@ void http_request_free(Arena *arena, HTTPRequest* req);
 
 void http_request_clear(Arena *arena, HTTPRequest** req);
 
-HTTPResponse* http_response_construct(
-	Arena* arena,
+int http_response_construct(
+	HTTPResponse* res,
 	HTTPStatusCode code,
 	const char* server_name,
 	HTTPMediaType content_type,

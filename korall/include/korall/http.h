@@ -339,5 +339,10 @@ typedef struct HTTPResponseStartLineInternal HTTPResponseStartLine;
 typedef struct HTTPResponseHeadersInternal HTTPResponseHeaders;
 typedef struct HTTPResponseInternal HTTPResponse;
 
+int http_response_code_set(HTTPResponse* res, HTTPStatusCode code);
+
+int http_response_body_set(HTTPResponse* res, const char* body);
+
+int http_response_header_set(HTTPResponse* res, const char* field, const char* value);
 
 #endif

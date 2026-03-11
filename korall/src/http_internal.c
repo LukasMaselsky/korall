@@ -346,21 +346,58 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 
 // Response
 
-HTTPResponse* http_response_construct(
-	Arena* arena,
+
+/*
+
+*/
+int http_response_code_set(HTTPResponse* res, HTTPStatusCode code) {
+	const char* code_str = lookup_int_str(code, &http_status_code_lookup_table);
+	if (code_str == NULL) {
+		printf("Failed to set response, invalid code\n");
+		return -1;
+	}
+	res->start_line->status_code = code;
+	strncpy(res->start_line->reason_phrase, code_str, MAX_REASON_PHRASE_LEN);
+	return 0;
+}
+
+/*
+
+*/
+int http_response_body_set(HTTPResponse* res, const char* body) {
+	if (body == NULL) return -1;
+
+	size_t body_len = strlen(body);
+	if (body_len > MAX_HTTP_BODY_LEN) {
+		printf("Failed to set body, body too long\n");
+		return -1;
+	}
+	res->headers->content_length = body_len;
+	strncpy(res->body, body, MAX_HTTP_BODY_LEN);
+	return 0;
+}
+
+/*
+
+*/
+int http_response_header_set(HTTPResponse* res, const char* field, const char* value) {
+	// todo
+	if (field == NULL || value == NULL) {
+		printf("Failed to set header, field and value must not be NULL\n");
+		return -1;
+	}
+
+
+}
+
+int http_response_construct(
+	HTTPResponse *res,
 	HTTPStatusCode code,
 	const char* server_name,
 	HTTPMediaType content_type,
 	const char* body
 ) {
-	HTTPResponse* res = http_response_init(arena);
-	res->start_line->status_code = code;
-	const char* code_str = lookup_int_str(code, &http_status_code_lookup_table);
-	if (code_str == NULL) {
-		printf("server: response construction failed, reason phrase lookup\n");
-		return NULL;
-	}
-	strncpy(res->start_line->reason_phrase, code_str, MAX_REASON_PHRASE_LEN);
+	if (http_response_code_set(res, code) == -1) return -1;
 
 	http_get_current_date((ConstString){ res->headers->date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
 	strncpy(res->headers->server, server_name, MAX_HTTP_HEADER_VALUE_LEN);
@@ -369,12 +406,12 @@ HTTPResponse* http_response_construct(
 		size_t body_len = strlen(body);
 		if (body_len > MAX_HTTP_BODY_LEN) {
 			printf("server: response construction failed, body too long\n");
-			return NULL;
+			return -1;
 		}
 		const char* ct_str = lookup_int_str(content_type, &http_media_type_lookup_table);
 		if (ct_str == NULL) {
 			printf("server: response construction failed, content type lookup\n");
-			return NULL;
+			return -1;
 		}
 		strncpy(res->headers->content_type, ct_str, MAX_MEDIA_TYPE_LEN);
 		res->headers->content_length = body_len;
@@ -385,13 +422,11 @@ HTTPResponse* http_response_construct(
 		res->headers->content_length = 0;
 		res->body = NULL;
 	}
-
-	return res;
+	return 0;
 }
 
 int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **buf) {
-	const char* field_val;
-	field_val = lookup_int_str(field, &http_res_header_field_lookup_table);
+	const char *field_val = lookup_int_str(field, &http_res_header_field_lookup_table);
 	if (field_val == NULL) {
 		return -1;
 	}
@@ -400,8 +435,9 @@ int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **
 	return 0;
 }
 
+// TODO
+
 char* http_response_to_str(const HTTPResponse* res) {
-	int data_len = MAX_HTTP_RES_LEN;
 	char* data;
 	data = (char*)safe_calloc(MAX_HTTP_RES_LEN + 1, sizeof(*data));
 	char* data_start = data;
@@ -428,9 +464,9 @@ char* http_response_to_str(const HTTPResponse* res) {
 		return NULL;
 	};
 
-	if (res->body == NULL) return data_start;
-
-	sprintf(data, "\r\n%s", res->body);
+	if (res->body != NULL) {
+		sprintf(data, "\r\n%s", res->body);
+	}
 
 	return data_start;
 }
@@ -460,6 +496,8 @@ int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HT
 	free(data);
 	return 0;
 }
+
+// TODO
 
 HTTPResponse* http_response_init(Arena *arena) {
 	// start line
