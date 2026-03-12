@@ -1,5 +1,32 @@
 #include "lookup_tables.h"
 
+int lookup_str_int(const char* key, const LookupTable* table, const bool case_insensitive) {
+	if (key[0] == '\0') return -1;
+	for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
+		if (case_insensitive) {
+			if (strcmp_ci(entry->string, key) == 0)
+				return entry->integer;
+		}
+		else {
+			if (*(entry->string) != *key) continue;
+
+			if (strcmp(entry->string, key) == 0)
+				return entry->integer;
+		}
+	}
+
+	return -1;
+}
+
+const char* lookup_int_str(const int key, const LookupTable* table) {
+	for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
+		if (entry->integer == key)
+			return entry->string;
+	}
+
+	return NULL;
+}
+
 const LookupEntry http_method_lookup_table_entries[HTTP_METHOD_TABLE_COUNT] = {
 	{ HTTP_CONNECT, "CONNECT" },
 	{ HTTP_DELETE, "DELETE" },

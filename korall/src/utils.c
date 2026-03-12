@@ -54,39 +54,12 @@ bool is_digits_only(const char* str) {
     return strspn(str, "0123456789") == strlen(str);
 }
 
-static int strcmp_ci(const char* str1, const char* str2) {
+int strcmp_ci(const char* str1, const char* str2) {
 #ifdef _WIN32
     return stricmp(str1, str2);
 #else
     return strcasecmp(str1, str2);
 #endif
-}
-
-int lookup_str_int(const char* key, const LookupTable *table, const bool case_insensitive) {
-    if (key[0] == '\0') return -1;
-    for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
-        if (case_insensitive) {
-            if (strcmp_ci(entry->string, key) == 0)
-                return entry->integer;
-        }
-        else {
-            if (*(entry->string) != *key) continue;
-
-            if (strcmp(entry->string, key) == 0)
-                return entry->integer;
-        }
-    }
-
-    return -1;
-}
-
-const char* lookup_int_str(const int key, const LookupTable* table) {
-    for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
-        if (entry->integer == key)
-            return entry->string;
-    }
-
-    return NULL;
 }
 
 void* safe_calloc(size_t count, size_t size) {

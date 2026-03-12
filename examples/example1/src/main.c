@@ -4,7 +4,7 @@
 
 static KORALL_ROUTE(my_route) {
 	//res->start_line->status_code = HTTP_SC_401;
-	printf("HELLO\n\n\n");
+	//printf("HELLO\n\n\n");
 }
 
 int main(int argc, char* argv[]) {

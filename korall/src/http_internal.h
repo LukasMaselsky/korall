@@ -15,14 +15,14 @@
 #define MAX_HTTP_HEADER_FIELD_LEN 32
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // todo: cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_MEDIA_TYPE_LEN 74
-#define MAX_HTTP_RES_LEN MAX_HTTP_BODY_LEN * 2 // ????
 #define MAX_HTTP_BOUNDARY_LEN 70
 #define MAX_ENCODING_CHAR_LEN 9
 #define MAX_HTTP_CHARSET_LEN 13
 #define MAX_HTTP_REQ_CC_LEN 15
 #define MAX_HTTP_USER_AGENT (KILOBYTE * 4)
 
-#define HTTP_RES_SIZE MAX_HTTP_BODY_LEN * 2
+#define HTTP_RES_SIZE (4 * MEGABYTE) // 4mb
+#define HTTP_RES_ARENA_SIZE (HTTP_RES_SIZE + KILOBYTE)
 #define HTTP_REQ_SIZE HTTP_RES_SIZE
 
 #define MAX_REASON_PHRASE_LEN 35
@@ -104,23 +104,11 @@ struct HTTPRequestInternal {
 
 // Response
 
-struct HTTPResponseStartLineInternal {
-	char* reason_phrase;
-	HTTPStatusCode status_code;
-};
-
-struct HTTPResponseHeadersInternal {
-	char* date;
-	char* server;
-	char* content_type;
-	size_t content_length;
-};
-
 
 struct HTTPResponseInternal {
-	HTTPResponseStartLine* start_line;
-	HTTPResponseHeaders* headers;
-	char* body;
+	char* data;
+	size_t capacity;
+	size_t size;
 };
 
 HTTPError http_parse_request(const char* data, HTTPRequest* req);
@@ -157,9 +145,7 @@ int http_response_construct(
 	const char* body
 );
 
-int http_header_to_str(HTTPResponseHeaderField field, const char* value, char** buf);
-
-char* http_response_to_str(const HTTPResponse* res);
+int http_response_append(HTTPResponse* res, const char* value, size_t value_len);
 
 int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse* res, const fd_set* main);
 

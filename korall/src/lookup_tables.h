@@ -16,6 +16,20 @@
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
+typedef struct {
+    int integer;
+    char* string;
+} LookupEntry;
+
+typedef struct {
+    const LookupEntry* entries;
+    const size_t size;
+} LookupTable;
+
+int lookup_str_int(const char* key, const LookupTable* table, const bool case_insensitive);
+
+const char* lookup_int_str(const int key, const LookupTable* table);
+
 extern const LookupTable http_method_lookup_table;
 extern const LookupTable http_req_header_field_lookup_table;
 extern const LookupTable http_res_header_field_lookup_table;

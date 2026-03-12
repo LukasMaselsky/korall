@@ -292,19 +292,6 @@ TEST("http_get_current_date") {
 	// todo
 }
 
-TEST("http_response_to_str") {
-	Arena arena = arena_init(HTTP_RES_SIZE);
-	HTTPResponse* res = http_response_init(&arena);
-
-	int err = http_response_construct(res, HTTP_SC_200, "MyServer", HTTP_MT_TXT_PLAIN, "Hello World!");
-	ASSERT(err == 0);
-	char *r = http_response_to_str(res);
-	ASSERT(starts_with("HTTP/1.1 200 OK", r));
-	ASSERT(r != NULL);
-	free(r);
-
-
-}
 
 
 #endif

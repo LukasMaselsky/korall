@@ -334,9 +334,7 @@ typedef struct HTTPRequestCacheControlPairInternal HTTPRequestCacheControlPair;
 typedef struct HTTPDateInternal HTTPDate;
 typedef struct HTTPRequestHeadersInternal HTTPRequestHeaders;
 typedef struct HTTPRequestInternal HTTPRequest;
-typedef struct HTTPResponseStartLineInternal HTTPResponseStartLine;
-typedef struct HTTPResponseStartLineInternal HTTPResponseStartLine;
-typedef struct HTTPResponseHeadersInternal HTTPResponseHeaders;
+
 typedef struct HTTPResponseInternal HTTPResponse;
 
 int http_response_code_set(HTTPResponse* res, HTTPStatusCode code);

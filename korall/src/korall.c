@@ -71,7 +71,8 @@ static void http_process_request(
 ) {
 
 	Arena req_arena = arena_init(HTTP_REQ_SIZE);
-	Arena res_arena = arena_init(HTTP_RES_SIZE);
+	Arena res_arena = arena_init(HTTP_RES_ARENA_SIZE);
+
 	HTTPRequest *req = http_request_init(&req_arena);
 	HTTPResponse *res = http_response_init(&res_arena);
 
@@ -109,14 +110,6 @@ static void http_process_request(
 	printf("server: sending HTTP response\n\n");
 
 	if (routes == NULL) return; // no route handlers
-
-	int err = http_response_construct(res, HTTP_SC_200, config->name.chars, HTTP_MT_TXT_PLAIN, "Hello World!");
-	if (err == -1) { 
-		printf("Could not construct response");
-		http_response_free(&res_arena, res);
-		http_request_free(&req_arena, req);
-		return;
-	}
 
 	const Route* route = http_route_select(req, routes);
 	if (route == NULL) {

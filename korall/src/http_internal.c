@@ -75,7 +75,7 @@ HTTPError http_process_header_value(const HTTPRequestHeaderField field, const ch
 HTTPError http_process_header(const char** str, HTTPRequest* req) {
 	// process field
 
-	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
+	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 }; // todo: allow custom headers (longer header field?)
 	
 	int res = fill_string_char(str, field, MAX_HTTP_HEADER_FIELD_LEN, ':');
 	if (res == -1) return HTTP_BAD_HEADER;
@@ -346,18 +346,29 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 
 // Response
 
-
 /*
 
 */
 int http_response_code_set(HTTPResponse* res, HTTPStatusCode code) {
-	const char* code_str = lookup_int_str(code, &http_status_code_lookup_table);
-	if (code_str == NULL) {
+	const char* reason_phrase = lookup_int_str(code, &http_status_code_lookup_table);
+	if (reason_phrase == NULL) {
 		printf("Failed to set response, invalid code\n");
 		return -1;
 	}
-	res->start_line->status_code = code;
-	strncpy(res->start_line->reason_phrase, code_str, MAX_REASON_PHRASE_LEN);
+
+	// http/1.1
+	if (http_response_append(res, "HTTP/1.1 ", 9) == -1) return -1;
+
+	// code
+	char code_str[4 + 1] = { 0 };
+	sprintf(code_str, "%d ", code);
+	if (http_response_append(res, code_str, 4) == -1) return -1;
+
+	// reason phrase
+	size_t size = strlen(reason_phrase);
+	if (http_response_append(res, reason_phrase, size)) return -1;
+	if (http_response_append(res, "\r\n" , 2)) return -1;
+	
 	return 0;
 }
 
@@ -372,22 +383,57 @@ int http_response_body_set(HTTPResponse* res, const char* body) {
 		printf("Failed to set body, body too long\n");
 		return -1;
 	}
-	res->headers->content_length = body_len;
-	strncpy(res->body, body, MAX_HTTP_BODY_LEN);
-	return 0;
+
+	if (http_response_append(res, "\r\n", 2) == -1) return -1;
+	return http_response_append(res, body, body_len);
 }
 
 /*
 
 */
 int http_response_header_set(HTTPResponse* res, const char* field, const char* value) {
-	// todo
 	if (field == NULL || value == NULL) {
 		printf("Failed to set header, field and value must not be NULL\n");
 		return -1;
 	}
 
+	size_t field_len = strlen(field);
+	size_t value_len = strlen(value);
+	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
 
+	if (field_len > MAX_HTTP_HEADER_FIELD_LEN) { 
+		printf("Failed to set header, header field name must be under %d characters\n", MAX_HTTP_HEADER_FIELD_LEN);
+		return -1;
+	}
+	if (value_len > MAX_HTTP_HEADER_FIELD_LEN) {
+		printf("Failed to set header, value must be under %d characters\n", MAX_HTTP_HEADER_VALUE_LEN);
+		return -1;
+	}
+
+	if (res_field != -1) {
+		// not custom header
+		// todo: validate value here
+		
+	}
+
+	char temp[MAX_HTTP_HEADER_FIELD_LEN + MAX_HTTP_HEADER_VALUE_LEN + 4 + 1] = { 0 };
+	sprintf(temp, "%s: %s\r\n", field, value);
+	size_t size = field_len + value_len + 4; // ": " + "\r\n" = 4
+	http_response_append(res, temp, size);
+	return 0;
+}
+
+int http_response_append(HTTPResponse* res, const char *value, size_t value_len) {
+	size_t size = res->size;
+	if (size + value_len > res->capacity) { 
+		printf("Failed to modify response, response too long\n");
+		return -1;
+	};
+
+	char* res_p = res->data + size;
+	strncpy(res_p, value, value_len);
+	res->size += value_len;
+	return 0;
 }
 
 int http_response_construct(
@@ -399,77 +445,33 @@ int http_response_construct(
 ) {
 	if (http_response_code_set(res, code) == -1) return -1;
 
-	http_get_current_date((ConstString){ res->headers->date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
-	strncpy(res->headers->server, server_name, MAX_HTTP_HEADER_VALUE_LEN);
+	char date[MAX_DATE_STR_LEN + 1] = { 0 };
+	http_get_current_date((ConstString){ date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
+	if (http_response_header_set(res, "Date", date) == -1) return -1;
+
 
 	if (body != NULL) {
-		size_t body_len = strlen(body);
-		if (body_len > MAX_HTTP_BODY_LEN) {
-			printf("server: response construction failed, body too long\n");
-			return -1;
-		}
 		const char* ct_str = lookup_int_str(content_type, &http_media_type_lookup_table);
 		if (ct_str == NULL) {
 			printf("server: response construction failed, content type lookup\n");
 			return -1;
 		}
-		strncpy(res->headers->content_type, ct_str, MAX_MEDIA_TYPE_LEN);
-		res->headers->content_length = body_len;
-		strncpy(res->body, body, MAX_HTTP_BODY_LEN);
-	}
-	else {
-		res->headers->content_type = NULL;
-		res->headers->content_length = 0;
-		res->body = NULL;
+
+		if (http_response_header_set(res, "Content-Type", ct_str) == -1) return -1;
+
+		int body_len = strlen(body);
+		if (body_len > MAX_HTTP_BODY_LEN) return -1;
+		char cl[10 + 1] = { 0 }; // todo: 10 digits max?
+		sprintf(cl, "%d", body_len);
+		if (http_response_header_set(res, "Content-Length", cl) == -1) return -1;
+
+
+		http_response_body_set(res, body);
+
 	}
 	return 0;
 }
 
-int http_header_to_str(HTTPResponseHeaderField field, const char* value, char **buf) {
-	const char *field_val = lookup_int_str(field, &http_res_header_field_lookup_table);
-	if (field_val == NULL) {
-		return -1;
-	}
-	sprintf(*buf, "%s: %s\r\n", field_val, value);
-	*buf += strlen(field_val) + strlen(value) + 4; // ": " + "\r\n" = 4
-	return 0;
-}
-
-// TODO
-
-char* http_response_to_str(const HTTPResponse* res) {
-	char* data;
-	data = (char*)safe_calloc(MAX_HTTP_RES_LEN + 1, sizeof(*data));
-	char* data_start = data;
-
-	sprintf(data, "HTTP/1.1 %d %s\r\n", res->start_line->status_code, res->start_line->reason_phrase);
-	data += HTTP_PROT_LEN + 1 + 3 + 1 + strlen(res->start_line->reason_phrase) + 2;
-	
-	if (http_header_to_str(HTTP_RSH_SERVER, res->headers->server, &data) == -1) { 
-		free(data);
-		return NULL;
-	};
-	if (http_header_to_str(HTTP_RSH_DATE, res->headers->date, &data) == -1) {
-		free(data);
-		return NULL;
-	};
-	if (http_header_to_str(HTTP_RSH_CONTENT_TYPE, res->headers->content_type, &data) == -1) {
-		free(data);
-		return NULL;
-	};
-	const char cl[20];
-	int_to_str(res->headers->content_length, cl);
-	if (http_header_to_str(HTTP_RSH_CONTENT_LENGTH, cl, &data) == -1) {
-		free(data);
-		return NULL;
-	};
-
-	if (res->body != NULL) {
-		sprintf(data, "\r\n%s", res->body);
-	}
-
-	return data_start;
-}
 
 int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse* res, const fd_set* main) {
 	if (inc_sock == server_sock) {
@@ -481,7 +483,8 @@ int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HT
 		return -1;
 	};
 
-	char* data = http_response_to_str(res);
+	char* data = res->data;
+	printf("'%s'", data);
 	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");
 		return -1;
@@ -493,47 +496,20 @@ int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HT
 		socket_print(inc_sock);
 		printf("\n");
 	}
-	free(data);
 	return 0;
 }
 
-// TODO
-
 HTTPResponse* http_response_init(Arena *arena) {
-	// start line
-	char* reason_phrase;
-	reason_phrase = (char*)safe_calloc(MAX_REASON_PHRASE_LEN + 1, sizeof(*reason_phrase));
 
-	HTTPResponseStartLine* sl;
-	sl = (HTTPResponseStartLine*)safe_calloc(1, sizeof(*sl));
-	sl->reason_phrase = reason_phrase;
+	HTTPResponse* res;
+	res = (HTTPResponse*)arena_alloc(arena, 1 * sizeof(*res));
 
-	// headers
-
-	char* server, *date, *content_type;
-	server = (char*)safe_calloc(MAX_HTTP_HEADER_VALUE_LEN + 1, sizeof(*server));
-	date = (char*)safe_calloc(MAX_DATE_STR_LEN + 1, sizeof(*date));
-	content_type = (char*)safe_calloc(MAX_MEDIA_TYPE_LEN + 1, sizeof(*content_type));
-
-	HTTPResponseHeaders* headers;
-	headers = (HTTPResponseHeaders*)safe_calloc(1, sizeof(*headers));
-	headers->server = server;
-	headers->content_type = content_type;
-	headers->date = date;
-
-	// body
-
-	char* body;
-	body = (char*)safe_calloc(MAX_HTTP_BODY_LEN + 1, sizeof(char*));
-
-	// all
-
-	HTTPResponse* req;
-	req = (HTTPResponse*)safe_calloc(1, sizeof(*req));
-	req->start_line = sl;
-	req->headers = headers;
-	req->body = body;
-	return req;
+	char* data;
+	data = (char*)arena_alloc(arena, (HTTP_RES_SIZE + 1) * sizeof(*data));
+	res->data = data;
+	res->capacity = HTTP_RES_SIZE;
+	res->size = 0;
+	return res;
 }
 
 void http_response_free(Arena* arena, HTTPResponse* res) {

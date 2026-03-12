@@ -66,19 +66,10 @@ typedef enum {
     STR_TO_INT_INCONVERTIBLE
 } str_to_int_errno;
 
-typedef struct {
-    int integer;
-    char* string;
-} LookupEntry;
-
-typedef struct {
-    const LookupEntry* entries;
-    const size_t size;
-} LookupTable;
 
 typedef struct {
     char* chars;
-    size_t size;
+    size_t size; // without null terminator
 } String;
 
 typedef struct {
@@ -90,13 +81,11 @@ str_to_int_errno str_to_int(int* out, const char* s, int base);
 
 void int_to_str(const int value, char* str);
 
+int strcmp_ci(const char* str1, const char* str2);
+
 bool is_digit(const char c);
 
 bool is_digits_only(const char* str);
-
-int lookup_str_int(const char* key, const LookupTable* table, const bool case_insensitive);
-
-const char* lookup_int_str(const int key, const LookupTable* table);
 
 void* safe_calloc(size_t count, size_t size);
 
