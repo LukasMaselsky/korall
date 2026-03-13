@@ -299,6 +299,22 @@ const LookupEntry http_req_cache_control_lookup_table_entries[HTTP_REQ_CACHE_CON
 	{ HTTP_REQ_CC_STALE_IF_ERROR, "stale-if-error" },
 };
 
+const LookupEntry http_res_cache_control_lookup_table_entries[HTTP_RES_CACHE_CONTROL_TABLE_COUNT] = {
+	{ HTTP_RES_CC_MAX_AGE, "max-age" },
+	{ HTTP_RES_CC_S_MAX_AGE, "s-maxage" },
+	{ HTTP_RES_CC_NO_CACHE, "no-cache" },
+	{ HTTP_RES_CC_NO_STORE, "no-store" },
+	{ HTTP_RES_CC_NO_TRANSFORM, "no-transform" },
+	{ HTTP_RES_CC_MUST_REVALIDATE, "must-revalidate" },
+	{ HTTP_RES_CC_PROXY_REVALIDATE, "proxy-revalidate" },
+	{ HTTP_RES_CC_MUST_UNDERSTAND, "must-understand" },
+	{ HTTP_RES_CC_PRIVATE, "private" },
+	{ HTTP_RES_CC_PUBLIC, "public" },
+	{ HTTP_RES_CC_IMMUTABLE, "immutable" },
+	{ HTTP_RES_CC_STALE_WHILE_REVALIDATE, "stale-while-revalidate" },
+	{ HTTP_RES_CC_STALE_IF_ERROR, "stale-if-error" },
+};
+
 const LookupEntry day_lookup_table_entries[DAY_TABLE_COUNT] = {
 	{ DAY_MON, "Mon" },
 	{ DAY_TUE, "Tue" },
@@ -367,6 +383,11 @@ const LookupTable http_connection_lookup_table = {
 const LookupTable http_req_cache_control_lookup_table = {
 	.entries = http_req_cache_control_lookup_table_entries,
 	.size = HTTP_REQ_CACHE_CONTROL_TABLE_COUNT
+};
+
+const LookupTable http_res_cache_control_lookup_table = {
+	.entries = http_res_cache_control_lookup_table_entries,
+	.size = HTTP_RES_CACHE_CONTROL_TABLE_COUNT
 };
 
 const LookupTable day_lookup_table = {

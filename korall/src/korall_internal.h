@@ -13,6 +13,7 @@
 #define SERVER_CONFIG_FILE_NAME "korall_config.json"
 #define DEFAULT_PORT "3500"
 #define DEFAULT_DOMAIN "localhost"
+#define SERVER_SOFTWARE "Korall"
 
 #define HTTP_CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?
 #define HTTP_ROUTES_CAPACITY 100 // todo: ?

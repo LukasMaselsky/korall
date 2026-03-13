@@ -295,10 +295,31 @@ typedef enum {
 	HTTP_EXP_100_CONTINUE
 } HTTPExpect;
 
+// response
+
+typedef enum {
+	HTTP_RES_CC_UNUSED = -1,
+	HTTP_RES_CC_MAX_AGE,
+	HTTP_RES_CC_S_MAX_AGE,
+	HTTP_RES_CC_NO_CACHE,
+	HTTP_RES_CC_NO_STORE,
+	HTTP_RES_CC_NO_TRANSFORM,
+	HTTP_RES_CC_MUST_REVALIDATE,
+	HTTP_RES_CC_PROXY_REVALIDATE,
+	HTTP_RES_CC_MUST_UNDERSTAND,
+	HTTP_RES_CC_PRIVATE,
+	HTTP_RES_CC_PUBLIC,
+	HTTP_RES_CC_IMMUTABLE,
+	HTTP_RES_CC_STALE_WHILE_REVALIDATE,
+	HTTP_RES_CC_STALE_IF_ERROR,
+	HTTP_RES_CC_COUNT,
+} HTTPResponseCacheControl;
+
 // errors
 
 typedef enum {
 	// todo
+	HTTP_BAD_SERVER = -24,
 	HTTP_BODY_TOO_LONG = -23,
 	HTTP_BODY_NOT_ALLOWED = -22,
 	HTTP_BAD_EXPECT = -21,
@@ -337,10 +358,10 @@ typedef struct HTTPRequestInternal HTTPRequest;
 
 typedef struct HTTPResponseInternal HTTPResponse;
 
-int http_response_code_set(HTTPResponse* res, HTTPStatusCode code);
+int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code);
 
-int http_response_body_set(HTTPResponse* res, const char* body);
+int korall_response_body_set(HTTPResponse* res, const char* body);
 
-int http_response_header_set(HTTPResponse* res, const char* field, const char* value);
+int korall_response_header_set(HTTPResponse* res, const char* field, const char* value);
 
 #endif

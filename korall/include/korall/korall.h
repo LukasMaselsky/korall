@@ -7,7 +7,6 @@
 #define KORALL_ROUTE(name) void name##(const HTTPRequest* req, HTTPResponse* res)
 
 
-
 typedef struct RoutePrivate Route;
 
 typedef struct RoutesPrivate Routes;

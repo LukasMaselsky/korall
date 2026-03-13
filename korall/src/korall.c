@@ -495,5 +495,3 @@ void korall_run(const char *config_path, const Routes* routes) {
 
 	return;
 }
-
-// todo: setters getters

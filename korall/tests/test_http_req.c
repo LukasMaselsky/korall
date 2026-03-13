@@ -53,22 +53,22 @@ TEST("http_process_headers") {
 	const char* str;
 
 	str = "Host: localhost\r\n\r\n";
-	res = http_process_headers(&str, req);
+	res = http_process_request_headers(&str, req);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "Host: localhost\r\n";
-	res = http_process_headers(&str, req);
+	res = http_process_request_headers(&str, req);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 	http_request_clear(&arena, &req);
 	str = "Host:      \r\n\r\n";
-	res = http_process_headers(&str, req);
+	res = http_process_request_headers(&str, req);
 	ASSERT(res == HTTP_BAD_DOMAIN_PORT);
 
 	http_request_clear(&arena, &req);
 	str = "FakeField: localhost\r\n";
-	res = http_process_headers(&str, req);
+	res = http_process_request_headers(&str, req);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 	http_request_free(&arena, req);
@@ -170,31 +170,31 @@ TEST("http_process_request_target_relative") {
 TEST("http_process_protocol") {
 	const char* str = "HTTP/1.1";
 	int res;
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	str = " HTTP/1.1";
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	str = "HTTP/1.";
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	str = "HTTP/1.1\r\n";
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_SUCCESS);
 
 	str = "HTTP/1.11\r\n";
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	str = "";
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	str = " ";
-	res = http_process_protocol(&str);
+	res = http_process_request_protocol(&str);
 	ASSERT(res == HTTP_BAD_PROT);
 
 }
@@ -206,82 +206,82 @@ TEST("http_process_method") {
 	const char* str = "POST /users HTTP/1.1";
 	HTTPError res;
 
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_POST);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "CONNECT /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_CONNECT);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "DELETE /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_DELETE);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "GET /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_GET);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "PUT /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_PUT);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "TRACE /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_TRACE);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "PATCH /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_PATCH);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "OPTIONS /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_OPTIONS);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "HEAD /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_HEAD);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "GE /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(res == HTTP_BAD_METHOD);
 	http_request_clear(&arena, &req);
 
 	str = "get /users HTTP/1.1";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(res == HTTP_BAD_METHOD);
 	http_request_clear(&arena, &req);
 
 	str = "GET";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(res == HTTP_BAD_METHOD);
 	http_request_clear(&arena, &req);
 
 	str = "GET ";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(req->start_line->method == HTTP_GET);
 	ASSERT(res == HTTP_SUCCESS);
 	http_request_clear(&arena, &req);
 
 	str = "";
-	res = http_process_method(&str, req);
+	res = http_process_request_method(&str, req);
 	ASSERT(res == HTTP_BAD_METHOD);
 	http_request_clear(&arena, &req);
 }

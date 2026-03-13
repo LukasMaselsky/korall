@@ -3,8 +3,11 @@
 #include <stdio.h>
 
 static KORALL_ROUTE(my_route) {
-	//res->start_line->status_code = HTTP_SC_401;
-	//printf("HELLO\n\n\n");
+	korall_response_start_set(res, 200);
+	korall_response_header_set(res, "Cache-Control", "no-store");
+	korall_response_header_set(res, "Content-Type", "application/json");
+	korall_response_body_set(res, "{\"res\":\"hello\"}");
+	// todo: test without body, wrong order etc
 }
 
 int main(int argc, char* argv[]) {

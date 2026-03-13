@@ -2,13 +2,16 @@
 #include "lookup_tables.h"
 #include "http_headers.h"
 #include "sockets.h"
+#include "korall_internal.h"
+
+// Request
 
 /*
 	Check if the format of the HTTP request is correct
 */
 HTTPError http_parse_request(const char* data, HTTPRequest* req) {
 	
-	HTTPError res = http_process_method(&data, req);
+	HTTPError res = http_process_request_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 	
 	if (*data != ' ') return -1;
@@ -22,7 +25,7 @@ HTTPError http_parse_request(const char* data, HTTPRequest* req) {
 	data++; // advance past space
 
 	// process prot
-	res = http_process_protocol(&data);
+	res = http_process_request_protocol(&data);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (*data != '\r' || data[1] != '\n') return HTTP_BAD_REQUEST; // must have \r\n
@@ -30,49 +33,49 @@ HTTPError http_parse_request(const char* data, HTTPRequest* req) {
 
 	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return HTTP_SUCCESS; // no header, no body
 
-	res = http_process_headers(&data, req);
+	res = http_process_request_headers(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (data[0] == '\0') return HTTP_SUCCESS; // no body
 
-	http_process_body(data, req);
+	http_process_request_body(data, req);
 
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
+HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_HOST:
-			return http_process_host(value, req);
+			return http_process_host_req(value, req);
 		case HTTP_RQH_ACCEPT:
-			return http_process_accept(value, req);
+			return http_process_accept_req(value, req);
 		case HTTP_RQH_ACCEPT_ENCODING:
-			return http_process_accept_encoding(value, req);
+			return http_process_accept_encoding_req(value, req);
 		case HTTP_RQH_CONTENT_LENGTH:
-			return http_process_content_length(value, req);
+			return http_process_content_length_req(value, req);
 		case HTTP_RQH_CONTENT_TYPE:
-			return http_process_content_type(value, req);
+			return http_process_content_type_req(value, req);
 		case HTTP_RQH_ACCESS_CONTROL_REQUEST_METHOD:
-			return http_process_access_control_request_method(value, req);
+			return http_process_access_control_request_method_req(value, req);
 		case HTTP_RQH_ACCESS_CONTROL_REQUEST_HEADERS:
-			return http_process_access_control_request_headers(value, req);
+			return http_process_access_control_request_headers_req(value, req);
 		case HTTP_RQH_CONNECTION:
-			return http_process_connection(value, req);
+			return http_process_connection_req(value, req);
 		case HTTP_RQH_CACHE_CONTROL:
-			return http_process_cache_control(value, req);
+			return http_process_cache_control_req(value, req);
 		case HTTP_RQH_USER_AGENT:
-			return http_process_user_agent(value, req);
+			return http_process_user_agent_req(value, req);
 		case HTTP_RQH_DATE:
-			return http_process_date(value, req);
+			return http_process_date_req(value, req);
 		case HTTP_RQH_EXPECT:
-			return http_process_expect(value, req);
+			return http_process_expect_req(value, req);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
 }
 
-HTTPError http_process_header(const char** str, HTTPRequest* req) {
+HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 	// process field
 
 	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 }; // todo: allow custom headers (longer header field?)
@@ -100,7 +103,7 @@ HTTPError http_process_header(const char** str, HTTPRequest* req) {
 	if (res == -1) return HTTP_BAD_HEADER_VAL;
 	s = *str;
 
-	HTTPError hv_res = http_process_header_value(header_field, value, req);
+	HTTPError hv_res = http_process_request_header_value(header_field, value, req);
 	if (hv_res != HTTP_SUCCESS) return hv_res;
 
 	s += 2; // \r\n
@@ -108,10 +111,10 @@ HTTPError http_process_header(const char** str, HTTPRequest* req) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_headers(const char** str, HTTPRequest* req) {
+HTTPError http_process_request_headers(const char** str, HTTPRequest* req) {
 
 	while (true) {
-		HTTPError res = http_process_header(str, req);
+		HTTPError res = http_process_request_header(str, req);
 		if (res != HTTP_SUCCESS) return res;
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
@@ -122,7 +125,7 @@ HTTPError http_process_headers(const char** str, HTTPRequest* req) {
 
 }
 
-HTTPError http_process_body(const char* str, HTTPRequest* req) {
+HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
 	// todo
 
 	HTTPMethod method = req->start_line->method;
@@ -137,7 +140,7 @@ HTTPError http_process_body(const char* str, HTTPRequest* req) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_protocol(const char** str) {
+HTTPError http_process_request_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
 
 	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n");
@@ -222,7 +225,7 @@ HTTPError http_process_request_target(const char **str, HTTPRequest *req) {
 	return HTTP_BAD_REQUEST_TARGET;
 }
 
-HTTPError http_process_method(const char **str, HTTPRequest *req) {
+HTTPError http_process_request_method(const char **str, HTTPRequest *req) {
 
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 	int len = MAX_HTTP_METHOD_STR_LEN;
@@ -346,83 +349,6 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 
 // Response
 
-/*
-
-*/
-int http_response_code_set(HTTPResponse* res, HTTPStatusCode code) {
-	const char* reason_phrase = lookup_int_str(code, &http_status_code_lookup_table);
-	if (reason_phrase == NULL) {
-		printf("Failed to set response, invalid code\n");
-		return -1;
-	}
-
-	// http/1.1
-	if (http_response_append(res, "HTTP/1.1 ", 9) == -1) return -1;
-
-	// code
-	char code_str[4 + 1] = { 0 };
-	sprintf(code_str, "%d ", code);
-	if (http_response_append(res, code_str, 4) == -1) return -1;
-
-	// reason phrase
-	size_t size = strlen(reason_phrase);
-	if (http_response_append(res, reason_phrase, size)) return -1;
-	if (http_response_append(res, "\r\n" , 2)) return -1;
-	
-	return 0;
-}
-
-/*
-
-*/
-int http_response_body_set(HTTPResponse* res, const char* body) {
-	if (body == NULL) return -1;
-
-	size_t body_len = strlen(body);
-	if (body_len > MAX_HTTP_BODY_LEN) {
-		printf("Failed to set body, body too long\n");
-		return -1;
-	}
-
-	if (http_response_append(res, "\r\n", 2) == -1) return -1;
-	return http_response_append(res, body, body_len);
-}
-
-/*
-
-*/
-int http_response_header_set(HTTPResponse* res, const char* field, const char* value) {
-	if (field == NULL || value == NULL) {
-		printf("Failed to set header, field and value must not be NULL\n");
-		return -1;
-	}
-
-	size_t field_len = strlen(field);
-	size_t value_len = strlen(value);
-	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
-
-	if (field_len > MAX_HTTP_HEADER_FIELD_LEN) { 
-		printf("Failed to set header, header field name must be under %d characters\n", MAX_HTTP_HEADER_FIELD_LEN);
-		return -1;
-	}
-	if (value_len > MAX_HTTP_HEADER_FIELD_LEN) {
-		printf("Failed to set header, value must be under %d characters\n", MAX_HTTP_HEADER_VALUE_LEN);
-		return -1;
-	}
-
-	if (res_field != -1) {
-		// not custom header
-		// todo: validate value here
-		
-	}
-
-	char temp[MAX_HTTP_HEADER_FIELD_LEN + MAX_HTTP_HEADER_VALUE_LEN + 4 + 1] = { 0 };
-	sprintf(temp, "%s: %s\r\n", field, value);
-	size_t size = field_len + value_len + 4; // ": " + "\r\n" = 4
-	http_response_append(res, temp, size);
-	return 0;
-}
-
 int http_response_append(HTTPResponse* res, const char *value, size_t value_len) {
 	size_t size = res->size;
 	if (size + value_len > res->capacity) { 
@@ -436,6 +362,26 @@ int http_response_append(HTTPResponse* res, const char *value, size_t value_len)
 	return 0;
 }
 
+HTTPError http_process_response_header_value(const HTTPResponseHeaderField field, const char* value) {
+	// massive switch for each header
+	switch (field) {
+	case HTTP_RSH_CONTENT_LENGTH:
+		return http_process_content_length_res(value); // todo
+	case HTTP_RSH_CONTENT_TYPE:
+		return http_process_content_type_res(value);
+	case HTTP_RSH_CONNECTION:
+		return http_process_connection_res(value);
+	case HTTP_RSH_CACHE_CONTROL:
+		return http_process_cache_control_res(value);
+	case HTTP_RSH_DATE:
+		return http_process_date_res(value);
+	case HTTP_RSH_SERVER:
+		return http_process_server_res(value); // todo: 
+	default:
+		return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
+	}
+}
+
 int http_response_construct(
 	HTTPResponse *res,
 	HTTPStatusCode code,
@@ -443,12 +389,7 @@ int http_response_construct(
 	HTTPMediaType content_type,
 	const char* body
 ) {
-	if (http_response_code_set(res, code) == -1) return -1;
-
-	char date[MAX_DATE_STR_LEN + 1] = { 0 };
-	http_get_current_date((ConstString){ date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
-	if (http_response_header_set(res, "Date", date) == -1) return -1;
-
+	if (korall_response_start_set(res, code) == -1) return -1;
 
 	if (body != NULL) {
 		const char* ct_str = lookup_int_str(content_type, &http_media_type_lookup_table);
@@ -457,17 +398,9 @@ int http_response_construct(
 			return -1;
 		}
 
-		if (http_response_header_set(res, "Content-Type", ct_str) == -1) return -1;
-
-		int body_len = strlen(body);
-		if (body_len > MAX_HTTP_BODY_LEN) return -1;
-		char cl[10 + 1] = { 0 }; // todo: 10 digits max?
-		sprintf(cl, "%d", body_len);
-		if (http_response_header_set(res, "Content-Length", cl) == -1) return -1;
-
-
-		http_response_body_set(res, body);
-
+		if (korall_response_header_set(res, "Content-Type", ct_str) == -1) return -1;
+		
+		korall_response_body_set(res, body);
 	}
 	return 0;
 }
@@ -509,6 +442,8 @@ HTTPResponse* http_response_init(Arena *arena) {
 	res->data = data;
 	res->capacity = HTTP_RES_SIZE;
 	res->size = 0;
+	res->body_set = false;
+	res->start_line_set = false;
 	return res;
 }
 
@@ -585,4 +520,130 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 		default:
 			return ERROR_MESSAGE("Bad request", "Invalid request.");
 	}
+}
+
+// PUBLIC
+
+/*
+	Sets the type of response
+*/
+int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
+	if (res->body_set) {
+		printf("Failed to set start line, must be set before body.\n");
+		// todo: allow to be set anytime?
+		return -1;
+	}
+	if (res->start_line_set) {
+		printf("Failed to set start line, already set.\n");
+		// todo: allow to be overwritten?
+		return -1;
+	}
+	const char* reason_phrase = lookup_int_str(code, &http_status_code_lookup_table);
+	if (reason_phrase == NULL) {
+		printf("Failed to set response, invalid code\n");
+		return -1;
+	}
+
+	// http/1.1
+	if (http_response_append(res, "HTTP/1.1 ", 9) == -1) return -1;
+
+	// code
+	char code_str[4 + 1] = { 0 };
+	sprintf(code_str, "%d ", code);
+	if (http_response_append(res, code_str, 4) == -1) return -1;
+
+	// reason phrase
+	size_t size = strlen(reason_phrase);
+	if (http_response_append(res, reason_phrase, size)) return -1;
+	if (http_response_append(res, "\r\n", 2)) return -1;
+	res->start_line_set = true;
+
+	// add some headers
+
+	// date
+	char date[MAX_DATE_STR_LEN + 1] = { 0 };
+	http_get_current_date((ConstString) { date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
+	if (korall_response_header_set(res, "Date", date) == -1) return -1;
+
+	// server
+	if (korall_response_header_set(res, "Server", SERVER_SOFTWARE) == -1) return -1;
+
+	return 0;
+}
+
+/*
+	Sets the value of a header of the response
+*/
+int korall_response_header_set(HTTPResponse* res, const char* field, const char* value) {
+	if (res->body_set) {
+		printf("Failed to set header, headers must be set before body.\n");
+		// todo: allow to be set anytime?
+		return -1;
+	}
+	if (!(res->start_line_set)) {
+		printf("Failed to set header, must be set after start line\n");
+		// todo: ?
+		return -1;
+	}
+	if (field == NULL || value == NULL) {
+		printf("Failed to set header, field and value must not be NULL\n");
+		return -1;
+	}
+
+	size_t field_len = strlen(field);
+	size_t value_len = strlen(value);
+	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
+
+	if (field_len > MAX_HTTP_HEADER_FIELD_LEN) {
+		printf("Failed to set header, header field name must be under %d characters\n", MAX_HTTP_HEADER_FIELD_LEN);
+		return -1;
+	}
+	if (value_len > MAX_HTTP_HEADER_FIELD_LEN) {
+		printf("Failed to set header, value must be under %d characters\n", MAX_HTTP_HEADER_VALUE_LEN);
+		return -1;
+	}
+
+	if (res_field != -1 && http_process_response_header_value(res_field, value) != HTTP_SUCCESS) {
+		// not custom header
+		printf("Failed to set header, value is not valid for field %s\n", field);
+		return -1;
+	}
+
+	char temp[MAX_HTTP_HEADER_FIELD_LEN + MAX_HTTP_HEADER_VALUE_LEN + 4 + 1] = { 0 };
+	sprintf(temp, "%s: %s\r\n", field, value);
+	size_t size = field_len + value_len + 4; // ": " + "\r\n" = 4
+	http_response_append(res, temp, size);
+	return 0;
+}
+
+/*
+	Sets the body of the reponse
+*/
+int korall_response_body_set(HTTPResponse* res, const char* body) {
+	if (body == NULL) return -1;
+	if (res->body_set) {
+		printf("Failed to set body, body already set\\n");
+		// todo: allow to be overwritten?
+		return -1;
+	}
+	if (!(res->start_line_set)) {
+		printf("Failed to set body, must be set after start line\\n");
+		// todo: ?
+		return -1;
+	}
+
+	size_t body_len = strlen(body);
+	if (body_len > MAX_HTTP_BODY_LEN) {
+		printf("Failed to set body, body too long\n");
+		return -1;
+	}
+
+	char cl[MAX_HTTP_BODY_DIGIT_LEN + 1] = { 0 };
+	sprintf(cl, "%" PRIu64, body_len);
+	if (korall_response_header_set(res, "Content-Length", cl) == -1) return -1;
+	
+	if (http_response_append(res, "\r\n", 2) == -1) return -1;
+	if (http_response_append(res, body, body_len) == -1) return -1;
+	res->body_set = true;
+	return 0;
 }

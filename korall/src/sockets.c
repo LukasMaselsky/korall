@@ -317,95 +317,17 @@ bool is_valid_service(char* service) {
     return false;
 }
 
-bool is_valid_ipv4(char* ip) {
-    int len = strlen(ip);
-    if (len < 7 || len > 15) {
-        return false;
-    }
-    
-    for (int i = 0; i < 4; i++) {
-        char octet[3 + 1] = { 0 };
-        char match = i == 3 ? '\0' : '.';
-        int res = fill_string_char(&ip, octet, 3, match);
-        if (res == -1) return false;
-
-        int octet_num;
-        str_to_int_errno err = str_to_int(&octet_num, octet, 10);
-        if (err != STR_TO_INT_SUCCESS) return false;
-
-        if (octet_num < 0 || octet_num > 255) return false;
-        
-        // prevent leading 0's
-        if (octet_num == 0 && octet[1] != '\0') return false;
-        ip++; // skip .
-    }
-    return true;
-
+bool is_valid_ipv4(const char* ip) {
+    char buf[IPV6_ADDRSTRLEN + 1] = { 0 };
+    return inet_pton(AF_IPV4, ip, buf);
 }
 
-bool is_valid_ipv6(char* ip) {
-    // only allow lowercase hex?
-    int len = strlen(ip);
-    if (len < 2 || len > 45) {
-        return false;
-    }
-
-    int digits = 0;
-    int sect_sum = 0;
-    int groups = 0;
-    int compr_count = 0;
-    int col_count = 0;
-
-    for (size_t i = 0; i < len; i++) {
-        char c = ip[i];
-
-        if (c == ':') {
-            col_count++;
-            if (col_count > 2) return false;
-            if (col_count == 2) {
-                compr_count++;
-                if (compr_count > 1) return false;
-                continue;
-            }
-
-            if (sect_sum < 0 || sect_sum > 65535 || digits > 4) {
-                return false;
-            }
-
-            groups++;
-            digits = 0;
-            sect_sum = 0;
-            continue;
-        }
-        
-        if (isxdigit(c)) {
-            int num = c - '0';
-            if (c > '9') {
-                num -= 39; // diff in ascii table
-            }
-            
-            sect_sum *= 16;
-            sect_sum += num;
-            digits++;
-            col_count = 0;
-            continue;
-        }
-
-        return false;
-    }
-
-    if (sect_sum < 0 || sect_sum > 65535 || digits > 4) {
-        return false;
-    }
-
-    if (compr_count == 1) return true;
-    
-    if (groups != 7) return false;
-    
-    return true;
+bool is_valid_ipv6(const char* ip) {
+    char buf[IPV6_ADDRSTRLEN + 1] = { 0 };
+    return inet_pton(AF_IPV6, ip, buf);
 }
 
-bool is_valid_ip(char* ip) {
+bool is_valid_ip(const char* ip) {
     // allow "localhost"
     return is_valid_ipv4(ip) || is_valid_ipv6(ip) || strcmp(ip, "localhost") == 0;
 }
