@@ -8,7 +8,7 @@
 
 #define MAX_HTTP_METHOD_STR_LEN 7
 #define MAX_HTTP_QUERY_STR_LEN 1024
-#define MAX_HTTP_URL_LEN 2048 // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
+#define MAX_HTTP_URL_LEN (2 * KILOBYTE) // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
 #define HTTP_PROT_LEN 8
 #define MAX_DOMAIN_LEN 253
 #define MAX_HTTP_BODY_LEN MEGABYTE // todo: 1mb?
@@ -21,7 +21,7 @@
 #define MAX_HTTP_CHARSET_LEN 12
 #define MAX_HTTP_REQ_CC_LEN 14
 #define MAX_HTTP_RES_CC_LEN 21
-#define MAX_HTTP_USER_AGENT (KILOBYTE * 4)
+#define MAX_HTTP_USER_AGENT (4 * KILOBYTE)
 
 #define HTTP_RES_SIZE (4 * MEGABYTE) // 4mb
 #define HTTP_RES_ARENA_SIZE (HTTP_RES_SIZE + KILOBYTE)
@@ -128,7 +128,9 @@ HTTPError http_process_request_body(const char* str, HTTPRequest* req);
 
 HTTPError http_process_request_method(const char** str, HTTPRequest* req);
 
-HTTPError http_process_request_target_relative(const char** str, HTTPRequest* req);
+HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req);
+
+HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req);
 
 HTTPError http_process_request_target(const char** str, HTTPRequest* req);
 

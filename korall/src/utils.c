@@ -94,9 +94,14 @@ int fill_string_char(const char **str, char *arr, size_t arr_len, char match) {
     return fill_str(str, s, end, arr, arr_len);
 }
 
-int fill_string_str(const char** str, char* arr, size_t arr_len, char *match) {
+int fill_string_str(const char** str, char* arr, size_t arr_len, char *match, bool case_insensitive) {
     const char* s = *str;
-    const char* end = strstr(s, match);
+    const char* t = match;
+    if (case_insensitive) {
+        s = strlwr(s);
+        t = strlwr(t);
+    }
+    const char* end = strstr(s, t);
     if (end == NULL) return -1;
 
     return fill_str(str, s, end, arr, arr_len);

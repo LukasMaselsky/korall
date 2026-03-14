@@ -99,7 +99,7 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 
 	char value[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
 	*str = s;
-	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n");
+	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n", false);
 	if (res == -1) return HTTP_BAD_HEADER_VAL;
 	s = *str;
 
@@ -143,7 +143,7 @@ HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
 HTTPError http_process_request_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
 
-	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n");
+	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n", false);
 	if (res == -1) return HTTP_BAD_PROT;
 
 	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0) return HTTP_SUCCESS;
@@ -162,64 +162,101 @@ static bool is_valid_request_target_relative(char c) {
 	return false;
 }
 
-HTTPError http_process_request_target_relative(const char** str, HTTPRequest* req) {
-	// todo: query string
-	int len = MAX_HTTP_URL_LEN;
-	int i = 0;
-	char* rt = req->start_line->request_target;
-	const char* s = *str;
-	for (char c = *s; c != '\0' && c != ' ' && i < len - 1; c = *(++s)) {
-		if (!is_valid_request_target_relative(c)) return HTTP_BAD_REQUEST_TARGET;
-		if (i != 0) {
-			if (c == '/' && *(s - 1) == '/') return HTTP_BAD_REQUEST_TARGET;
-		}
-		rt[i] = c;
-		i++;
+HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req) {
+	if (str[0] != '/') return HTTP_BAD_REQUEST_TARGET;
+	if (str[1] == '\0') {
+		strncpy(req->start_line->request_target, str, MAX_HTTP_URL_LEN);
+		return HTTP_SUCCESS;
 	}
-	rt[i] = '\0';
-	*str = s;
+	if (str[1] == '/') return HTTP_BAD_REQUEST_TARGET;
+	const char* base = str;
+	str++;
+	char temp[MAX_HTTP_URL_LEN + 1] = { 0 };
+	while (true) {
+		memset(temp, 0, MAX_HTTP_URL_LEN);
+		if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '/') == 0) {
+			if (temp[0] == '/') return HTTP_BAD_REQUEST_TARGET; // double / not allowed
+			str++;
+			continue;
+		}
+		else if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '?') == 0) {
+			if (temp[0] == '/') return HTTP_BAD_REQUEST_TARGET; // "/?" not allowed
+			str++;
+			// query param part found
+			break;
+		}
+		else if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '\0') == 0) {
+			if (temp[0] == '\0') return HTTP_BAD_REQUEST_TARGET;
+			strncpy(req->start_line->request_target, base, MAX_HTTP_URL_LEN);
+			return HTTP_SUCCESS;
+		}
+		else {
+			return HTTP_BAD_REQUEST_TARGET;
+		}
+	}
 
+	// query params
+
+	while (true) {
+		memset(temp, 0, MAX_HTTP_URL_LEN);
+		if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '=') == -1) return HTTP_BAD_REQUEST_TARGET;
+		if (temp[0] == '\0' || temp[0] == '&') return HTTP_BAD_REQUEST_TARGET;
+		str++;
+		if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '&') == -1) {
+			if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '\0') == -1) return HTTP_BAD_REQUEST_TARGET;
+			if (temp[0] == '\0' || temp[0] == '=' || temp[0] == '&') return HTTP_BAD_REQUEST_TARGET;
+			strncpy(req->start_line->request_target, base, MAX_HTTP_URL_LEN);
+			return HTTP_SUCCESS;
+		}
+		if (temp[0] == '\0') return HTTP_BAD_REQUEST_TARGET;
+		str++;
+	}
+}
+
+HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req) {
+	// todo: 
 	return HTTP_SUCCESS;
 }
 
 HTTPError http_process_request_target(const char **str, HTTPRequest *req) {
 	HTTPMethod method = req->start_line->method;
 	if (method == -1) return HTTP_ERROR; // for testing purposes, never actually -1
-	const char* s = *str;
-	if (method == HTTP_OPTIONS && s[0] == '*') {
-		(req->start_line->request_target)[0] = '*';
-		(req->start_line->request_target)[1] = '\0';
-		*str = ++s;
-		return HTTP_SUCCESS;
+
+	char value[MAX_HTTP_URL_LEN + 1] = { 0 };
+	if (fill_string_char(str, value, MAX_HTTP_URL_LEN, ' ') == -1) return HTTP_BAD_REQUEST_TARGET;
+
+
+	if (method == HTTP_OPTIONS) {
+		if (value[0] == '*' && value[1] == '\0') {
+			strncpy(req->start_line->request_target, value, 1);
+			return HTTP_SUCCESS;
+		}
+		return HTTP_BAD_REQUEST_TARGET;
 	}
+
 	if (method == HTTP_CONNECT) {
+		// todo: 
 		// rt has to be domain:port format
 		char domain[MAX_DOMAIN_LEN + 1] = { 0 }; // todo: not using these ???
 		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		bool with_port = false;
-		char value[MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
-		int len = MAX_DOMAIN_LEN + 1 + MAX_PORT_NUM_CHAR_LEN;
-		int res = fill_string_char(str, value, len, ' ');
-		if (res == -1) return HTTP_BAD_REQUEST_TARGET;
 
 		HTTPError dp_res = http_domain_port(value, domain, port, &with_port);
 		if (dp_res != HTTP_SUCCESS) return dp_res;
 		if (!with_port) return HTTP_BAD_PORT;
 
-		strncpy(req->start_line->request_target, value, len);
+		strncpy(req->start_line->request_target, value, MAX_HTTP_URL_LEN);
 		return HTTP_SUCCESS;
 	}
 
-	const char first_c = s[0];
+	const char first_c = value[0];
 	if (first_c == '/') {
 		// relative path
-		return http_process_request_target_relative(str, req);
+		return http_process_request_target_relative(value, req);
 	}
 	else if (first_c == 'h' || first_c == 'H') { // http...
 		// absolute path
-		// todo
-		printf("Absolute paths not supported");
-		return HTTP_BAD_REQUEST_TARGET;
+		return http_process_request_target_absolute(value, req);
 	}
 
 	return HTTP_BAD_REQUEST_TARGET;

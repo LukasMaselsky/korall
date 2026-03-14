@@ -270,8 +270,8 @@ static HTTPError http_process_date(const char* value,
 	if (strstr(value, "GMT") == NULL) return HTTP_BAD_DATE;
 
 
-	*year_val = (uint16_t)day_num;
-	*day_val = (byte)year_num;
+	*year_val = (uint16_t)year_num;
+	*day_val = (byte)day_num;
 	*hour_val = (byte)hour_num;
 	*minute_val = (byte)minute_num;
 	*second_val = (byte)second_num;

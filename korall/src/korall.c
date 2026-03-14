@@ -38,17 +38,10 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
 		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		const char* str = req->start_line->request_target;
-		int i = 0;
-		for (char c = *str; c != ':'; c = *(++str)) {
-			domain[i] = c;
-			i++;
-		}
-		str++;
-		i = 0;
-		for (char c = *str; c != '\0'; c = *(++str)) {
-			port[i] = c;
-			i++;
-		}
+
+		if (fill_string_char(&str, domain, MAX_DOMAIN_LEN, ':') == -1) return false;
+		if (fill_string_char(&str, port, MAX_PORT_NUM_CHAR_LEN, '\0') == -1) return false;
+
 		if (strcmp(config->domain.chars, domain) != 0 ||
 			strcmp(config->port.chars, port) != 0) return false;
 	}
@@ -86,14 +79,14 @@ static void http_process_request(
 		const char* message = http_error_response_info(parse_res, &sc, &mt);
 
 		int err = http_response_construct(res, sc, config->name.chars, mt, message);
-		if (err == NULL) return;
+		if (err == -1) return;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
 		http_response_free(&res_arena, res);
 		http_request_free(&req_arena, req);
 		return;
 	}
 
-	// check if Host matches server domain + port, also if OPTIONS req, if rt matches it aswell
+	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
 	if (!http_domain_port_match_server(config, req)) { 
 		printf("server: invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
@@ -125,6 +118,11 @@ static void http_process_request(
 		return;
 	}
 	route->callback(req, res); // CALL CALLBACK
+
+	// add \r\n if without body
+	if (!(res->body_set)) {
+		http_response_append(res, "\r\n", 2);
+	}
 
 	if (http_response_send(inc_sock, server_sock, res, main) == -1) {
 		printf("Failed to send responses\n");
@@ -366,7 +364,7 @@ HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
 		return HTTP_CONF_ERROR;
 	};
 
-	char* port_str[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+	char port_str[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 	int_to_str(port->valueint, port_str);
 	strncpy(config->port.chars, port_str, config->port.size);
 
@@ -399,7 +397,7 @@ void korall_routes_add(Routes* routes, const char* path, const HTTPMethod method
 		printf("Failed to add route, callback cannot be NULL.\n");
 		return;
 	}
-	if (lookup_int_str(method, &http_method_lookup_table) == -1) {
+	if (lookup_int_str(method, &http_method_lookup_table) == NULL) {
 		printf("Failed to add route, method is not valid.\n");
 		return;
 	}
@@ -417,9 +415,9 @@ void korall_run(const char *config_path, const Routes* routes) {
 
 	// config
 
-	char* domain[MAX_DOMAIN_LEN + 1] = { 0 };
-	char* port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
-	char* name[MAX_SERVER_NAME_LEN + 1] = { 0 };
+	char domain[MAX_DOMAIN_LEN + 1] = { 0 };
+	char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+	char name[MAX_SERVER_NAME_LEN + 1] = { 0 };
 
 	ServerConfig config = {
 		.domain = {.chars = domain, .size = MAX_DOMAIN_LEN },
