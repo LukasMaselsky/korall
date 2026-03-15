@@ -214,6 +214,60 @@ TEST("http_process_request_target_relative") {
 
 }
 
+TEST("http_process_request_target_absolute") {
+	Arena arena = arena_init(HTTP_REQ_SIZE);
+	HTTPRequest *req = http_request_init(&arena);
+	
+	int res;
+	const char* str;
+
+	str = "http://www.example.re/page";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(strcmp(req->start_line->request_target, "http://www.example.re/page") == 0);
+
+	http_request_clear(&arena, &req);
+	str = "http://www.example.re";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(strcmp(req->start_line->request_target, "http://www.example.re") == 0);
+
+	http_request_clear(&arena, &req);
+	str = "http://www.example.re";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	ASSERT(strcmp(req->start_line->request_target, "http://www.example.re") == 0);
+
+	http_request_clear(&arena, &req);
+	str = "http://www.example..re";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
+
+	http_request_clear(&arena, &req);
+	str = "http://example.re./a";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
+
+	http_request_clear(&arena, &req);
+	str = "http://example.re-/a";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
+
+	http_request_clear(&arena, &req);
+	str = "http://example.-re/a";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
+
+	http_request_clear(&arena, &req);
+	str = "http://www.-example.re/a";
+	res = http_process_request_target_absolute(str, req);
+	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
+
+
+	http_request_free(&arena, req);
+
+}
+
 TEST("http_process_protocol") {
 	const char* str = "HTTP/1.1";
 	int res;

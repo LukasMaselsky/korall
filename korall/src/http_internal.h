@@ -10,7 +10,9 @@
 #define MAX_HTTP_QUERY_STR_LEN 1024
 #define MAX_HTTP_URL_LEN (2 * KILOBYTE) // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
 #define HTTP_PROT_LEN 8
-#define MAX_DOMAIN_LEN 253
+#define MAX_DOMAIN_LEN 255
+#define MAX_DOMAIN_LABEL_LEN 63
+#define MIN_DOMAIN_LABEL_LEN 1
 #define MAX_HTTP_BODY_LEN MEGABYTE // todo: 1mb?
 #define MAX_HTTP_BODY_DIGIT_LEN 7 // 7 digits
 #define MAX_HTTP_HEADER_FIELD_LEN 32

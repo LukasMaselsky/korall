@@ -358,6 +358,8 @@ typedef struct HTTPRequestInternal HTTPRequest;
 
 typedef struct HTTPResponseInternal HTTPResponse;
 
+char* korall_request_param_get(const char* field);
+
 int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code);
 
 int korall_response_body_set(HTTPResponse* res, const char* body);

@@ -154,6 +154,7 @@ static bool is_valid_request_target_relative(char c) {
 	// ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 	// $%&'()*+,-./:;=[]_~
 	// @!?#
+	// todo: https://stackoverflow.com/a/4669755
 	if (c <= 'z' && c >= 'a') return true;
 	if (c <= 'Z' && c >= 'A') return true;
 	if (c <= '9' && c >= '0') return true;
@@ -162,7 +163,16 @@ static bool is_valid_request_target_relative(char c) {
 	return false;
 }
 
+static bool is_valid_hostname_label(char c) {
+	if (c <= 'z' && c >= 'a') return true;
+	if (c <= 'Z' && c >= 'A') return true;
+	if (c <= '9' && c >= '0') return true;
+	if (c == '-') return true;
+	return false;
+}
+
 HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req) {
+	// todo: 
 	if (str[0] != '/') return HTTP_BAD_REQUEST_TARGET;
 	if (str[1] == '\0') {
 		strncpy(req->start_line->request_target, str, MAX_HTTP_URL_LEN);
@@ -214,7 +224,58 @@ HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req
 }
 
 HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req) {
-	// todo: 
+	const char* base = str;
+	char temp[MAX_HTTP_URL_LEN + 1] = { 0 };
+	int skip;
+	if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "http://", true) == 0) {
+		skip = 7;
+	}
+	else if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "https://", true) == 0) {
+		skip = 8;
+	}
+	else {
+		return HTTP_BAD_REQUEST_TARGET;
+	}
+	if (temp[0] != '\0') return HTTP_BAD_REQUEST_TARGET;
+	memset(temp, 0, MAX_HTTP_URL_LEN);
+	str += skip;
+
+	// www.
+	if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "www.", true) == 0) {
+		skip = 4;
+		if (temp[0] != '\0') return HTTP_BAD_REQUEST_TARGET;
+		memset(temp, 0, MAX_HTTP_URL_LEN);
+		str += skip;
+	}
+
+	// process host name labels
+	
+	int total_label_len = 0;
+	int label_len = 0;
+	char prev_c = 0;
+	for (char c = *str; c != '\0' && c != '/'; c = *(++str)) {
+		if (c == '.') {
+			if (label_len > MAX_DOMAIN_LABEL_LEN || label_len < MIN_DOMAIN_LABEL_LEN) return HTTP_BAD_REQUEST_TARGET;
+			if (prev_c == '-') return HTTP_BAD_REQUEST_TARGET;
+			label_len = 0;
+			prev_c = c;
+			continue;
+		}
+		if (!is_valid_hostname_label(c)) return HTTP_BAD_REQUEST_TARGET;
+		if (label_len == 0 && c == '-') return HTTP_BAD_REQUEST_TARGET; // cant start with -
+		prev_c = c;
+		label_len++;
+		total_label_len++;
+	}
+	if (total_label_len > MAX_DOMAIN_LEN || prev_c == '.' || prev_c == '-') return HTTP_BAD_REQUEST_TARGET;
+
+	if (*str == '/')  {
+		int err = http_process_request_target_relative(str, req);
+		if (err != HTTP_SUCCESS) return err;
+	}
+
+	strncpy(req->start_line->request_target, base, MAX_HTTP_URL_LEN);
+
 	return HTTP_SUCCESS;
 }
 
@@ -560,6 +621,14 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 }
 
 // PUBLIC
+
+/*
+
+*/
+char* korall_request_param_get(const char* field) {
+
+	return NULL;
+}
 
 /*
 	Sets the type of response
