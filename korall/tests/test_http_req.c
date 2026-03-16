@@ -161,11 +161,6 @@ TEST("http_process_request_target_relative") {
 	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
 
 	http_request_clear(&arena, &req);
-	str = "/a/";
-	res = http_process_request_target_relative(str, req);
-	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
-
-	http_request_clear(&arena, &req);
 	str = "/a?";
 	res = http_process_request_target_relative(str, req);
 	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
@@ -201,14 +196,28 @@ TEST("http_process_request_target_relative") {
 	res = http_process_request_target_relative(str, req);
 	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
 
-	// todo: fix illegal chars
-	/*
 	http_request_clear(&arena, &req);
-	str = "/{/a";
+	str = "/a?field=v%AA";
+	res = http_process_request_target_relative(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+
+	http_request_clear(&arena, &req);
+	str = "/a?field=v%A";
 	res = http_process_request_target_relative(str, req);
 	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
-	*/
 
+	http_request_clear(&arena, &req);
+	str = "/a?field=v,b";
+	res = http_process_request_target_relative(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+
+	http_request_clear(&arena, &req);
+	str = "/a?field=v,";
+	res = http_process_request_target_relative(str, req);
+	ASSERT(res == HTTP_SUCCESS);
+
+
+	// todo: more tests
 
 	http_request_free(&arena, req);
 

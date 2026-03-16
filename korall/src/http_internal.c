@@ -150,20 +150,26 @@ HTTPError http_process_request_protocol(const char** str) {
 	return HTTP_BAD_PROT;
 }
 
-static bool is_valid_request_target_relative(char c) {
-	// ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
-	// $%&'()*+,-./:;=[]_~
-	// @!?#
-	// todo: https://stackoverflow.com/a/4669755
+static bool is_valid_query_string(const char c) {
 	if (c <= 'z' && c >= 'a') return true;
 	if (c <= 'Z' && c >= 'A') return true;
 	if (c <= '9' && c >= '0') return true;
-	if (c <= '/' && c >= '$') return true;
-	if (c == ':' || c == ';' || c == '=' || c == '[' || c == ']' || c == '_' || c == '~') return true;
+	if (c <= '.' && c >= '\'') return true;
+	if (c == '$' || c == '!' || c == '_' || c == '~' || c == '%') return true;
 	return false;
 }
 
-static bool is_valid_hostname_label(char c) {
+static bool is_valid_path_segment(const char c) {
+	if (c <= 'z' && c >= 'a') return true;
+	if (c <= 'Z' && c >= 'A') return true;
+	if (c <= '9' && c >= '0') return true;
+	if (c <= '.' && c >= '$') return true;
+	if (c == '!' || c == ':' || c == ';' || c == '=' || c == '_' || c == '~' || c == '@' || c == '%') return true;
+
+	return false;
+}
+
+static bool is_valid_hostname_label(const char c) {
 	if (c <= 'z' && c >= 'a') return true;
 	if (c <= 'Z' && c >= 'A') return true;
 	if (c <= '9' && c >= '0') return true;
@@ -174,53 +180,67 @@ static bool is_valid_hostname_label(char c) {
 HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req) {
 	// todo: 
 	if (str[0] != '/') return HTTP_BAD_REQUEST_TARGET;
-	if (str[1] == '\0') {
-		strncpy(req->start_line->request_target, str, MAX_HTTP_URL_LEN);
-		return HTTP_SUCCESS;
-	}
-	if (str[1] == '/') return HTTP_BAD_REQUEST_TARGET;
 	const char* base = str;
 	str++;
-	char temp[MAX_HTTP_URL_LEN + 1] = { 0 };
-	while (true) {
-		memset(temp, 0, MAX_HTTP_URL_LEN);
-		if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '/') == 0) {
-			if (temp[0] == '/') return HTTP_BAD_REQUEST_TARGET; // double / not allowed
-			str++;
+	
+	int seg_len = 0;
+	for (char c = *str; c != '\0'; c = *(++str)) {
+		if (c == '/') {
+			if (seg_len < 1) return HTTP_BAD_REQUEST_TARGET;
+			seg_len = 0;
 			continue;
 		}
-		else if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '?') == 0) {
-			if (temp[0] == '/') return HTTP_BAD_REQUEST_TARGET; // "/?" not allowed
-			str++;
-			// query param part found
-			break;
+		if (c == '%') {
+			// safe since null term is false
+			if (!(is_hex_digit(str[1]) && is_hex_digit(str[2]))) return HTTP_BAD_REQUEST_TARGET;
+			continue;
 		}
-		else if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '\0') == 0) {
-			if (temp[0] == '\0') return HTTP_BAD_REQUEST_TARGET;
-			strncpy(req->start_line->request_target, base, MAX_HTTP_URL_LEN);
-			return HTTP_SUCCESS;
-		}
-		else {
-			return HTTP_BAD_REQUEST_TARGET;
-		}
+		if (c == '?') break;
+		if (!is_valid_path_segment(c)) return HTTP_BAD_REQUEST_TARGET;
+		seg_len++;
 	}
 
-	// query params
+	if (*str == '?') {
+		// query params
+		str++;
+		if (*str == '\0') return HTTP_BAD_REQUEST_TARGET; // cannot have ".../?" ?
+		int part_len = 0;
+		char prev_c = 0;
+		bool in_val = false;
+		bool in_field = true;
+		for (char c = *str; c != '\0'; c = *(++str)) {
+			if (c == '=') {
+				if (part_len < 1 || !in_field) return HTTP_BAD_REQUEST_TARGET;
+				part_len = 0;
+				prev_c = c;
+				in_val = true;
+				in_field = false;
+				continue;
+			}
+			if (c == '&') {
+				if (part_len < 1 || !in_val) return HTTP_BAD_REQUEST_TARGET;
+				part_len = 0;
+				prev_c = c;
+				in_val = false;
+				in_field = true;
+				continue;
+			}
+			if (c == '%') {
+				// safe since null term is false
+				if (!(is_hex_digit(str[1]) && is_hex_digit(str[2]))) return HTTP_BAD_REQUEST_TARGET;
+				continue;
+			}
 
-	while (true) {
-		memset(temp, 0, MAX_HTTP_URL_LEN);
-		if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '=') == -1) return HTTP_BAD_REQUEST_TARGET;
-		if (temp[0] == '\0' || temp[0] == '&') return HTTP_BAD_REQUEST_TARGET;
-		str++;
-		if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '&') == -1) {
-			if (fill_string_char(&str, temp, MAX_HTTP_URL_LEN, '\0') == -1) return HTTP_BAD_REQUEST_TARGET;
-			if (temp[0] == '\0' || temp[0] == '=' || temp[0] == '&') return HTTP_BAD_REQUEST_TARGET;
-			strncpy(req->start_line->request_target, base, MAX_HTTP_URL_LEN);
-			return HTTP_SUCCESS;
+			if (!is_valid_path_segment(c)) return HTTP_BAD_REQUEST_TARGET;
+			prev_c = c;
+			part_len++;
 		}
-		if (temp[0] == '\0') return HTTP_BAD_REQUEST_TARGET;
-		str++;
+		if (!in_val) return HTTP_BAD_REQUEST_TARGET; // must end on value
 	}
+
+
+	strncpy(req->start_line->request_target, base, MAX_HTTP_URL_LEN);
+	return HTTP_SUCCESS;
 }
 
 HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req) {
@@ -284,7 +304,7 @@ HTTPError http_process_request_target(const char **str, HTTPRequest *req) {
 	if (method == -1) return HTTP_ERROR; // for testing purposes, never actually -1
 
 	char value[MAX_HTTP_URL_LEN + 1] = { 0 };
-	if (fill_string_char(str, value, MAX_HTTP_URL_LEN, ' ') == -1) return HTTP_BAD_REQUEST_TARGET;
+	if (fill_string_char(str, value, MAX_HTTP_URL_LEN, ' ') == -1) return HTTP_REQUEST_TARGET_TOO_BIG;
 
 
 	if (method == HTTP_OPTIONS) {

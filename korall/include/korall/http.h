@@ -319,6 +319,7 @@ typedef enum {
 
 typedef enum {
 	// todo
+	HTTP_REQUEST_TARGET_TOO_BIG = -25,
 	HTTP_BAD_SERVER = -24,
 	HTTP_BODY_TOO_LONG = -23,
 	HTTP_BODY_NOT_ALLOWED = -22,

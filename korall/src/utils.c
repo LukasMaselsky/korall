@@ -43,6 +43,13 @@ void int_to_str(const int value, char* str) {
     sprintf(str, "%d", value);
 }
 
+bool is_hex_digit(const char c) {
+    if (c <= 'f' && c >= 'a') return true;
+    if (c <= 'F' && c >= 'A') return true;
+    if (c <= '9' && c >= '0') return true;
+    return false;
+}
+
 bool is_digit(const char c) {
     return c >= '0' && c <= '9';
 }
@@ -108,10 +115,12 @@ int fill_string_str(const char** str, char* arr, size_t arr_len, char *match, bo
 }
 
 static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
-    const size_t sub_len = end - s;
-    if (sub_len > arr_len) return -1;
-    memcpy(arr, s, sub_len);
-    arr[sub_len] = '\0';
+    if (end != NULL) {
+        const size_t sub_len = end - s;
+        if (sub_len > arr_len) return -1;
+        memcpy(arr, s, sub_len);
+        arr[sub_len] = '\0';
+    }
     *str = end;
     return 0;
 }

@@ -84,6 +84,8 @@ void int_to_str(const int value, char* str);
 
 int strcmp_ci(const char* str1, const char* str2);
 
+bool is_hex_digit(const char c);
+
 bool is_digit(const char c);
 
 bool is_digits_only(const char* str);
