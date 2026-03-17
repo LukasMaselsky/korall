@@ -132,7 +132,7 @@ HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
 	if (!(method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_POST)) return HTTP_BODY_NOT_ALLOWED;
 
 	size_t body_len = strlen(str);
-	if (body_len > MAX_HTTP_BODY_LEN) return HTTP_BODY_TOO_LONG;
+	if (body_len > HTTP_REQ_BODY_LEN) return HTTP_BODY_TOO_LONG;
 	
 	memcpy(req->body, str, body_len);
 	req->body[body_len] = '\0';
@@ -361,7 +361,7 @@ HTTPError http_process_request_method(const char **str, HTTPRequest *req) {
 HTTPRequest* http_request_init(Arena *arena) {
 	// start line
 	char* request_target;
-	request_target = (char*) arena_alloc(arena, (MAX_HTTP_URL_LEN + 1) * sizeof(*request_target));
+	request_target = (char*) arena_alloc(arena, (HTTP_REQ_START_LINE_LEN + 1) * sizeof(*request_target));
 
 	HTTPRequestStartLine* sl;
 	sl = (HTTPRequestStartLine*)arena_alloc(arena, 1 * sizeof(*sl));
@@ -375,7 +375,7 @@ HTTPRequest* http_request_init(Arena *arena) {
 	// body
 
 	char* body;
-	body = (char*)arena_alloc(arena, (MAX_HTTP_BODY_LEN + 1) * sizeof(*body));
+	body = (char*)arena_alloc(arena, (HTTP_REQ_BODY_LEN + 1) * sizeof(*body));
 
 	// all
 
@@ -467,19 +467,6 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 
 // Response
 
-int http_response_append(HTTPResponse* res, const char *value, size_t value_len) {
-	size_t size = res->size;
-	if (size + value_len > res->capacity) { 
-		printf("Failed to modify response, response too long\n");
-		return -1;
-	};
-
-	char* res_p = res->data + size;
-	strncpy(res_p, value, value_len);
-	res->size += value_len;
-	return 0;
-}
-
 HTTPError http_process_response_header_value(const HTTPResponseHeaderField field, const char* value) {
 	// massive switch for each header
 	switch (field) {
@@ -524,7 +511,7 @@ int http_response_construct(
 }
 
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse* res, const fd_set* main) {
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const char* data, const fd_set* main) {
 	if (inc_sock == server_sock) {
 		printf("server: cannot send HTTP response to itself\n");
 		return -1;
@@ -534,7 +521,6 @@ int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HT
 		return -1;
 	};
 
-	char* data = res->data;
 	printf("'%s'", data);
 	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");
@@ -555,13 +541,20 @@ HTTPResponse* http_response_init(Arena *arena) {
 	HTTPResponse* res;
 	res = (HTTPResponse*)arena_alloc(arena, 1 * sizeof(*res));
 
-	char* data;
-	data = (char*)arena_alloc(arena, (HTTP_RES_SIZE + 1) * sizeof(*data));
-	res->data = data;
-	res->capacity = HTTP_RES_SIZE;
-	res->size = 0;
-	res->body_set = false;
-	res->start_line_set = false;
+	char* start_line, *headers, *body;
+	start_line = (char*)arena_alloc(arena, (HTTP_RES_START_LINE_LEN + 1) * sizeof(*start_line));
+	headers = (char*)arena_alloc(arena, (HTTP_RES_HEADERS_LEN + 1) * sizeof(*headers));
+	body = (char*)arena_alloc(arena, (HTTP_RES_BODY_LEN + 1) * sizeof(*body));
+
+	res->start_line.chars = start_line;
+	res->start_line.size = HTTP_RES_START_LINE_LEN;
+	res->headers.chars = headers;
+	res->headers.size = HTTP_RES_HEADERS_LEN;
+	res->header_count = 0;
+	res->header_size = HTTP_RES_HEADER_LEN;
+	res->headers_base = headers;
+	res->body.chars = body;
+	res->body.size = HTTP_RES_BODY_LEN;
 	return res;
 }
 
@@ -666,35 +659,15 @@ int korall_request_param_get(const HTTPRequest* req, const char* field, char *va
 	Sets the type of response
 */
 int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
-	if (res->body_set) {
-		printf("Failed to set start line, must be set before body.\n");
-		// todo: allow to be set anytime?
-		return -1;
-	}
-	if (res->start_line_set) {
-		printf("Failed to set start line, already set.\n");
-		// todo: allow to be overwritten?
-		return -1;
-	}
 	const char* reason_phrase = lookup_int_str(code, &http_status_code_lookup_table);
 	if (reason_phrase == NULL) {
 		printf("Failed to set response, invalid code\n");
 		return -1;
 	}
+	String start_line = res->start_line;
+	char* str = start_line.chars;
 
-	// http/1.1
-	if (http_response_append(res, "HTTP/1.1 ", 9) == -1) return -1;
-
-	// code
-	char code_str[4 + 1] = { 0 };
-	sprintf(code_str, "%d ", code);
-	if (http_response_append(res, code_str, 4) == -1) return -1;
-
-	// reason phrase
-	size_t size = strlen(reason_phrase);
-	if (http_response_append(res, reason_phrase, size)) return -1;
-	if (http_response_append(res, "\r\n", 2)) return -1;
-	res->start_line_set = true;
+	sprintf(str, "HTTP/1.1 %d %s\r\n", code, reason_phrase);
 
 	// add some headers
 
@@ -713,44 +686,35 @@ int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
 	Sets the value of a header of the response
 */
 int korall_response_header_set(HTTPResponse* res, const char* field, const char* value) {
-	if (res->body_set) {
-		printf("Failed to set header, headers must be set before body.\n");
-		// todo: allow to be set anytime?
-		return -1;
-	}
-	if (!(res->start_line_set)) {
-		printf("Failed to set header, must be set after start line\n");
-		// todo: ?
-		return -1;
-	}
 	if (field == NULL || value == NULL) {
 		printf("Failed to set header, field and value must not be NULL\n");
 		return -1;
 	}
+	if (res->header_count >= HTTP_RES_HEADER_COUNT) { // todo: embed in res struct
+		printf("Failed to set header, maximum of %d headers reached\n", HTTP_RES_HEADER_COUNT);
+		return -1;
+	}
+
+	String headers = res->headers;
+	char* str = headers.chars;
 
 	size_t field_len = strlen(field);
 	size_t value_len = strlen(value);
 	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
 
-	if (field_len > MAX_HTTP_HEADER_FIELD_LEN) {
-		printf("Failed to set header, header field name must be under %d characters\n", MAX_HTTP_HEADER_FIELD_LEN);
-		return -1;
-	}
-	if (value_len > MAX_HTTP_HEADER_FIELD_LEN) {
-		printf("Failed to set header, value must be under %d characters\n", MAX_HTTP_HEADER_VALUE_LEN);
+	if (field_len + value_len + 4 > res->headers.size) {
+		printf("Failed to set header, must be under %d characters\n", HTTP_RES_HEADER_LEN);
 		return -1;
 	}
 
 	if (res_field != -1 && http_process_response_header_value(res_field, value) != HTTP_SUCCESS) {
-		// not custom header
+		// not custom header and invalid
 		printf("Failed to set header, value is not valid for field %s\n", field);
 		return -1;
 	}
 
-	char temp[MAX_HTTP_HEADER_FIELD_LEN + MAX_HTTP_HEADER_VALUE_LEN + 4 + 1] = { 0 };
-	sprintf(temp, "%s: %s\r\n", field, value);
-	size_t size = field_len + value_len + 4; // ": " + "\r\n" = 4
-	http_response_append(res, temp, size);
+	res->headers.chars += sprintf(str, "%s: %s\r\n", field, value);
+	res->header_count++;
 	return 0;
 }
 
@@ -759,29 +723,21 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 */
 int korall_response_body_set(HTTPResponse* res, const char* body) {
 	if (body == NULL) return -1;
-	if (res->body_set) {
-		printf("Failed to set body, body already set\\n");
-		// todo: allow to be overwritten?
-		return -1;
-	}
-	if (!(res->start_line_set)) {
-		printf("Failed to set body, must be set after start line\\n");
-		// todo: ?
-		return -1;
-	}
 
 	size_t body_len = strlen(body);
-	if (body_len > MAX_HTTP_BODY_LEN) {
+	if (body_len > res->body.size) {
 		printf("Failed to set body, body too long\n");
 		return -1;
 	}
 
+	char* str = res->body.chars;
+
+	// content length
 	char cl[MAX_HTTP_BODY_DIGIT_LEN + 1] = { 0 };
 	sprintf(cl, "%" PRIu64, body_len);
 	if (korall_response_header_set(res, "Content-Length", cl) == -1) return -1;
 	
-	if (http_response_append(res, "\r\n", 2) == -1) return -1;
-	if (http_response_append(res, body, body_len) == -1) return -1;
-	res->body_set = true;
+	// body
+	sprintf(str, "\r\n%s", body);
 	return 0;
 }

@@ -460,8 +460,6 @@ HTTPError http_process_cache_control_res(const char* value) {
 }
 
 HTTPError http_process_server_res(const char* value) {
-	size_t len = strlen(value);
-	if (len > MAX_HTTP_HEADER_VALUE_LEN) return HTTP_BAD_SERVER;
 	return HTTP_SUCCESS;
 }
 

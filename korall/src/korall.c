@@ -69,6 +69,8 @@ static void http_process_request(
 
 	Arena req_arena = arena_init(HTTP_REQ_SIZE);
 	Arena res_arena = arena_init(HTTP_RES_ARENA_SIZE);
+	Arena res_full_arena = arena_init(HTTP_RES_FULL_ARENA_SIZE + 1); // for concating res parts into full response text
+	const char* res_data = (char*)arena_alloc(&res_full_arena, HTTP_RES_FULL_ARENA_SIZE + 1);
 
 	HTTPRequest *req = http_request_init(&req_arena);
 	HTTPResponse *res = http_response_init(&res_arena);
@@ -123,18 +125,16 @@ static void http_process_request(
 	}
 	route->callback(req, res); // CALL CALLBACK
 
-	// add \r\n if without body
-	if (!(res->body_set)) {
-		http_response_append(res, "\r\n", 2);
-	}
 
-	if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+	sprintf(res_data, "%s%s%s", res->start_line.chars, res->headers_base, res->body.chars);
+	
+	if (http_response_send(inc_sock, server_sock, res_data, main) == -1) {
 		printf("Failed to send responses\n");
 	}
 
 	http_response_free(&res_arena, res);
 	http_request_free(&req_arena, req);
-
+	arena_free(&res_full_arena);
 	return;
 }
 
