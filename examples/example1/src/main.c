@@ -4,6 +4,10 @@
 #include <string.h>
 
 static KORALL_ROUTE(my_route) {
+
+	char value[100] = { 0 };
+	korall_request_param_get(req, "name", value, 99);
+
 	korall_response_start_set(res, 200);
 	korall_response_header_set(res, "Cache-Control", "no-store");
 	korall_response_header_set(res, "Content-Type", "application/json");

@@ -96,9 +96,9 @@ void get_current_time_gmt(struct tm** t);
 
 bool starts_with(const char* pre, const char* str);
 
-int fill_string_char(const char** str, char* arr, size_t arr_len, char match);
+int fill_string_char(const char** str, char* arr, size_t arr_len, const char match);
 
-int fill_string_str(const char** str, char* arr, size_t arr_len, char *match, bool case_insensitive);
+int fill_string_str(const char** str, char* arr, size_t arr_len, const char *match, bool case_insensitive);
 
 
 #endif

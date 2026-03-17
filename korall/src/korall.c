@@ -19,6 +19,10 @@ const ServerConfig default_config = {
 */
 static Route* http_route_select(HTTPRequest *req, const Routes *routes) {
 	const char *path = req->start_line->request_target;
+	char sub_path[MAX_HTTP_URL_LEN + 1] = { 0 };
+	if (fill_string_char(&path, sub_path, MAX_HTTP_URL_LEN, '?') == 0) {
+		path = sub_path;
+	}
 	const HTTPMethod method = req->start_line->method;
 
 	for (Route* route = routes->routes; route != routes->routes + routes->route_count; route++) {

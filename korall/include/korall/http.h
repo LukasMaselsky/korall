@@ -359,7 +359,7 @@ typedef struct HTTPRequestInternal HTTPRequest;
 
 typedef struct HTTPResponseInternal HTTPResponse;
 
-char* korall_request_param_get(const char* field);
+int korall_request_param_get(const HTTPRequest* req, const char* field, char* value, size_t value_len);
 
 int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code);
 

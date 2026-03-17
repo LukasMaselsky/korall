@@ -643,11 +643,23 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 // PUBLIC
 
 /*
-
+	Get a request param
 */
-char* korall_request_param_get(const char* field) {
+int korall_request_param_get(const HTTPRequest* req, const char* field, char *value, size_t value_len) {
+	const char* rt = req->start_line->request_target;
 
-	return NULL;
+	// find start of query params
+	if (fill_string_char(&rt, NULL, 0, '?') == -1) return -1;
+	// find field
+	if (fill_string_str(&rt, NULL, 0, field, false) == -1) return -1;
+	// find start of value
+	if (fill_string_char(&rt, NULL, 0, '=') == -1) return -1;
+	rt++;
+
+	if (fill_string_char(&rt, value, value_len, '&') == -1
+		&& fill_string_char(&rt, value, value_len, '\0') == -1) return -1;
+
+	return 0;
 }
 
 /*

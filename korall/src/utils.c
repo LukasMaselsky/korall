@@ -93,7 +93,7 @@ bool starts_with(const char* pre, const char* str)
 /*
     Fills char array with substring based on matching
 */
-int fill_string_char(const char **str, char *arr, size_t arr_len, char match) {
+int fill_string_char(const char **str, char *arr, size_t arr_len, const char match) {
     const char* s = *str;
     const char* end = strchr(s, match);
     if (end == NULL) return -1;
@@ -101,7 +101,7 @@ int fill_string_char(const char **str, char *arr, size_t arr_len, char match) {
     return fill_str(str, s, end, arr, arr_len);
 }
 
-int fill_string_str(const char** str, char* arr, size_t arr_len, char *match, bool case_insensitive) {
+int fill_string_str(const char** str, char* arr, size_t arr_len, const char *match, bool case_insensitive) {
     const char* s = *str;
     const char* t = match;
     if (case_insensitive) {
@@ -115,7 +115,7 @@ int fill_string_str(const char** str, char* arr, size_t arr_len, char *match, bo
 }
 
 static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
-    if (end != NULL) {
+    if (arr != NULL) {
         const size_t sub_len = end - s;
         if (sub_len > arr_len) return -1;
         memcpy(arr, s, sub_len);
