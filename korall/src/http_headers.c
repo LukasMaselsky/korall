@@ -74,73 +74,68 @@ HTTPError http_domain_port(const char* value, char* domain, char* port, bool *wi
 
 static int http_process_weighted_list(
 	const char* value, 
-	HTTPRequest* req, 
 	LookupTable *table,
 	char *field_arr, 
-	const int field_arr_len, 
-	Array* res_arr
+	const int field_arr_len
 ) {
+
 	int i = 0;
 	for (char c = *value; ; c = *(++value)) {
-		if (c == ',' || c == ';' || c == '\0') {
-			field_arr[i] = '\0';
-			int res = lookup_str_int(field_arr, table, false);
-			if (res == -1) return -1;
+		if (!(c == ',' || c == ';' || c == '\0')) {
+			field_arr[i] = c;
+			i++;
+			continue;
+		}
+		field_arr[i] = '\0';
+		int res = lookup_str_int(field_arr, table, false);
+		if (res == -1) return -1;
 
-			double weight = 1.0;
-			if (c == ';') {
-				// get weight
-				++value; // skip ;
-				if (!(value[0] == 'q' && value[1] == '=' && value[2] == '0' && value[3] == '.')) return -1; // invalid weight format
+		if (c == ';') {
+			// get weight
+			++value; // skip ;
+			if (!(value[0] == 'q' && value[1] == '=')) return -1; // invalid weight format
+			if (!((value[2] == '0' && value[3] == '.') || value[2] == '1')) return -1;
+			if (value[2] == '1') {
+				if (!(value[3] == '\0' || value[3] == ',')) return -1;
+				value += 3;
+			}
+			else {
 				value += 4;
 
-				char float_temp[64 + 1] = { 0 };
-				float_temp[0] = '0';
-				float_temp[1] = '.';
-				int j = 2;
-				for (c = *value; c != ',' && j < 64; c = *(++value)) {
-					if (c == '\0') {
-						--value; // for skip spaces
-						break;
-					}
-					if (!(c <= '9' && c >= '0')) return -1;
-					float_temp[j] = c;
-					j++;
+				bool at_least_1_digit = false;
+				for (c = *value; c != ',' && c != '\0'; c = *(++value)) {
+					if (!is_digit(c)) return -1;
+					at_least_1_digit = true;
 				}
-				if (float_temp[j - 1] == '.') return -1;
-				float_temp[j] = '\0';
-				double val = strtod(float_temp, NULL);
-				weight = val;
+				if (!at_least_1_digit) return -1;
 			}
-
-			HTTPWeightedField wf = { .field = res, .weight = weight};
-			array_add(res_arr, (void *) &wf);
-			
-			do {
-				value++;
-			} while (*value == ' '); // skip spaces
-			c = *value;
-			if (c == '\0') return 0;
-			i = 0;
-			memset(field_arr, 0, field_arr_len);
 		}
-		field_arr[i] = c;
+
+		if (*value == '\0') return 0;
+
+		do {
+			value++;
+		} while (*value == ' '); // skip spaces
+		i = 0;
+		memset(field_arr, 0, field_arr_len);
+		field_arr[i] = *value;
 		i++;
 	}
 	return 0;
 }
 
-static HTTPError http_process_content_length(const char* value, int *val) {
-	str_to_int_errno res = str_to_int(val, value, 10);
+HTTPError http_process_content_length(const char* value) {
+	int val;
+	str_to_int_errno res = str_to_int(&val, value, 10);
 	return (res != STR_TO_INT_SUCCESS) ? HTTP_BAD_CONTENT_LENGTH : HTTP_SUCCESS;
 }
 
-static HTTPError http_process_connection(const char* value, int *val) {
-	*val = lookup_str_int(value, &http_connection_lookup_table, false);
-	return (*val == -1) ? HTTP_BAD_CONNECTION : HTTP_SUCCESS;
+HTTPError http_process_connection(const char* value) {
+	int val = lookup_str_int(value, &http_connection_lookup_table, false);
+	return (val == -1) ? HTTP_BAD_CONNECTION : HTTP_SUCCESS;
 }
 
-static HTTPError http_process_content_type(const char* value, HTTPMediaType *media_type, char *boundary, HTTPCharset *chst) {
+HTTPError http_process_content_type(const char* value) {
 	char type[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
 	int colon = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, ';');
 	if (colon == -1) {
@@ -151,7 +146,6 @@ static HTTPError http_process_content_type(const char* value, HTTPMediaType *med
 	int mt = lookup_str_int(type, &http_media_type_lookup_table, false);
 	if (mt == -1) return HTTP_BAD_CONTENT_TYPE;
 
-	*media_type = mt;
 	if (colon == -1) return HTTP_SUCCESS; // no boundary/charset
 
 	// skip spaces
@@ -166,7 +160,8 @@ static HTTPError http_process_content_type(const char* value, HTTPMediaType *med
 		if (!starts_with(pre, value)) return HTTP_BAD_CONTENT_TYPE;
 		value += (pre_len - 1);
 
-		int boundary_res = fill_string_char(&value, boundary, MAX_HTTP_BOUNDARY_LEN, '\0');
+		char bnd[MAX_HTTP_BOUNDARY_LEN + 1] = { 0 };
+		int boundary_res = fill_string_char(&value, bnd, MAX_HTTP_BOUNDARY_LEN, '\0');
 		if (boundary_res == -1) return HTTP_BAD_CONTENT_TYPE;
 		return HTTP_SUCCESS;
 	}
@@ -184,27 +179,18 @@ static HTTPError http_process_content_type(const char* value, HTTPMediaType *med
 		int charset_int = lookup_str_int(charset, &http_charset_lookup_table, true);
 		if (charset_int == -1) return HTTP_BAD_CONTENT_TYPE;
 
-		*chst = charset_int;
 		return HTTP_SUCCESS;
 	}
 }
 
-static HTTPError http_process_date(const char* value, 
-	Day *day_name_val, 
-	Month *month_val,
-	uint16_t *year_val,
-	byte *day_val,
-	byte *hour_val,
-	byte *minute_val,
-	byte *second_val
-) {
+HTTPError http_process_date(const char* value) {
 	char day_name[3 + 1] = { 0 };
 	if (fill_string_char(&value, day_name, 3, ',') == -1) return HTTP_BAD_DATE;
 	value++; // skip ,
 	if (value[0] == '\0') return HTTP_BAD_DATE;
 	value++; // skip space
 
-	if ((*day_name_val = lookup_str_int(day_name, &day_lookup_table, false)) == -1) return HTTP_BAD_DATE;
+	if (lookup_str_int(day_name, &day_lookup_table, false) == -1) return HTTP_BAD_DATE;
 
 
 	char day[2 + 1] = { 0 };
@@ -219,8 +205,9 @@ static HTTPError http_process_date(const char* value,
 	if (fill_string_char(&value, month, 3, ' ') == -1) return HTTP_BAD_DATE;
 	value++;
 
-	if ((*month_val = lookup_str_int(month, &month_lookup_table, false)) == -1) return HTTP_BAD_DATE;
-	int month_num = *month_val + 1;
+	int month_val;
+	if ((month_val = lookup_str_int(month, &month_lookup_table, false)) == -1) return HTTP_BAD_DATE;
+	int month_num = month_val + 1;
 
 
 	char year[4 + 1] = { 0 };
@@ -269,19 +256,10 @@ static HTTPError http_process_date(const char* value,
 
 	if (strstr(value, "GMT") == NULL) return HTTP_BAD_DATE;
 
-
-	*year_val = (uint16_t)year_num;
-	*day_val = (byte)day_num;
-	*hour_val = (byte)hour_num;
-	*minute_val = (byte)minute_num;
-	*second_val = (byte)second_num;
-
 	return HTTP_SUCCESS;
 }
 
-/* Request */
-
-HTTPError http_process_host_req(const char* value, HTTPRequest* req) {
+HTTPError http_process_host(const char* value, HTTPRequest* req) {
 
 	char domain[MAX_DOMAIN_LEN + 1] = { 0 };
 	char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
@@ -289,80 +267,60 @@ HTTPError http_process_host_req(const char* value, HTTPRequest* req) {
 	HTTPError res = http_domain_port(value, domain, port, &with_port);
 	if (res != HTTP_SUCCESS) return res;
 
-	strncpy(req->headers->host->domain, domain, MAX_DOMAIN_LEN);
-	strncpy(req->headers->host->port, port, MAX_PORT_NUM_CHAR_LEN);
+	strncpy(req->host->domain, domain, MAX_DOMAIN_LEN);
+	strncpy(req->host->port, port, MAX_PORT_NUM_CHAR_LEN);
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_accept_req(const char* value, HTTPRequest* req) {
+HTTPError http_process_accept(const char* value) {
 	char temp[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
-	Array* res_arr = req->headers->accept;
-	int res = http_process_weighted_list(value, req, &http_media_type_lookup_table, temp, MAX_MEDIA_TYPE_LEN + 1, res_arr);
+	int res = http_process_weighted_list(value, &http_media_type_lookup_table, temp, MAX_MEDIA_TYPE_LEN + 1);
 	if (res == -1) return HTTP_BAD_ACCEPT;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_accept_encoding_req(const char* value, HTTPRequest* req) {
+HTTPError http_process_accept_encoding(const char* value) {
 	char temp[MAX_ENCODING_CHAR_LEN + 1] = { 0 };
-	Array* res_arr = req->headers->accept_encoding;
-	int res = http_process_weighted_list(value, req, &http_encoding_lookup_table, temp, MAX_ENCODING_CHAR_LEN + 1, res_arr);
+	int res = http_process_weighted_list(value, &http_encoding_lookup_table, temp, MAX_ENCODING_CHAR_LEN + 1);
 	if (res == -1) return HTTP_BAD_ACCEPT_ENC;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_content_length_req(const char* value, HTTPRequest* req) {
-	return http_process_content_length(value, &(req->headers->content_length));
-}
-
-HTTPError http_process_content_type_req(const char* value, HTTPRequest* req) {
-	return http_process_content_type(value, 
-		&(req->headers->content_type->media_type), 
-		req->headers->content_type->boundary, 
-		&(req->headers->content_type->charset)
-	);
-}
-
-HTTPError http_process_access_control_request_method_req(const char* value, HTTPRequest* req) {
+HTTPError http_process_access_control_request_method(const char* value) {
 	int res = lookup_str_int(value, &http_method_lookup_table, true);
 	if (res == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD;
-	req->headers->access_control_request_method = res;
-
+	
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_access_control_request_headers_req(const char* value, HTTPRequest* req) {
+HTTPError http_process_access_control_request_headers(const char* value) {
 	char val[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
 	HTTPRequestHeaderField field;
 	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1 || fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') != -1) {
 		if ((field = lookup_str_int(val, &http_req_header_field_lookup_table, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
-		if (!array_add(req->headers->access_control_request_headers, &field)) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
 		if (value[0] == '\0') return HTTP_SUCCESS;
 		value++; // skip ,
 		while (value[0] == ' ')
 			value++;
-		memset(val, 0, MAX_HTTP_HEADER_FIELD_LEN + 1);
+		memset(val, 0, MAX_HTTP_HEADER_FIELD_LEN);
 	};
 
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_connection_req(const char* value, HTTPRequest* req) {
-	return http_process_connection(value, &(req->headers->connection));
-}
-
-HTTPError http_process_cache_control_req(const char* value, HTTPRequest* req) {
+HTTPError http_process_cache_control_req(const char* value) {
 
 	char val[MAX_HTTP_REQ_CC_LEN + 1] = { 0 };
-	HTTPRequestCacheControlPair field = { .name = HTTP_REQ_CC_UNUSED, .seconds = -1 };
 	size_t len = MAX_HTTP_REQ_CC_LEN;
+	int name;
 	while (
 		fill_string_char(&value, val, len, '=') != -1
 		|| fill_string_char(&value, val, len, ',') != -1
 		|| fill_string_char(&value, val, len, '\0') != -1
 	) {
-		if ((field.name = lookup_str_int(val, &http_req_cache_control_lookup_table, true)) == -1) return HTTP_BAD_CACHE_CONTROL;
+		if ((name = lookup_str_int(val, &http_req_cache_control_lookup_table, true)) == -1) return HTTP_BAD_CACHE_CONTROL;
 		if (value[0] == '=') {
-			if (!HTTP_REQ_CC_HAS_VAL(field.name)) return HTTP_BAD_CACHE_CONTROL;
+			if (!HTTP_REQ_CC_HAS_VAL(name)) return HTTP_BAD_CACHE_CONTROL;
 			value++; // skip =
 			char sec[24 + 1] = { 0 }; // todo: change 24
 			size_t sec_len = 24;
@@ -372,59 +330,33 @@ HTTPError http_process_cache_control_req(const char* value, HTTPRequest* req) {
 			int sec_num;
 			str_to_int_errno res = str_to_int(&sec_num, sec, 10);
 			if (res != STR_TO_INT_SUCCESS) return HTTP_BAD_CACHE_CONTROL;
-			field.seconds = sec_num;
 		}
-		
-		if (!array_add(req->headers->cache_control, &field)) return HTTP_BAD_CACHE_CONTROL;
-		
+				
 		if (value[0] == '\0') return HTTP_SUCCESS;
 		value++; // skip ,
 		while (value[0] == ' ')
 			value++;
 		memset(val, 0, len + 1);
-
-		// reset field temp
-		field.name = HTTP_REQ_CC_UNUSED;
-		field.seconds = -1;
 	};
 
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_user_agent_req(const char* value, HTTPRequest* req) {
-	if (fill_string_char(&value, req->headers->user_agent, MAX_HTTP_USER_AGENT, '\0') == -1) return HTTP_BAD_USER_AGENT;
+HTTPError http_process_user_agent(const char* value) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_date_req(const char* value, HTTPRequest* req) {
-	HTTPDate* date = req->headers->date;
-	return http_process_date(value, &(date->day_name), &(date->month), &(date->year), &(date->day), &(date->hour), &(date->minute), &(date->second));
+HTTPError http_process_expect(const char* value) {
+	if (strncmp(value, "100-continue", 13) != 0) return HTTP_BAD_EXPECT;
+	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_expect_req(const char* value, HTTPRequest* req) {
-	if (strncmp(value, "100-continue", 13) != 0) return HTTP_BAD_EXPECT;
-	req->headers->expect = HTTP_EXP_100_CONTINUE;
+HTTPError http_process_server(const char* value) {
+	// todo: 
 	return HTTP_SUCCESS;
 }
 
 /* Response */
-
-HTTPError http_process_content_length_res(const char* value) {
-	int val;
-	return http_process_content_length(value, &val);
-}
-
-HTTPError http_process_content_type_res(const char* value) {
-	HTTPMediaType mt;
-	HTTPCharset ct;
-	char bd[MAX_HTTP_BOUNDARY_LEN + 1] = { 0 };
-	return http_process_content_type(value, &mt, bd, &ct);
-}
-
-HTTPError http_process_connection_res(const char* value) {
-	int val;
-	return http_process_connection(value, &val);
-}
 
 HTTPError http_process_cache_control_res(const char* value) {
 	char val[MAX_HTTP_RES_CC_LEN + 1] = { 0 };
@@ -457,16 +389,4 @@ HTTPError http_process_cache_control_res(const char* value) {
 	};
 
 	return HTTP_SUCCESS;
-}
-
-HTTPError http_process_server_res(const char* value) {
-	return HTTP_SUCCESS;
-}
-
-HTTPError http_process_date_res(const char* value) {
-	Day day_n;
-	Month month;
-	uint16_t year;
-	byte hour, minute, second, day;
-	return http_process_date(value, &day_n, &month, &year, &day, &hour, &minute, &second);
 }

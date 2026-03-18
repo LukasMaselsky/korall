@@ -47,29 +47,29 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_HOST:
-			return http_process_host_req(value, req);
+			return http_process_host(value, req);
 		case HTTP_RQH_ACCEPT:
-			return http_process_accept_req(value, req);
+			return http_process_accept(value);
 		case HTTP_RQH_ACCEPT_ENCODING:
-			return http_process_accept_encoding_req(value, req);
+			return http_process_accept_encoding(value);
 		case HTTP_RQH_CONTENT_LENGTH:
-			return http_process_content_length_req(value, req);
+			return http_process_content_length(value);
 		case HTTP_RQH_CONTENT_TYPE:
-			return http_process_content_type_req(value, req);
+			return http_process_content_type(value);
 		case HTTP_RQH_ACCESS_CONTROL_REQUEST_METHOD:
-			return http_process_access_control_request_method_req(value, req);
+			return http_process_access_control_request_method(value);
 		case HTTP_RQH_ACCESS_CONTROL_REQUEST_HEADERS:
-			return http_process_access_control_request_headers_req(value, req);
+			return http_process_access_control_request_headers(value);
 		case HTTP_RQH_CONNECTION:
-			return http_process_connection_req(value, req);
+			return http_process_connection(value);
 		case HTTP_RQH_CACHE_CONTROL:
-			return http_process_cache_control_req(value, req);
+			return http_process_cache_control_req(value);
 		case HTTP_RQH_USER_AGENT:
-			return http_process_user_agent_req(value, req);
+			return http_process_user_agent(value);
 		case HTTP_RQH_DATE:
-			return http_process_date_req(value, req);
+			return http_process_date(value);
 		case HTTP_RQH_EXPECT:
-			return http_process_expect_req(value, req);
+			return http_process_expect(value);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -113,11 +113,15 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 
 HTTPError http_process_request_headers(const char** str, HTTPRequest* req) {
 
+	const* base = *str;
+
 	while (true) {
 		HTTPError res = http_process_request_header(str, req);
 		if (res != HTTP_SUCCESS) return res;
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
+			// copy whole headers
+			if (fill_string_str(&base, req->headers, HTTP_REQ_HEADERS_LEN, "\r\n", false) == -1) return HTTP_ERROR;
 			return HTTP_SUCCESS;
 		}
 		// empty newline at end of headers, required
@@ -370,7 +374,17 @@ HTTPRequest* http_request_init(Arena *arena) {
 
 	// headers
 
-	HTTPRequestHeaders* headers = http_request_init_headers(arena);
+	char* domain, * port;
+	domain = (char*)arena_alloc(arena, (MAX_DOMAIN_LEN + 1) * sizeof(*domain));
+	port = (char*)arena_alloc(arena, (MAX_PORT_NUM_CHAR_LEN + 1) * sizeof(*port));
+
+	HTTPHeaderHost* host;
+	host = (HTTPHeaderHost*)arena_alloc(arena, 1 * sizeof(*host));
+	host->domain = domain;
+	host->port = port;
+
+	char* headers;
+	headers = (char*)arena_alloc(arena, (HTTP_REQ_HEADERS_LEN + 1) * sizeof(*headers));
 
 	// body
 
@@ -382,78 +396,10 @@ HTTPRequest* http_request_init(Arena *arena) {
 	HTTPRequest *req;
 	req = (HTTPRequest*)arena_alloc(arena, 1 * sizeof(*req));
 	req->start_line = sl;
+	req->host = host;
 	req->headers = headers;
 	req->body = body;
 	return req;
-}
-
-HTTPRequestHeaders* http_request_init_headers(Arena* arena) {
-
-	char* domain, * port;
-	domain = (char*)arena_alloc(arena, (MAX_DOMAIN_LEN + 1) * sizeof(*domain));
-	port = (char*)arena_alloc(arena, (MAX_PORT_NUM_CHAR_LEN + 1) * sizeof(*port));
-
-	HTTPHeaderHost* hh;
-	hh = (HTTPHeaderHost*)arena_alloc(arena, 1 * sizeof(*hh));
-	hh->domain = domain;
-	hh->port = port;
-
-	HTTPWeightedField* mtw_data;
-	mtw_data = (HTTPWeightedField*)arena_alloc(arena, HTTP_MEDIA_TYPE_TABLE_COUNT * sizeof(*mtw_data));
-	Array* mtw;
-	mtw = (Array*)arena_alloc(arena, sizeof(*mtw)); // todo: change count ?
-	array_init(mtw, mtw_data, sizeof(*mtw_data), HTTP_MEDIA_TYPE_TABLE_COUNT);
-
-	HTTPWeightedField* ew_data;
-	ew_data = (HTTPWeightedField*)arena_alloc(arena, HTTP_ENCODING_TABLE_COUNT * sizeof(*ew_data));
-	Array* ew;
-	ew = (Array*)arena_alloc(arena, sizeof(*ew)); // todo: change count ?
-	array_init(ew, ew_data, sizeof(*ew_data), HTTP_ENCODING_TABLE_COUNT);
-
-
-	char* boundary;
-	boundary = (char*)arena_alloc(arena, (MAX_HTTP_BOUNDARY_LEN + 1) * sizeof(*boundary));
-
-	HTTPContentType* ct;
-	ct = (HTTPContentType*)arena_alloc(arena, 1 * sizeof(*ct));
-	ct->boundary = boundary;
-	ct->charset = HTTP_CHS_UNUSED;
-	ct->media_type = HTTP_MT_UNUSED;
-
-	HTTPRequestHeaderField* acrh_data;
-	acrh_data = (HTTPRequestHeaderField*)arena_alloc(arena, HTTP_RQH_COUNT * sizeof(*acrh_data));
-	Array* acrh;
-	acrh = (Array*)arena_alloc(arena, sizeof(*acrh));
-	array_init(acrh, acrh_data, sizeof(*acrh_data), HTTP_RQH_COUNT);
-
-	HTTPRequestCacheControlPair* cc_data;
-	cc_data = (HTTPRequestCacheControlPair*)arena_alloc(arena, HTTP_REQ_CC_COUNT * sizeof(*cc_data));
-	Array* cc;
-	cc = (Array*)arena_alloc(arena, sizeof(*cc));
-	array_init(cc, cc_data, sizeof(*cc_data), HTTP_REQ_CC_COUNT);
-
-	char* user_agent;
-	user_agent = (char*)arena_alloc(arena, (MAX_HTTP_USER_AGENT + 1) * sizeof(*user_agent));
-
-	HTTPDate* date;
-	date = (HTTPDate*)arena_alloc(arena, 1 * sizeof(*date));
-	date->used = false;
-
-	HTTPRequestHeaders* headers;
-	headers = (HTTPRequestHeaders*)arena_alloc(arena, 1 * sizeof(*headers));
-	headers->host = hh;
-	headers->accept = mtw;
-	headers->accept_encoding = ew;
-	headers->content_type = ct;
-	headers->content_length = -1;
-	headers->access_control_request_method = HTTP_METHOD_UNUSED;
-	headers->access_control_request_headers = acrh;
-	headers->connection = HTTP_CON_UNUSED;
-	headers->cache_control = cc;
-	headers->user_agent = user_agent;
-	headers->date = date;
-	headers->expect = HTTP_EXP_UNUSED;
-	return headers;
 }
 
 void http_request_free(Arena *arena, HTTPRequest* req) {
@@ -471,17 +417,17 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 	// massive switch for each header
 	switch (field) {
 	case HTTP_RSH_CONTENT_LENGTH:
-		return http_process_content_length_res(value); // todo
+		return http_process_content_length(value); // todo
 	case HTTP_RSH_CONTENT_TYPE:
-		return http_process_content_type_res(value);
+		return http_process_content_type(value);
 	case HTTP_RSH_CONNECTION:
-		return http_process_connection_res(value);
+		return http_process_connection(value);
 	case HTTP_RSH_CACHE_CONTROL:
 		return http_process_cache_control_res(value);
 	case HTTP_RSH_DATE:
-		return http_process_date_res(value);
+		return http_process_date(value);
 	case HTTP_RSH_SERVER:
-		return http_process_server_res(value); // todo: 
+		return http_process_server(value); // todo: 
 	default:
 		return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}

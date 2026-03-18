@@ -15,7 +15,7 @@ static KORALL_ROUTE(my_route) {
 }
 
 int main(int argc, char* argv[]) {
-
+	
 	Routes* routes = korall_routes_init();
 	korall_routes_add(routes, "/", HTTP_GET, my_route);
 

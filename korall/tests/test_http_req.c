@@ -6,7 +6,7 @@
 
 TEST("http_parse_request") {
 	
-	Arena arena = arena_init(HTTP_REQ_SIZE);
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	HTTPRequest* req = http_request_init(&arena);
 	HTTPError res;
 	char* str;
@@ -47,7 +47,7 @@ TEST("http_process_header") {
 }
 
 TEST("http_process_headers") {
-	Arena arena = arena_init(HTTP_REQ_SIZE);
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	HTTPRequest* req = http_request_init(&arena);
 	int res;
 	const char* str;
@@ -76,7 +76,7 @@ TEST("http_process_headers") {
 
 
 TEST("http_process_request_target") {
-	Arena arena = arena_init(HTTP_REQ_SIZE);
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	HTTPRequest *req = http_request_init(&arena);
 	HTTPMethod method;
 	int res;
@@ -133,7 +133,7 @@ TEST("http_process_request_target") {
 }
 
 TEST("http_process_request_target_relative") {
-	Arena arena = arena_init(HTTP_REQ_SIZE);
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	HTTPRequest *req = http_request_init(&arena);
 	
 	int res;
@@ -224,7 +224,7 @@ TEST("http_process_request_target_relative") {
 }
 
 TEST("http_process_request_target_absolute") {
-	Arena arena = arena_init(HTTP_REQ_SIZE);
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	HTTPRequest *req = http_request_init(&arena);
 	
 	int res;
@@ -310,7 +310,7 @@ TEST("http_process_protocol") {
 }
 
 TEST("http_process_method") {
-	Arena arena = arena_init(HTTP_REQ_SIZE);
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	HTTPRequest* req = http_request_init(&arena);
 
 	const char* str = "POST /users HTTP/1.1";

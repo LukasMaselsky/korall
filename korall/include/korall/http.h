@@ -350,11 +350,6 @@ typedef enum {
 
 typedef struct HTTPRequestStartLineInternal HTTPRequestStartLine;
 typedef struct HTTPHeaderHostInternal HTTPHeaderHost;
-typedef struct HTTPWeightedFieldInternal HTTPWeightedField;
-typedef struct HTTPContentTypeInternal HTTPContentType;
-typedef struct HTTPRequestCacheControlPairInternal HTTPRequestCacheControlPair;
-typedef struct HTTPDateInternal HTTPDate;
-typedef struct HTTPRequestHeadersInternal HTTPRequestHeaders;
 typedef struct HTTPRequestInternal HTTPRequest;
 
 typedef struct HTTPResponseInternal HTTPResponse;

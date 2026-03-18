@@ -34,7 +34,7 @@
 #define HTTP_REQ_HEADERS_LEN (HTTP_REQ_HEADER_LEN * HTTP_REQ_HEADER_COUNT)
 #define HTTP_REQ_BODY_LEN (1 * MEGABYTE) // todo: change to 1 GB?
 #define HTTP_REQ_SIZE (HTTP_REQ_START_LINE_LEN + HTTP_REQ_HEADERS_LEN + HTTP_REQ_BODY_LEN)
-#define HTTP_RES_ARENA_SIZE (HTTP_REQ_SIZE + KILOBYTE)
+#define HTTP_REQ_ARENA_SIZE (HTTP_REQ_SIZE + KILOBYTE)
 
 // response
 
@@ -74,53 +74,13 @@ struct HTTPHeaderHostInternal {
 	char* port;
 };
 
-struct HTTPWeightedFieldInternal {
-	int field;
-	double weight;
-};
-
-struct HTTPContentTypeInternal {
-	char* boundary;
-	HTTPMediaType media_type;
-	HTTPCharset charset;
-};
-
-struct HTTPRequestCacheControlPairInternal {
-	HTTPRequestCacheControl name;
-	int seconds;
-};
-
-struct HTTPDateInternal {
-	Day day_name;
-	Month month;
-	uint16_t year;
-	byte day;
-	byte hour;
-	byte minute;
-	byte second;
-	bool used; // if this header used in req
-};
-
-struct HTTPRequestHeadersInternal {
-	HTTPHeaderHost* host;
-	Array* accept;
-	Array* accept_encoding;
-	int content_length;
-	HTTPContentType* content_type;
-	HTTPMethod access_control_request_method;
-	Array* access_control_request_headers;
-	HTTPConnection connection;
-	Array* cache_control;
-	char* user_agent;
-	HTTPDate* date;
-	HTTPExpect expect;
-};
 
 // Request
 
 struct HTTPRequestInternal {
 	HTTPRequestStartLine* start_line;
-	HTTPRequestHeaders* headers;
+	HTTPHeaderHost* host;
+	char* headers;
 	char* body;
 };
 
@@ -157,8 +117,6 @@ HTTPError http_process_request_target(const char** str, HTTPRequest* req);
 HTTPError http_process_request_protocol(const char** str);
 
 HTTPRequest* http_request_init(Arena* arena);
-
-HTTPRequestHeaders* http_request_init_headers(Arena* arena);
 
 void http_request_free(Arena *arena, HTTPRequest* req);
 

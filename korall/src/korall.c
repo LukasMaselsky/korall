@@ -50,8 +50,8 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 			strcmp(config->port.chars, port) != 0) return false;
 	}
 	
-	if (strcmp(config->domain.chars, req->headers->host->domain) != 0 ||
-		strcmp(config->port.chars, req->headers->host->port) != 0) return false;
+	if (strcmp(config->domain.chars, req->host->domain) != 0 ||
+		strcmp(config->port.chars, req->host->port) != 0) return false;
 	
 
 	return true;
@@ -67,7 +67,7 @@ static void http_process_request(
 	const Routes *routes
 ) {
 
-	Arena req_arena = arena_init(HTTP_REQ_SIZE);
+	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	Arena res_arena = arena_init(HTTP_RES_ARENA_SIZE);
 	Arena res_full_arena = arena_init(HTTP_RES_FULL_ARENA_SIZE + 1); // for concating res parts into full response text
 	const char* res_data = (char*)arena_alloc(&res_full_arena, HTTP_RES_FULL_ARENA_SIZE + 1);
