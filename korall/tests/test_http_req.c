@@ -398,7 +398,8 @@ TEST("http_process_method") {
 
 TEST("http_get_current_date") {
 	const char buf[MAX_DATE_STR_LEN + 1];
-	http_get_current_date((ConstString){ buf, MAX_DATE_STR_LEN + 1 });
+	String str = { .chars = buf, .size = MAX_DATE_STR_LEN + 1 };
+	http_get_current_date(&str);
 	// todo
 }
 

@@ -57,6 +57,10 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 	return true;
 }
 
+static void res_full_arena_free(Arena* arena, const char* data) {
+	arena_free(arena);
+}
+
 static void http_process_request(
 	const SOCKET inc_sock, 
 	const SOCKET server_sock, 
@@ -85,24 +89,22 @@ static void http_process_request(
 		const char* message = http_error_response_info(parse_res, &sc, &mt);
 
 		int err = http_response_construct(res, sc, config->name.chars, mt, message);
-		if (err == -1) return;
-		if (http_response_send(inc_sock, server_sock, res, main) == -1) return;
-		http_response_free(&res_arena, res);
-		http_request_free(&req_arena, req);
-		return;
+		if (err == -1) goto http_process_request_end;
+		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+			printf("Failed to send responses\n");
+		}
+		goto http_process_request_end;
 	}
 
 	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
 	if (!http_domain_port_match_server(config, req)) { 
 		printf("server: invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
-		if (err == -1) return;
+		if (err == -1) goto http_process_request_end;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
 			printf("Failed to send responses\n");
 		}
-		http_response_free(&res_arena, res);
-		http_request_free(&req_arena, req);
-		return;
+		goto http_process_request_end;
 	}
 
 	printf("server: valid HTTP request received\n");
@@ -114,33 +116,36 @@ static void http_process_request(
 	if (route == NULL) {
 		// send 404 if no matching route
 		int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
-		if (err == -1) return;
+		if (err == -1) goto http_process_request_end;
 		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
 			printf("Failed to send responses\n");
 		};
-		
-		http_response_free(&res_arena, res);
-		http_request_free(&req_arena, req);
-		return;
+		goto http_process_request_end;
 	}
 	route->callback(req, res); // CALL CALLBACK
 
-
+	if (res->start_line.chars[0] == '\0') {
+		printf("Failed to send response, no start line set\n");
+		goto http_process_request_end;
+	}
 	sprintf(res_data, "%s%s%s", res->start_line.chars, res->headers_base, res->body.chars);
 	
 	if (http_response_send(inc_sock, server_sock, res_data, main) == -1) {
 		printf("Failed to send responses\n");
 	}
 
+http_process_request_end:
 	http_response_free(&res_arena, res);
 	http_request_free(&req_arena, req);
-	arena_free(&res_full_arena);
+	res_full_arena_free(&res_full_arena, res_data);
 	return;
 }
 
-/*
-	Initialise a socket for listening
-*/
+/**
+ * @brief Initialise a socket for listening
+ * @param config 
+ * @return open socket
+ */
 static SOCKET init_listen_socket(ServerConfig *config) {
 	int res;
 	SOCKET sock;
@@ -288,9 +293,15 @@ static void process_incoming_data(
 	return;
 }
 
-// PUBLIC FUNCTIONS
 
-HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
+/**
+ * @brief Loads config from .json file, else fills config with default values from default_config
+ * @param path path of configuration file location
+ * @param config config struct to fill
+ * @param default_config 
+ * @return -1 if default_config should be used fully
+ */
+int http_config_init(const char *path, ServerConfig *config, ServerConfig *default_config) {
 
 	const char* config_file_name = SERVER_CONFIG_FILE_NAME;
 	char file_path[MAX_FILE_PATH + 1] = { 0 };
@@ -302,12 +313,12 @@ HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
 		size_t path_len = strlen(path);
 		if (path_len > MAX_FILE_PATH) { 
 			printf("File path too long.");
-			return HTTP_CONF_ERROR; 
+			return -1; 
 		};
 		strcpy(file_path, path);
 		if (strlen(config_file_name) + path_len > MAX_FILE_PATH) {
 			printf("File path too long.");
-			return HTTP_CONF_ERROR;
+			return -1;
 		};
 		strcat(file_path, config_file_name);
 	}
@@ -315,7 +326,7 @@ HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
 	FILE* fp = fopen(file_path, "r");
 	if (fp == NULL) { 
 		printf("Could not find a korall_config.json, file using default config.\nIf you are using a custom config, make sure the path is correct.");
-		return HTTP_CONF_DEFAULT;
+		return -1;
 	};
 
 	// read the file contents into a string
@@ -331,7 +342,7 @@ HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
 			printf("%s\n", error_ptr);
 		}
 		cJSON_Delete(json);
-		return HTTP_CONF_ERROR;
+		return -1;
 	}
 
 	// access the JSON data
@@ -341,42 +352,51 @@ HTTPConfigError http_config_init(const char *path, ServerConfig *config) {
 	// server name
 
 	cJSON* name = cJSON_GetObjectItemCaseSensitive(json, "name");
+	char* name_val;
 	if (!(cJSON_IsString(name) && (name->valuestring != NULL))) {
 		printf("Config \"name\" field is not valid.\n");
-		return HTTP_CONF_ERROR;
+		name_val = default_config->name.chars;
 	}
-	strncpy(config->name.chars, name->valuestring, config->name.size);
+	else {
+		name_val = name->valuestring;
+	}
+	strncpy(config->name.chars, name_val, config->name.size);
 	
 	// domain
 
 	cJSON* domain = cJSON_GetObjectItemCaseSensitive(json, "domain");
+	char* domain_val;
 	if (!(cJSON_IsString(domain) && (domain->valuestring != NULL))) {
 		printf("Config \"domain\" field is not valid.\n");
-		return HTTP_CONF_ERROR;
+		domain_val = default_config->domain.chars;
 	}
-	strncpy(config->domain.chars, domain->valuestring, config->domain.size);
+	else {
+		domain_val = domain->valuestring;
+	}
+	strncpy(config->domain.chars, domain_val, config->domain.size);
 
 	// port
 
 	cJSON* port = cJSON_GetObjectItemCaseSensitive(json, "port");
 	if (!(cJSON_IsNumber(port))) {
 		printf("Config \"port\" field is not valid.\n");
-		return HTTP_CONF_ERROR;
-	}
-	if (!is_valid_port_num(port->valueint)) {
+		strncpy(config->port.chars, default_config->port.chars, config->port.size);
+	} else if (!is_valid_port_num(port->valueint)) {
 		printf("Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
-		return HTTP_CONF_ERROR;
+		strncpy(config->port.chars, default_config->port.chars, config->port.size);
+	}
+	else {
+		int_to_str(port->valueint, config->port.chars);
 	};
 
-	char port_str[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
-	int_to_str(port->valueint, port_str);
-	strncpy(config->port.chars, port_str, config->port.size);
 
 	//
 
 	cJSON_Delete(json);
-	return HTTP_CONF_SUCCESS;
+	return 0;
 }
+
+// PUBLIC FUNCTIONS
 
 static void http_routes_free(Routes* routes) {
 	free(routes->routes);
@@ -428,17 +448,9 @@ void korall_run(const char *config_path, const Routes* routes) {
 		.port = {.chars = port, .size = MAX_PORT_NUM_CHAR_LEN },
 		.name = {.chars = name, .size = MAX_SERVER_NAME_LEN },
 	};
-	HTTPConfigError conf_res = http_config_init(config_path, &config);
-	
-	switch (conf_res) {
-		case HTTP_CONF_SUCCESS:
-			break;
-		case HTTP_CONF_DEFAULT:
-			config = default_config;
-			break;
-		case HTTP_CONF_ERROR:
-		default:
-			return;
+	int conf_res = http_config_init(config_path, &config, &default_config);
+	if (conf_res == -1) {
+		config = default_config;
 	}
 	
 	// sockets

@@ -8,7 +8,7 @@
 #define READ_BUFFER_LEN 1024
 #define RESPONSE_BUFFER_LEN 1024
 
-#define DEFAULT_SERVER_NAME "MyServer"
+#define DEFAULT_SERVER_NAME "KorallServer"
 #define MAX_SERVER_NAME_LEN 100 // todo 
 #define SERVER_CONFIG_FILE_NAME "korall_config.json"
 #define DEFAULT_PORT "3500"
@@ -24,13 +24,8 @@ typedef struct ServerConfig {
 	String name;
 } ServerConfig;
 
-typedef enum HTTPConfigError {
-	HTTP_CONF_ERROR = -1,
-	HTTP_CONF_SUCCESS,
-	HTTP_CONF_DEFAULT,
-} HTTPConfigError;
 
-HTTPConfigError http_config_init(const char *path, ServerConfig* config);
+int http_config_init(const char *path, ServerConfig* config, ServerConfig *default_config);
 
 
 struct RoutePrivate {

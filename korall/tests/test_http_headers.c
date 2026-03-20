@@ -2,7 +2,6 @@
 #include "http_internal.h"
 #include "lookup_tables.h"
 #include "http_headers.h"
-#include "array.h"
 #elif defined TESTS
 
 TEST("http_process_host") {
@@ -96,6 +95,50 @@ TEST("http_process_accept_encoding") {
 
 	str = "gzip, deflate;q=0.9";
 	res = http_process_accept_encoding(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+}
+
+TEST("http_process_te") {
+	const char* str;
+	int res;
+
+	str = "gzip";
+	res = http_process_te(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+	str = "gzi";
+	res = http_process_te(str);
+	ASSERT(res == HTTP_BAD_TE);
+
+	str = "gzip, deflate;q=0.9";
+	res = http_process_te(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+	str = "trailers, deflate;q=0.5";
+	res = http_process_te(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+}
+
+TEST("http_process_transfer_encoding") {
+	const char* str;
+	int res;
+
+	str = "gzip";
+	res = http_process_transfer_encoding(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+	str = "gzi";
+	res = http_process_transfer_encoding(str);
+	ASSERT(res == HTTP_BAD_TRANSFER_ENCODING);
+
+	str = "gzip, deflate";
+	res = http_process_transfer_encoding(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+	str = "gzip,    deflate";
+	res = http_process_transfer_encoding(str);
 	ASSERT(res == HTTP_SUCCESS);
 
 }

@@ -70,6 +70,10 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 			return http_process_date(value);
 		case HTTP_RQH_EXPECT:
 			return http_process_expect(value);
+		case HTTP_RQH_TE:
+			return http_process_te(value);
+		case HTTP_RQH_TRANSFER_ENCODING:
+			return http_process_transfer_encoding(value);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -77,6 +81,7 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 
 HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 	// process field
+	// todo: full header line instead of field and value len separate
 
 	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 }; // todo: allow custom headers (longer header field?)
 	
@@ -85,7 +90,7 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 	const char *s = *str;
 
 	int header_field = lookup_str_int(field, &http_req_header_field_lookup_table, true);
-	if (header_field == -1) return HTTP_BAD_HEADER;
+	if (header_field == -1) return HTTP_BAD_HEADER; // todo: allow custom header fields
 
 	
 	s++; // skip colon
@@ -182,7 +187,6 @@ static bool is_valid_hostname_label(const char c) {
 }
 
 HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req) {
-	// todo: 
 	if (str[0] != '/') return HTTP_BAD_REQUEST_TARGET;
 	const char* base = str;
 	str++;
@@ -416,20 +420,20 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 HTTPError http_process_response_header_value(const HTTPResponseHeaderField field, const char* value) {
 	// massive switch for each header
 	switch (field) {
-	case HTTP_RSH_CONTENT_LENGTH:
-		return http_process_content_length(value); // todo
-	case HTTP_RSH_CONTENT_TYPE:
-		return http_process_content_type(value);
-	case HTTP_RSH_CONNECTION:
-		return http_process_connection(value);
-	case HTTP_RSH_CACHE_CONTROL:
-		return http_process_cache_control_res(value);
-	case HTTP_RSH_DATE:
-		return http_process_date(value);
-	case HTTP_RSH_SERVER:
-		return http_process_server(value); // todo: 
-	default:
-		return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
+		case HTTP_RSH_CONTENT_LENGTH:
+			return http_process_content_length(value); // todo
+		case HTTP_RSH_CONTENT_TYPE:
+			return http_process_content_type(value);
+		case HTTP_RSH_CONNECTION:
+			return http_process_connection(value);
+		case HTTP_RSH_CACHE_CONTROL:
+			return http_process_cache_control_res(value);
+		case HTTP_RSH_DATE:
+			return http_process_date(value);
+		case HTTP_RSH_SERVER:
+			return http_process_server(value); // todo: 
+		default:
+			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
 }
 
@@ -513,11 +517,11 @@ void http_response_clear(Arena* arena, HTTPResponse** res) {
 	*res = http_response_init(arena);
 }
 
-void http_get_current_date(ConstString str) {
+void http_get_current_date(String *str) {
 	struct tm* timeinfo;
 	get_current_time_gmt(&timeinfo);
 
-	strftime(str.chars, str.size, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	strftime(str->chars, str->size, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 }
 
 /* 
@@ -528,6 +532,10 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_TRANSFER_ENCODING:
+			return ERROR_MESSAGE("Bad request", "Invalid Transfer-Encoding header.");
+		case HTTP_BAD_TE:
+			return ERROR_MESSAGE("Bad request", "Invalid TE header.");
 		case HTTP_BODY_TOO_LONG:
 			return ERROR_MESSAGE("Bad request", "Maximum body length is 1MB.");
 		case HTTP_BODY_NOT_ALLOWED:
@@ -619,7 +627,8 @@ int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
 
 	// date
 	char date[MAX_DATE_STR_LEN + 1] = { 0 };
-	http_get_current_date((ConstString) { date, MAX_DATE_STR_LEN + 1 }); // + 1 needed, \0 included for strftime
+	String s = { .chars = date, .size = MAX_DATE_STR_LEN + 1 }; // + 1 needed, \0 included for strftime
+	http_get_current_date(&s);
 	if (korall_response_header_set(res, "Date", date) == -1) return -1;
 
 	// server

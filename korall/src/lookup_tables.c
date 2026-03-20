@@ -256,6 +256,22 @@ const LookupEntry http_encoding_lookup_table_entries[HTTP_ENCODING_TABLE_COUNT] 
 	{ HTTP_ENC_IDENTITY, "identity" },
 };
 
+const LookupEntry http_te_lookup_table_entries[HTTP_TE_TABLE_COUNT] = {
+	{ HTTP_TE_ANY, "*"},
+	{ HTTP_TE_GZIP, "gzip"},
+	{ HTTP_TE_COMPRESS, "compress"},
+	{ HTTP_TE_DEFLATE, "deflate"},
+	{ HTTP_TE_TRAILERS, "trailers"},
+};
+
+const LookupEntry http_transfer_encoding_lookup_table_entries[HTTP_TRANSFER_ENCODING_TABLE_COUNT] = {
+	{ HTTP_TRENC_ANY, "*"},
+	{ HTTP_TRENC_GZIP, "gzip"},
+	{ HTTP_TRENC_COMPRESS, "compress"},
+	{ HTTP_TRENC_DEFLATE, "deflate"},
+	{ HTTP_TRENC_CHUNKED, "chunked"},
+};
+
 const LookupEntry http_charset_lookup_table_entries[HTTP_CHARSET_TABLE_COUNT] = {
 	{ HTTP_CHS_BIG5, "big5" },
 	{ HTTP_CHS_EUC_KR, "euc-kr" },
@@ -368,6 +384,16 @@ const LookupTable http_media_type_lookup_table = {
 const LookupTable http_encoding_lookup_table = {
 	.entries = http_encoding_lookup_table_entries,
 	.size = HTTP_ENCODING_TABLE_COUNT
+};
+
+const LookupTable http_te_lookup_table = {
+	.entries = http_te_lookup_table_entries,
+	.size = HTTP_TE_TABLE_COUNT
+};
+
+const LookupTable http_transfer_encoding_lookup_table = {
+	.entries = http_transfer_encoding_lookup_table_entries,
+	.size = HTTP_TRANSFER_ENCODING_TABLE_COUNT
 };
 
 const LookupTable http_charset_lookup_table = {

@@ -28,6 +28,10 @@ HTTPError http_process_date(const char* value);
 
 HTTPError http_process_expect(const char* value);
 
+HTTPError http_process_te(const char* value);
+
+HTTPError http_process_transfer_encoding(const char* value);
+
 HTTPError http_process_server(const char* value);
 
 /* Response */

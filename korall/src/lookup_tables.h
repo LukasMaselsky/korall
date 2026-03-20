@@ -10,6 +10,8 @@
 #define HTTP_STATUS_CODE_TABLE_COUNT HTTP_SC_COUNT
 #define HTTP_MEDIA_TYPE_TABLE_COUNT HTTP_MT_COUNT
 #define HTTP_ENCODING_TABLE_COUNT HTTP_ENC_COUNT
+#define HTTP_TE_TABLE_COUNT HTTP_TE_COUNT
+#define HTTP_TRANSFER_ENCODING_TABLE_COUNT HTTP_TRENC_COUNT
 #define HTTP_CHARSET_TABLE_COUNT HTTP_CHS_COUNT
 #define HTTP_CONNECTION_TABLE_COUNT HTTP_CON_COUNT
 #define HTTP_REQ_CACHE_CONTROL_TABLE_COUNT HTTP_REQ_CC_COUNT
@@ -37,6 +39,8 @@ extern const LookupTable http_res_header_field_lookup_table;
 extern const LookupTable http_status_code_lookup_table;
 extern const LookupTable http_media_type_lookup_table;
 extern const LookupTable http_encoding_lookup_table;
+extern const LookupTable http_te_lookup_table;
+extern const LookupTable http_transfer_encoding_lookup_table;
 extern const LookupTable http_charset_lookup_table;
 extern const LookupTable http_connection_lookup_table;
 extern const LookupTable http_req_cache_control_lookup_table;

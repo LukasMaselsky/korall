@@ -1,7 +1,6 @@
 #ifndef HTTP_INTERNAL_H
 #define HTTP_INTERNAL_H
 #include "arena.h"
-#include "array.h"
 #include "sockets.h"
 #include "utils.h"
 #include "korall/http.h"
@@ -20,6 +19,8 @@
 #define MAX_MEDIA_TYPE_LEN 73
 #define MAX_HTTP_BOUNDARY_LEN 70
 #define MAX_ENCODING_CHAR_LEN 8
+#define MAX_TE_LEN 8
+#define MAX_TRANSFER_ENCODING_LEN 8
 #define MAX_HTTP_CHARSET_LEN 12
 #define MAX_HTTP_REQ_CC_LEN 14
 #define MAX_HTTP_RES_CC_LEN 21
@@ -142,7 +143,7 @@ void http_response_free(Arena* arena, HTTPResponse* res);
 
 void http_response_clear(Arena* arena, HTTPResponse** res);
 
-void http_get_current_date(ConstString str);
+void http_get_current_date(String *str);
 
 const char* http_error_response_info(HTTPError err, HTTPStatusCode* sc, HTTPMediaType* mt);
 

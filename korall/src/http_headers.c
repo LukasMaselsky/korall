@@ -124,6 +124,36 @@ static int http_process_weighted_list(
 	return 0;
 }
 
+static int http_process_list(
+	const char* value,
+	LookupTable* table,
+	char* field_arr,
+	const int field_arr_len
+) {
+	int i = 0;
+	for (char c = *value; ; c = *(++value)) {
+		if (!(c == ',' || c == '\0')) {
+			field_arr[i] = c;
+			i++;
+			continue;
+		}
+		field_arr[i] = '\0';
+		int res = lookup_str_int(field_arr, table, false);
+		if (res == -1) return -1;
+
+		if (*value == '\0') return 0;
+
+		do {
+			value++;
+		} while (*value == ' '); // skip spaces
+		i = 0;
+		memset(field_arr, 0, field_arr_len);
+		field_arr[i] = *value;
+		i++;
+	}
+	return 0;
+}
+
 HTTPError http_process_content_length(const char* value) {
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
@@ -348,6 +378,20 @@ HTTPError http_process_user_agent(const char* value) {
 
 HTTPError http_process_expect(const char* value) {
 	if (strncmp(value, "100-continue", 13) != 0) return HTTP_BAD_EXPECT;
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_te(const char* value) {
+	char temp[MAX_TE_LEN + 1] = { 0 };
+	int res = http_process_weighted_list(value, &http_te_lookup_table, temp, MAX_TE_LEN + 1);
+	if (res == -1) return HTTP_BAD_TE;
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_transfer_encoding(const char* value) {
+	char temp[MAX_TRANSFER_ENCODING_LEN + 1] = { 0 };
+	int res = http_process_list(value, &http_transfer_encoding_lookup_table, temp, MAX_TRANSFER_ENCODING_LEN + 1);
+	if (res == -1) return HTTP_BAD_TRANSFER_ENCODING;
 	return HTTP_SUCCESS;
 }
 

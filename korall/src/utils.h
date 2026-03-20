@@ -70,14 +70,10 @@ typedef enum {
 
 
 typedef struct {
-    char* chars;
+    const char* chars;
     size_t size; // without null terminator
 } String;
 
-typedef struct {
-    const char* chars;
-    const size_t size;
-} ConstString;
 
 str_to_int_errno str_to_int(int* out, const char* s, int base);
 
