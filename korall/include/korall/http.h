@@ -337,6 +337,8 @@ typedef enum {
 
 typedef enum {
 	// todo
+	HTTP_BAD_TK = -29,
+	HTTP_BAD_MAX_FORWARDS = -28,
 	HTTP_BAD_TRANSFER_ENCODING = -27,
 	HTTP_BAD_TE = -26,
 	HTTP_REQUEST_TARGET_TOO_BIG = -25,

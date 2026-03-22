@@ -74,6 +74,8 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 			return http_process_te(value);
 		case HTTP_RQH_TRANSFER_ENCODING:
 			return http_process_transfer_encoding(value);
+		case HTTP_RQH_MAX_FORWARDS:
+			return http_process_max_forwards(value);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -432,6 +434,10 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 			return http_process_date(value);
 		case HTTP_RSH_SERVER:
 			return http_process_server(value); // todo: 
+		case HTTP_RSH_TRANSFER_ENCODING:
+			return http_process_transfer_encoding(value);
+		case HTTP_RSH_TK:
+			return http_process_tk(value);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -532,11 +538,16 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_TK:
+			return ERROR_MESSAGE("Bad request", "Invalid Tk header.");
+		case HTTP_BAD_MAX_FORWARDS:
+			return ERROR_MESSAGE("Bad request", "Invalid Max-Forwards header.");
 		case HTTP_BAD_TRANSFER_ENCODING:
 			return ERROR_MESSAGE("Bad request", "Invalid Transfer-Encoding header.");
 		case HTTP_BAD_TE:
 			return ERROR_MESSAGE("Bad request", "Invalid TE header.");
 		case HTTP_BODY_TOO_LONG:
+			*sc = HTTP_SC_413;
 			return ERROR_MESSAGE("Bad request", "Maximum body length is 1MB.");
 		case HTTP_BODY_NOT_ALLOWED:
 			return ERROR_MESSAGE("Bad request", "Body is only allowed for PUT, PATCH and POST requests.");

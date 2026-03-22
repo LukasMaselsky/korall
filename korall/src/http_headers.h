@@ -34,6 +34,10 @@ HTTPError http_process_transfer_encoding(const char* value);
 
 HTTPError http_process_server(const char* value);
 
+HTTPError http_process_max_forwards(const char* value);
+
+HTTPError http_process_tk(const char* value);
+
 /* Response */
 
 HTTPError http_process_cache_control_res(const char* value);

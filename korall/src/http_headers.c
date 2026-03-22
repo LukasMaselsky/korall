@@ -400,6 +400,30 @@ HTTPError http_process_server(const char* value) {
 	return HTTP_SUCCESS;
 }
 
+HTTPError http_process_max_forwards(const char* value) {
+	int val;
+	str_to_int_errno res = str_to_int(&val, value, 10);
+	if (res != STR_TO_INT_SUCCESS || val < 0) return HTTP_BAD_MAX_FORWARDS;
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_tk(const char* value) {
+	if (value[0] == '\0' || value[1] != '\0') return HTTP_BAD_TK;
+	char c = value[0];
+	if (
+		c == '!' ||
+		c == '?' ||
+		c == 'G' ||
+		c == 'N' ||
+		c == 'T' ||
+		c == 'C' ||
+		c == 'P' ||
+		c == 'D' ||
+		c == 'U'
+		) return HTTP_SUCCESS;
+	return HTTP_BAD_TK;
+}
+
 /* Response */
 
 HTTPError http_process_cache_control_res(const char* value) {

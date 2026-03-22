@@ -365,4 +365,51 @@ TEST("http_process_expect") {
 
 }
 
+TEST("http_process_max_forwards") {
+	
+	const char* str;
+	int res;
+
+	str = "100";
+	res = http_process_max_forwards(str);
+	ASSERT(res == HTTP_SUCCESS);
+	
+
+	str = "10.1";
+	res = http_process_max_forwards(str);
+	ASSERT(res == HTTP_BAD_MAX_FORWARDS);
+
+	str = "100a";
+	res = http_process_max_forwards(str);
+	ASSERT(res == HTTP_BAD_MAX_FORWARDS);
+	
+
+}
+
+TEST("http_process_tk") {
+	
+	const char* str;
+	int res;
+
+	str = "T";
+	res = http_process_tk(str);
+	ASSERT(res == HTTP_SUCCESS);
+
+	str = "!";
+	res = http_process_tk(str);
+	ASSERT(res == HTTP_SUCCESS);
+	
+
+	str = "";
+	res = http_process_tk(str);
+	ASSERT(res == HTTP_BAD_TK);
+
+	str = "S";
+	res = http_process_tk(str);
+	ASSERT(res == HTTP_BAD_TK);
+
+	
+
+}
+
 #endif
