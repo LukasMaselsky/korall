@@ -108,13 +108,11 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 	*str = s;
 	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n", false);
 	if (res == -1) return HTTP_BAD_HEADER_VAL;
-	s = *str;
 
 	HTTPError hv_res = http_process_request_header_value(header_field, value, req);
 	if (hv_res != HTTP_SUCCESS) return hv_res;
 
-	s += 2; // \r\n
-	*str = s;
+	*str += 2; // \r\n
 	return HTTP_SUCCESS;
 }
 
@@ -128,7 +126,7 @@ HTTPError http_process_request_headers(const char** str, HTTPRequest* req) {
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
 			// copy whole headers
-			if (fill_string_str(&base, req->headers, HTTP_REQ_HEADERS_LEN, "\r\n", false) == -1) return HTTP_ERROR;
+			if (fill_string_str(&base, req->headers, HTTP_REQ_HEADERS_LEN, "\r\n\r\n", false) == -1) return HTTP_ERROR;
 			return HTTP_SUCCESS;
 		}
 		// empty newline at end of headers, required
@@ -137,7 +135,7 @@ HTTPError http_process_request_headers(const char** str, HTTPRequest* req) {
 }
 
 HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
-	// todo
+	// todo: parse json/xml/... ?
 
 	HTTPMethod method = req->start_line->method;
 	if (!(method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_POST)) return HTTP_BODY_NOT_ALLOWED;
@@ -423,7 +421,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RSH_CONTENT_LENGTH:
-			return http_process_content_length(value); // todo
+			return http_process_content_length(value); // todo: check if matches
 		case HTTP_RSH_CONTENT_TYPE:
 			return http_process_content_type(value);
 		case HTTP_RSH_CONNECTION:
@@ -433,7 +431,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_DATE:
 			return http_process_date(value);
 		case HTTP_RSH_SERVER:
-			return http_process_server(value); // todo: 
+			return http_process_server(value); // todo: check if matches
 		case HTTP_RSH_TRANSFER_ENCODING:
 			return http_process_transfer_encoding(value);
 		case HTTP_RSH_TK:
@@ -618,6 +616,31 @@ int korall_request_param_get(const HTTPRequest* req, const char* field, char *va
 		&& fill_string_char(&rt, value, value_len, '\0') == -1) return -1;
 
 	return 0;
+}
+
+/*
+	Get a request header
+*/
+int korall_request_header_get(const HTTPRequest* req, const char* field, char* value, size_t value_len) {
+	// todo: write tests
+	const char* h = req->headers;
+	const char* base = h;
+	if (fill_string_str(&h, NULL, 0, field, false) == -1) return -1;
+	
+	// make sure actually field and not reading middle of a value
+	if (!(h == base || (*(h - 2) == '\r' && *(h - 1) == '\n'))) return -1;
+
+	if (fill_string_char(&h, NULL, 0, ':') == -1) return -1;
+	h += 2; // skip : and space
+
+	return fill_string_str(&h, value, value_len, "\r\n", false);
+}
+
+/*
+	Get request body
+*/
+char* korall_request_body_get(const HTTPRequest* req) {
+	return req->body;
 }
 
 /*
