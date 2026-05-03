@@ -4,6 +4,13 @@
 #include "arena.h"
 #elif defined TESTS
 
+const ServerConfig config = {
+	.domain = "",
+	.port = "",
+	.name = "",
+	.allow_custom_headers = true
+};
+
 TEST("http_parse_request") {
 	
 	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
@@ -12,27 +19,27 @@ TEST("http_parse_request") {
 	char* str;
 
 	str = "GET / HTTP/1.1\r\n\r\n";
-	res = http_parse_request(str, req);
+	res = http_parse_request(str, req, &config);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-	res = http_parse_request(str, req);
+	res = http_parse_request(str, req, &config);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\nHost: \r\n\r\n";
-	res = http_parse_request(str, req);
+	res = http_parse_request(str, req, &config);
 	ASSERT(res == HTTP_BAD_DOMAIN_PORT);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1";
-	res = http_parse_request(str, req);
+	res = http_parse_request(str, req, &config);
 	ASSERT(res == HTTP_BAD_PROT);
 
 	http_request_clear(&arena, &req);
 	str = "GET / HTTP/1.1\r\n";
-	res = http_parse_request(str, req);
+	res = http_parse_request(str, req, &config);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 
@@ -53,22 +60,22 @@ TEST("http_process_headers") {
 	const char* str;
 
 	str = "Host: localhost\r\n\r\n";
-	res = http_process_request_headers(&str, req);
+	res = http_process_request_headers(&str, req, &config);
 	ASSERT(res == HTTP_SUCCESS);
 
 	http_request_clear(&arena, &req);
 	str = "Host: localhost\r\n";
-	res = http_process_request_headers(&str, req);
+	res = http_process_request_headers(&str, req, &config);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 	http_request_clear(&arena, &req);
 	str = "Host:      \r\n\r\n";
-	res = http_process_request_headers(&str, req);
+	res = http_process_request_headers(&str, req, &config);
 	ASSERT(res == HTTP_BAD_DOMAIN_PORT);
 
 	http_request_clear(&arena, &req);
 	str = "FakeField: localhost\r\n";
-	res = http_process_request_headers(&str, req);
+	res = http_process_request_headers(&str, req, &config);
 	ASSERT(res == HTTP_BAD_HEADER);
 
 	http_request_free(&arena, req);

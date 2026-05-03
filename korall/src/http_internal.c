@@ -9,7 +9,7 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-HTTPError http_parse_request(const char* data, HTTPRequest* req) {
+HTTPError http_parse_request(const char* data, HTTPRequest* req, const ServerConfig* config) {
 	
 	HTTPError res = http_process_request_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
@@ -33,7 +33,7 @@ HTTPError http_parse_request(const char* data, HTTPRequest* req) {
 
 	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return HTTP_SUCCESS; // no header, no body
 
-	res = http_process_request_headers(&data, req);
+	res = http_process_request_headers(&data, req, config);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (data[0] == '\0') return HTTP_SUCCESS; // no body
@@ -43,7 +43,7 @@ HTTPError http_parse_request(const char* data, HTTPRequest* req) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
+HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req, const ServerConfig* config) {
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_HOST:
@@ -77,11 +77,11 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 		case HTTP_RQH_MAX_FORWARDS:
 			return http_process_max_forwards(value);
 		default:
-			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
+			return config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}
 }
 
-HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
+HTTPError http_process_request_header(const char** str, HTTPRequest* req, const ServerConfig* config) {
 	// process field
 	// todo: full header line instead of field and value len separate
 
@@ -92,7 +92,7 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 	const char *s = *str;
 
 	int header_field = lookup_str_int(field, &http_req_header_field_lookup_table, true);
-	if (header_field == -1) return HTTP_BAD_HEADER; // todo: allow custom header fields
+	if (header_field == -1 && !(config->allow_custom_headers)) return HTTP_BAD_HEADER; // todo: better error msg
 
 	
 	s++; // skip colon
@@ -109,19 +109,19 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req) {
 	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n", false);
 	if (res == -1) return HTTP_BAD_HEADER_VAL;
 
-	HTTPError hv_res = http_process_request_header_value(header_field, value, req);
+	HTTPError hv_res = http_process_request_header_value(header_field, value, req, config);
 	if (hv_res != HTTP_SUCCESS) return hv_res;
 
 	*str += 2; // \r\n
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_headers(const char** str, HTTPRequest* req) {
+HTTPError http_process_request_headers(const char** str, HTTPRequest* req, const ServerConfig* config) {
 
 	const* base = *str;
 
 	while (true) {
-		HTTPError res = http_process_request_header(str, req);
+		HTTPError res = http_process_request_header(str, req, config);
 		if (res != HTTP_SUCCESS) return res;
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
@@ -465,7 +465,7 @@ int http_response_construct(
 }
 
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const char* data, const fd_set* main) {
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, const char* data, const fd_set* main) {
 	if (inc_sock == server_sock) {
 		printf("server: cannot send HTTP response to itself\n");
 		return -1;
@@ -475,6 +475,7 @@ int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const ch
 		return -1;
 	};
 
+	sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, res->body.chars);
 	printf("'%s'", data);
 	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");

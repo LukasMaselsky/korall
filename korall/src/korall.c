@@ -12,6 +12,7 @@ const ServerConfig default_config = {
 	.domain = DEFAULT_DOMAIN,
 	.port = DEFAULT_PORT,
 	.name = DEFAULT_SERVER_NAME,
+	.allow_custom_headers = true
 };
 
 /*
@@ -80,7 +81,7 @@ static void http_process_request(
 	HTTPResponse *res = http_response_init(&res_arena);
 
 	// first validate format
-	HTTPError parse_res = http_parse_request(data, req);
+	HTTPError parse_res = http_parse_request(data, req, config);
 	if (parse_res != HTTP_SUCCESS) {
 		printf("server: invalid HTTP request received, syntax\n");
 
@@ -90,7 +91,7 @@ static void http_process_request(
 
 		int err = http_response_construct(res, sc, config->name.chars, mt, message);
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		}
 		goto http_process_request_end;
@@ -101,7 +102,7 @@ static void http_process_request(
 		printf("server: invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		}
 		goto http_process_request_end;
@@ -117,7 +118,7 @@ static void http_process_request(
 		// send 404 if no matching route
 		int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, main) == -1) {
+		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		};
 		goto http_process_request_end;
@@ -128,9 +129,8 @@ static void http_process_request(
 		printf("Failed to send response, no start line set\n");
 		goto http_process_request_end;
 	}
-	sprintf(res_data, "%s%s%s", res->start_line.chars, res->headers_base, res->body.chars);
 	
-	if (http_response_send(inc_sock, server_sock, res_data, main) == -1) {
+	if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
 		printf("Failed to send responses\n");
 	}
 
@@ -390,7 +390,14 @@ int http_config_init(const char *path, ServerConfig *config, ServerConfig *defau
 	};
 
 
-	//
+	// allow_custom_headers
+	cJSON* allow_custom_headers = cJSON_GetObjectItemCaseSensitive(json, "allow_custom_headers");
+	if (!(cJSON_IsBool(allow_custom_headers))) {
+		printf("Config \"allow_custom_headers\" field is not valid.\n");
+	}
+	else {
+		config->allow_custom_headers = allow_custom_headers->valueint;
+	}
 
 	cJSON_Delete(json);
 	return 0;
@@ -447,6 +454,7 @@ void korall_run(const char *config_path, const Routes* routes) {
 		.domain = {.chars = domain, .size = MAX_DOMAIN_LEN },
 		.port = {.chars = port, .size = MAX_PORT_NUM_CHAR_LEN },
 		.name = {.chars = name, .size = MAX_SERVER_NAME_LEN },
+		.allow_custom_headers = default_config.allow_custom_headers,
 	};
 	int conf_res = http_config_init(config_path, &config, &default_config);
 	if (conf_res == -1) {

@@ -18,12 +18,6 @@
 #define HTTP_CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?
 #define HTTP_ROUTES_CAPACITY 100 // todo: ?
 
-typedef struct ServerConfig {
-	String domain;
-	String port;
-	String name;
-} ServerConfig;
-
 
 int http_config_init(const char *path, ServerConfig* config, ServerConfig *default_config);
 

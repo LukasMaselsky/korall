@@ -97,13 +97,20 @@ struct HTTPResponseInternal {
 	String body;
 };
 
-HTTPError http_parse_request(const char* data, HTTPRequest* req);
+typedef struct ServerConfig {
+	String domain;
+	String port;
+	String name;
+	bool allow_custom_headers;
+} ServerConfig;
 
-HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
+HTTPError http_parse_request(const char* data, HTTPRequest* req, const ServerConfig* config);
 
-HTTPError http_process_request_header(const char** str, HTTPRequest* req);
+HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req, const ServerConfig* config);
 
-HTTPError http_process_request_headers(const char** str, HTTPRequest* req);
+HTTPError http_process_request_header(const char** str, HTTPRequest* req, const ServerConfig* config);
+
+HTTPError http_process_request_headers(const char** str, HTTPRequest* req, const ServerConfig* config);
 
 HTTPError http_process_request_body(const char* str, HTTPRequest* req);
 
@@ -135,7 +142,7 @@ int http_response_construct(
 	const char* body
 );
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const char* data, const fd_set* main);
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, const char* data, const fd_set* main);
 
 HTTPResponse* http_response_init(Arena *arena);
 
