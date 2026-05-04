@@ -135,8 +135,6 @@ HTTPError http_process_request_headers(const char** str, HTTPRequest* req, const
 }
 
 HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
-	// todo: parse json/xml/... ?
-
 	HTTPMethod method = req->start_line->method;
 	if (!(method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_POST)) return HTTP_BODY_NOT_ALLOWED;
 
@@ -421,7 +419,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RSH_CONTENT_LENGTH:
-			return http_process_content_length(value); // todo: check if matches
+			return http_process_content_length(value);
 		case HTTP_RSH_CONTENT_TYPE:
 			return http_process_content_type(value);
 		case HTTP_RSH_CONNECTION:
@@ -431,7 +429,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_DATE:
 			return http_process_date(value);
 		case HTTP_RSH_SERVER:
-			return http_process_server(value); // todo: check if matches
+			return http_process_server(value); // todo:
 		case HTTP_RSH_TRANSFER_ENCODING:
 			return http_process_transfer_encoding(value);
 		case HTTP_RSH_TK:
