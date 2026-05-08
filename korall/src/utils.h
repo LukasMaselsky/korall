@@ -74,6 +74,7 @@ typedef struct {
     size_t size; // without null terminator
 } String;
 
+char* b64_encode(const unsigned char* in, size_t len);
 
 str_to_int_errno str_to_int(int* out, const char* s, int base);
 

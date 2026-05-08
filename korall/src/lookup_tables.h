@@ -16,6 +16,7 @@
 #define HTTP_CONNECTION_TABLE_COUNT HTTP_CON_COUNT
 #define HTTP_REQ_CACHE_CONTROL_TABLE_COUNT HTTP_REQ_CC_COUNT
 #define HTTP_RES_CACHE_CONTROL_TABLE_COUNT HTTP_RES_CC_COUNT
+#define HTTP_REQ_UPGRADE_TABLE_COUNT HTTP_UPG_COUNT
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
@@ -47,5 +48,6 @@ extern const LookupTable http_req_cache_control_lookup_table;
 extern const LookupTable http_res_cache_control_lookup_table;
 extern const LookupTable day_lookup_table;
 extern const LookupTable month_lookup_table;
+extern const LookupTable http_req_upgrade_lookup_table;
 
 #endif

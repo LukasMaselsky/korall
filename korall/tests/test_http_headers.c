@@ -255,17 +255,17 @@ TEST("http_process_connection") {
 	int res;
 
 	str = "keep-alive";
-	res = http_process_connection(str);
+	res = http_process_connection(str, NULL);
 	ASSERT(res == HTTP_SUCCESS);
 	
 
 	str = "close";
-	res = http_process_connection(str);
+	res = http_process_connection(str, NULL);
 	ASSERT(res == HTTP_SUCCESS);
 	
 
 	str = "clos";
-	res = http_process_connection(str);
+	res = http_process_connection(str, NULL);
 	ASSERT(res == HTTP_BAD_CONNECTION);
 	
 
@@ -408,6 +408,14 @@ TEST("http_process_tk") {
 	res = http_process_tk(str);
 	ASSERT(res == HTTP_BAD_TK);
 
+	
+
+}
+
+TEST("http_process_ws_key") {
+	
+	char* str = "x3JJHMbDL1EzLkh9GBhXDw==";
+	http_process_ws_key(str, NULL);
 	
 
 }

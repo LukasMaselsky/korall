@@ -61,7 +61,7 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 		case HTTP_RQH_ACCESS_CONTROL_REQUEST_HEADERS:
 			return http_process_access_control_request_headers(value);
 		case HTTP_RQH_CONNECTION:
-			return http_process_connection(value);
+			return http_process_connection(value, req);
 		case HTTP_RQH_CACHE_CONTROL:
 			return http_process_cache_control_req(value);
 		case HTTP_RQH_USER_AGENT:
@@ -76,6 +76,12 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 			return http_process_transfer_encoding(value);
 		case HTTP_RQH_MAX_FORWARDS:
 			return http_process_max_forwards(value);
+		case HTTP_RQH_UPGRADE:
+			return http_process_upgrade(value, req);
+		case HTTP_RQH_WS_KEY:
+			return http_process_ws_key(value, req);
+		case HTTP_RQH_WS_VERSION:
+			return http_process_ws_version(value, req);
 		default:
 			return config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}
@@ -387,11 +393,21 @@ HTTPRequest* http_request_init(Arena *arena) {
 
 	char* headers;
 	headers = (char*)arena_alloc(arena, (HTTP_REQ_HEADERS_LEN + 1) * sizeof(*headers));
-
+	
 	// body
 
 	char* body;
 	body = (char*)arena_alloc(arena, (HTTP_REQ_BODY_LEN + 1) * sizeof(*body));
+
+	// ws
+
+	char* accept;
+	accept = (char*)arena_alloc(arena, (28 + 1) * sizeof(*accept));
+
+
+	HTTPRequestWebsocket* ws;
+	ws = (HTTPRequestWebsocket*)arena_alloc(arena, sizeof(*ws));
+	ws->accept = accept;
 
 	// all
 
@@ -401,6 +417,7 @@ HTTPRequest* http_request_init(Arena *arena) {
 	req->host = host;
 	req->headers = headers;
 	req->body = body;
+	req->ws = ws;
 	return req;
 }
 
@@ -423,7 +440,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_CONTENT_TYPE:
 			return http_process_content_type(value);
 		case HTTP_RSH_CONNECTION:
-			return http_process_connection(value);
+			return http_process_connection(value, NULL);
 		case HTTP_RSH_CACHE_CONTROL:
 			return http_process_cache_control_res(value);
 		case HTTP_RSH_DATE:
@@ -535,6 +552,14 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_WS_VERSION:
+			return ERROR_MESSAGE("Bad request", "Invalid Sec-WebSocket-Version header.");
+		case HTTP_BAD_WS_KEY:
+			return ERROR_MESSAGE("Bad request", "Invalid Sec-WebSocket-Key header.");
+		case HTTP_BAD_WS_KEY_CALC:
+			return ERROR_MESSAGE("Bad request", "Sec-WebSocket-Accept calculation failed.");
+		case HTTP_BAD_UPGRADE:
+			return ERROR_MESSAGE("Bad request", "Invalid Upgrade header.");
 		case HTTP_BAD_TK:
 			return ERROR_MESSAGE("Bad request", "Invalid Tk header.");
 		case HTTP_BAD_MAX_FORWARDS:

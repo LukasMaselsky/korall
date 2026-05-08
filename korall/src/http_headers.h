@@ -18,7 +18,7 @@ HTTPError http_process_access_control_request_method(const char* value);
 
 HTTPError http_process_access_control_request_headers(const char* value);
 
-HTTPError http_process_connection(const char* value);
+HTTPError http_process_connection(const char* value, HTTPRequest* req);
 
 HTTPError http_process_cache_control_req(const char* value);
 
@@ -37,6 +37,12 @@ HTTPError http_process_server(const char* value);
 HTTPError http_process_max_forwards(const char* value);
 
 HTTPError http_process_tk(const char* value);
+
+HTTPError http_process_upgrade(const char* value, HTTPRequest* req);
+
+HTTPError http_process_ws_key(const char* value, HTTPRequest* req);
+
+HTTPError http_process_ws_version(const char* value, HTTPRequest* req);
 
 /* Response */
 

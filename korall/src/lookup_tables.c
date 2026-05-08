@@ -81,6 +81,8 @@ const LookupEntry http_req_header_field_lookup_table_entries[HTTP_REQ_HEADER_FIE
 	{ HTTP_RQH_UPGRADE, "Upgrade" },
 	{ HTTP_RQH_VIA, "Via" },
 	{ HTTP_RQH_WARNING, "Warning" },
+	{ HTTP_RQH_WS_KEY, "Sec-WebSocket-Key" },
+	{ HTTP_RQH_WS_VERSION, "Sec-WebSocket-Version" },
 };
 
 const LookupEntry http_status_code_lookup_table_entries[HTTP_STATUS_CODE_TABLE_COUNT] = {
@@ -302,6 +304,7 @@ const LookupEntry http_charset_lookup_table_entries[HTTP_CHARSET_TABLE_COUNT] = 
 const LookupEntry http_connection_lookup_table_entries[HTTP_CONNECTION_TABLE_COUNT] = {
 	{ HTTP_CON_KEEP_ALIVE, "keep-alive" },
 	{ HTTP_CON_CLOSE, "close" },
+	{ HTTP_CON_UPGRADE, "upgrade" },
 };
 
 const LookupEntry http_req_cache_control_lookup_table_entries[HTTP_REQ_CACHE_CONTROL_TABLE_COUNT] = {
@@ -355,6 +358,12 @@ const LookupEntry month_lookup_table_entries[MONTH_TABLE_COUNT] = {
 	{ MONTH_NOV, "Nov" },
 	{ MONTH_DEC, "Dec" },
 };
+
+const LookupEntry http_req_upgrade_lookup_table_entries[HTTP_REQ_UPGRADE_TABLE_COUNT] = {
+	{ HTTP_UPG_WS, "websocket" },
+};
+
+/*****************************************************************************/
 
 const LookupTable http_method_lookup_table = {
 	.entries = http_method_lookup_table_entries,
@@ -426,3 +435,7 @@ const LookupTable month_lookup_table = {
 	.size = MONTH_TABLE_COUNT
 };
 
+const LookupTable http_req_upgrade_lookup_table = {
+	.entries = http_req_upgrade_lookup_table_entries,
+	.size = HTTP_REQ_UPGRADE_TABLE_COUNT
+};

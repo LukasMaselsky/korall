@@ -3,3 +3,5 @@
 #include "test_http_headers.c"
 #include "test_arena.c"
 #include "test_sockets.c"
+#include "test_sha1.c"
+#include "test_websocket.c"

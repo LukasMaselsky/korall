@@ -4,6 +4,7 @@
 #include "lookup_tables.h"
 #include "sockets.h"
 #include "date.h"
+#include "sha1.h"
 
 /* General */
 
@@ -160,8 +161,11 @@ HTTPError http_process_content_length(const char* value) {
 	return (res != STR_TO_INT_SUCCESS) ? HTTP_BAD_CONTENT_LENGTH : HTTP_SUCCESS;
 }
 
-HTTPError http_process_connection(const char* value) {
-	int val = lookup_str_int(value, &http_connection_lookup_table, false);
+HTTPError http_process_connection(const char* value, HTTPRequest* req) {
+	HTTPConnection val = lookup_str_int(value, &http_connection_lookup_table, false);
+	if (val == HTTP_CON_UPGRADE && req != NULL) {
+		req->ws->has_connection = true;
+	}
 	return (val == -1) ? HTTP_BAD_CONNECTION : HTTP_SUCCESS;
 }
 
@@ -422,6 +426,82 @@ HTTPError http_process_tk(const char* value) {
 		c == 'U'
 		) return HTTP_SUCCESS;
 	return HTTP_BAD_TK;
+}
+
+HTTPError http_process_upgrade(const char* value, HTTPRequest* req) {
+	HTTPUpgrade up = lookup_str_int(value, &http_req_upgrade_lookup_table, false);
+	if (up == -1) return HTTP_BAD_UPGRADE; // todo: support any custom prot ?
+	
+	switch (up) {
+		case HTTP_UPG_WS:
+			if (req == NULL) break;
+			req->ws->has_upgrade = true;
+			break;
+		default:
+	}
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
+	// todo:
+	
+	// check key is 16-bytes
+
+	if (strlen(value) != 24) return HTTP_BAD_WS_KEY;
+
+	// concat with GUID
+
+	const unsigned char concated[WS_KEY_LEN + WS_GUID_LEN + 1] = { 0 };
+	strcpy(concated, value);
+	strcpy(concated + WS_KEY_LEN, WS_GUID);
+
+	//printf("%s\n", concated);
+
+	// hash with SHA-1
+
+	SHA1Context sha;
+	int err;
+	uint8_t accept[20];
+
+	err = SHA1Reset(&sha);
+	if (err)
+	{
+		fprintf(stderr, "SHA1Reset Error %d.\n", err);
+		return HTTP_BAD_WS_KEY_CALC;
+	}
+
+	err = SHA1Input(&sha, (const unsigned char*)concated, strlen(concated));
+	if (err)
+	{
+		fprintf(stderr, "SHA1Input Error %d.\n", err);
+		return HTTP_BAD_WS_KEY_CALC;
+	}
+
+	err = SHA1Result(&sha, accept);
+	if (err)
+	{
+		fprintf(stderr, "SHA1Result Error %d, could not compute message digest.\n", err);
+		return HTTP_BAD_WS_KEY_CALC;
+	}
+
+	
+	// encode base64
+
+	const char* str = b64_encode(accept, 20);
+	//printf("%s\n", str);
+	
+	if (req != NULL) {
+		strcpy(req->ws->accept, str);
+	}
+
+	free(str);
+	return HTTP_SUCCESS;
+}
+
+HTTPError http_process_ws_version(const char* value, HTTPRequest* req) {
+	int val;
+	str_to_int_errno res = str_to_int(&val, value, 10);
+	return (res != STR_TO_INT_SUCCESS || val != WS_VERSION) ? HTTP_BAD_WS_VERSION : HTTP_SUCCESS;
 }
 
 /* Response */

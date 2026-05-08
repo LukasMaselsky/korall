@@ -5,6 +5,11 @@
 #include "utils.h"
 #include "korall/http.h"
 
+#define WS_VERSION 13
+#define WS_KEY_LEN 24
+#define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+#define WS_GUID_LEN 36
+
 #define MAX_HTTP_METHOD_STR_LEN 7
 #define MAX_HTTP_QUERY_STR_LEN 1024
 #define MAX_HTTP_URL_LEN (2 * KILOBYTE) // incl query str: https://stackoverflow.com/questions/812925/what-is-the-maximum-possible-length-of-a-query-string/48230425#48230425
@@ -75,6 +80,13 @@ struct HTTPHeaderHostInternal {
 	char* port;
 };
 
+struct HTTPRequestWebsocketInternal {
+	char* accept;
+	bool has_connection;
+	bool has_upgrade;
+	bool has_key;
+	bool has_version;
+};
 
 // Request
 
@@ -83,6 +95,7 @@ struct HTTPRequestInternal {
 	HTTPHeaderHost* host;
 	char* headers;
 	char* body;
+	HTTPRequestWebsocket* ws;
 };
 
 // Response

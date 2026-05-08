@@ -5,8 +5,8 @@
 #include "http_internal.h"
 #include "korall/korall.h"
 
-#define READ_BUFFER_LEN 1024
-#define RESPONSE_BUFFER_LEN 1024
+#define READ_BUFFER_LEN MEGABYTE * 10
+#define RESPONSE_BUFFER_LEN MEGABYTE * 10
 
 #define DEFAULT_SERVER_NAME "KorallServer"
 #define MAX_SERVER_NAME_LEN 100 // todo 

@@ -57,6 +57,8 @@ typedef enum {
 	HTTP_RQH_UPGRADE,
 	HTTP_RQH_VIA,
 	HTTP_RQH_WARNING,
+	HTTP_RQH_WS_KEY,
+	HTTP_RQH_WS_VERSION,
 	HTTP_RQH_COUNT
 } HTTPRequestHeaderField;
 
@@ -292,6 +294,7 @@ typedef enum {
 	HTTP_CON_UNUSED = -1,
 	HTTP_CON_KEEP_ALIVE,
 	HTTP_CON_CLOSE,
+	HTTP_CON_UPGRADE,
 	HTTP_CON_COUNT,
 } HTTPConnection;
 
@@ -312,6 +315,12 @@ typedef enum {
 	HTTP_EXP_UNUSED = -1,
 	HTTP_EXP_100_CONTINUE
 } HTTPExpect;
+
+typedef enum {
+	HTTP_UPG_UNUSED = -1,
+	HTTP_UPG_WS,
+	HTTP_UPG_COUNT,
+} HTTPUpgrade;
 
 // response
 
@@ -337,6 +346,10 @@ typedef enum {
 
 typedef enum {
 	// todo
+	HTTP_BAD_WS_KEY_CALC = -33,
+	HTTP_BAD_WS_KEY = -32,
+	HTTP_BAD_WS_VERSION = -31,
+	HTTP_BAD_UPGRADE = -30,
 	HTTP_BAD_TK = -29,
 	HTTP_BAD_MAX_FORWARDS = -28,
 	HTTP_BAD_TRANSFER_ENCODING = -27,
@@ -372,6 +385,7 @@ typedef enum {
 
 typedef struct HTTPRequestStartLineInternal HTTPRequestStartLine;
 typedef struct HTTPHeaderHostInternal HTTPHeaderHost;
+typedef struct HTTPRequestWebsocketInternal HTTPRequestWebsocket;
 typedef struct HTTPRequestInternal HTTPRequest;
 
 typedef struct HTTPResponseInternal HTTPResponse;
