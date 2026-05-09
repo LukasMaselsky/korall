@@ -75,7 +75,7 @@ HTTPError http_domain_port(const char* value, char* domain, char* port, bool *wi
 
 static int http_process_weighted_list(
 	const char* value, 
-	LookupTable *table,
+	const LookupTable *table,
 	char *field_arr, 
 	const int field_arr_len
 ) {
@@ -127,7 +127,7 @@ static int http_process_weighted_list(
 
 static int http_process_list(
 	const char* value,
-	LookupTable* table,
+	const LookupTable* table,
 	char* field_arr,
 	const int field_arr_len
 ) {
@@ -451,7 +451,7 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 
 	// concat with GUID
 
-	const unsigned char concated[WS_KEY_LEN + WS_GUID_LEN + 1] = { 0 };
+	unsigned char concated[WS_KEY_LEN + WS_GUID_LEN + 1] = { 0 };
 	strcpy(concated, value);
 	strcpy(concated + WS_KEY_LEN, WS_GUID);
 
@@ -487,7 +487,7 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 	
 	// encode base64
 
-	const char* str = b64_encode(accept, 20);
+	char* str = b64_encode(accept, 20);
 	//printf("%s\n", str);
 	
 	if (req != NULL) {

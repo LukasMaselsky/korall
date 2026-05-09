@@ -70,7 +70,7 @@ typedef enum {
 
 
 typedef struct {
-    const char* chars;
+    char* chars;
     size_t size; // without null terminator
 } String;
 

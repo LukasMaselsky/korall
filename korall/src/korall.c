@@ -352,7 +352,7 @@ int http_config_init(const char *path, ServerConfig *config, ServerConfig *defau
 	// server name
 
 	cJSON* name = cJSON_GetObjectItemCaseSensitive(json, "name");
-	char* name_val;
+	const char* name_val;
 	if (!(cJSON_IsString(name) && (name->valuestring != NULL))) {
 		printf("Config \"name\" field is not valid.\n");
 		name_val = default_config->name.chars;
@@ -365,7 +365,7 @@ int http_config_init(const char *path, ServerConfig *config, ServerConfig *defau
 	// domain
 
 	cJSON* domain = cJSON_GetObjectItemCaseSensitive(json, "domain");
-	char* domain_val;
+	const char* domain_val;
 	if (!(cJSON_IsString(domain) && (domain->valuestring != NULL))) {
 		printf("Config \"domain\" field is not valid.\n");
 		domain_val = default_config->domain.chars;
