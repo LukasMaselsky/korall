@@ -162,7 +162,7 @@ HTTPError http_process_content_length(const char* value) {
 }
 
 HTTPError http_process_connection(const char* value, HTTPRequest* req) {
-	HTTPConnection val = lookup_str_int(value, &http_connection_lookup_table, false);
+	HTTPConnection val = lookup_str_int(value, &http_connection_lookup_table, true);
 	if (val == HTTP_CON_UPGRADE && req != NULL) {
 		req->ws->has_connection = true;
 	}
@@ -443,8 +443,6 @@ HTTPError http_process_upgrade(const char* value, HTTPRequest* req) {
 }
 
 HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
-	// todo:
-	
 	// check key is 16-bytes
 
 	if (strlen(value) != 24) return HTTP_BAD_WS_KEY;
@@ -492,6 +490,7 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 	
 	if (req != NULL) {
 		strcpy(req->ws->accept, str);
+		req->ws->has_key = true;
 	}
 
 	free(str);
@@ -501,7 +500,9 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 HTTPError http_process_ws_version(const char* value, HTTPRequest* req) {
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
-	return (res != STR_TO_INT_SUCCESS || val != WS_VERSION) ? HTTP_BAD_WS_VERSION : HTTP_SUCCESS;
+	if (res != STR_TO_INT_SUCCESS || val != WS_VERSION) return HTTP_BAD_WS_VERSION;
+	req->ws->has_version = true;
+	return HTTP_SUCCESS;
 }
 
 /* Response */

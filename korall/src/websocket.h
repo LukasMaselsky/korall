@@ -3,6 +3,9 @@
 
 #include "utils.h"
 
+#define WS_FRAME_PAYLOAD_SIZE (1 * MEGABYTE) // change ?
+#define WS_FRAME_SIZE (sizeof(WebsocketFrame) + WS_FRAME_PAYLOAD_SIZE)
+#define WS_ARENA_SIZE (WS_FRAME_SIZE + KILOBYTE)
 
 typedef enum {
 	WS_OP_CON = 0,

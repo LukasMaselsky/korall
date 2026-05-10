@@ -11,6 +11,7 @@ static KORALL_ROUTE(my_route) {
 	korall_response_start_set(res, 200);
 	korall_response_header_set(res, "Cache-Control", "no-store");
 	korall_response_header_set(res, "Content-Type", "application/json");
+	//korall_response_header_set(res, "Content-Length", "0");
 	korall_response_body_set(res, "{\"res\":\"hello\"}");
 }
 

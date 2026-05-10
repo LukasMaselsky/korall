@@ -451,6 +451,8 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 			return http_process_transfer_encoding(value);
 		case HTTP_RSH_TK:
 			return http_process_tk(value);
+		case HTTP_RSH_UPGRADE:
+			return http_process_upgrade(value, NULL);
 		default:
 			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
 	}
@@ -476,11 +478,27 @@ int http_response_construct(
 		
 		korall_response_body_set(res, body);
 	}
+	else {
+		if (korall_response_header_set(res, "Content-Length", "0") == -1) return -1;
+	}
 	return 0;
 }
 
+int http_response_ws_construct(
+	HTTPResponse* res,
+	const char* accept,
+	const char* server_name
+) {
+	if (korall_response_start_set(res, HTTP_SC_101) == -1) return -1;
+	if (korall_response_header_set(res, "Server", server_name) == -1) return -1;
+	if (korall_response_header_set(res, "Upgrade", "websocket") == -1) return -1;
+	if (korall_response_header_set(res, "Connection", "upgrade") == -1) return -1;
+	if (korall_response_header_set(res, "Sec-WebSocket-Accept", accept) == -1) return -1;
+	if (korall_response_header_set(res, "Content-Length", "0") == -1) return -1; // ! important
+	return 0;
+}
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, const char* data, const fd_set* main) {
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, char* data, const fd_set* main) {
 	if (inc_sock == server_sock) {
 		printf("server: cannot send HTTP response to itself\n");
 		return -1;
@@ -490,7 +508,9 @@ int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HT
 		return -1;
 	};
 
-	sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, res->body.chars);
+	const char* body = res->body.chars[0] == '\0' ? "\r\n" : res->body.chars;
+
+	sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, body);
 	printf("'%s'", data);
 	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");
@@ -601,7 +621,7 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 		case HTTP_BAD_HEADER_VAL:
 			return ERROR_MESSAGE("Bad request", "Unsupported header.");
 		case HTTP_BAD_HEADER:
-			return ERROR_MESSAGE("Bad request", "Invalid header.");
+			return ERROR_MESSAGE("Bad request", "Invalid header (allow_custom_headers may be set to false).");
 		case HTTP_BAD_PORT:
 			return ERROR_MESSAGE("Bad request", "Invalid port.");
 		case HTTP_BAD_DOMAIN:

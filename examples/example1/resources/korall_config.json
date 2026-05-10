@@ -2,5 +2,5 @@
   "name": "TestServer",
   "domain": "localhost",
   "port": 3500,
-  "allow_custom_headers": false
+  "allow_custom_headers": true
 }

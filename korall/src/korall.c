@@ -4,6 +4,7 @@
 #include "arena.h"
 #include "lookup_tables.h"
 #include "cJSON.h"
+#include "websocket.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
@@ -62,12 +63,51 @@ static void res_full_arena_free(Arena* arena, const char* data) {
 	arena_free(arena);
 }
 
+static void websocket_process_data(
+	const SOCKET inc_sock,
+	const SOCKET server_sock,
+	const char* data,
+	const fd_set* main,
+	const fd_set* ws,
+	const ServerConfig* config,
+	const Routes* routes
+) {
+	// process frame
+
+	Arena inc_arena = arena_init(WS_ARENA_SIZE);
+	Arena out_arena = arena_init(WS_ARENA_SIZE);
+
+	WebsocketFrame* wsf;
+	wsf = (WebsocketFrame *)arena_alloc(&inc_arena, sizeof(*wsf));
+
+	uint8_t* payload;
+	payload = (uint8_t*)arena_alloc(&inc_arena, WS_FRAME_PAYLOAD_SIZE);
+	wsf->data = payload;
+
+
+	if (websocket_process_frame((uint8_t*)data, wsf) == -1) {
+		
+		goto websocket_process_data_end;
+	}
+
+	// if close frame, remove from ws set
+
+
+
+	// send response ?
+
+websocket_process_data_end:
+	arena_free(&inc_arena);
+	arena_free(&out_arena);
+	return;
+}
+
 static void http_process_request(
 	const SOCKET inc_sock, 
 	const SOCKET server_sock, 
 	const char* data,
-	const fd_set* main, 
-	const SOCKET fd_max,
+	const fd_set* main,
+	const fd_set* ws,
 	const ServerConfig *config,
 	const Routes *routes
 ) {
@@ -75,7 +115,7 @@ static void http_process_request(
 	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	Arena res_arena = arena_init(HTTP_RES_ARENA_SIZE);
 	Arena res_full_arena = arena_init(HTTP_RES_FULL_ARENA_SIZE + 1); // for concating res parts into full response text
-	const char* res_data = (char*)arena_alloc(&res_full_arena, HTTP_RES_FULL_ARENA_SIZE + 1);
+	char* res_data = (char*)arena_alloc(&res_full_arena, HTTP_RES_FULL_ARENA_SIZE + 1);
 
 	HTTPRequest *req = http_request_init(&req_arena);
 	HTTPResponse *res = http_response_init(&res_arena);
@@ -109,9 +149,23 @@ static void http_process_request(
 	}
 
 	printf("server: valid HTTP request received\n");
-	printf("server: sending HTTP response\n\n");
 
 	if (routes == NULL) return; // no route handlers
+
+	// check if want to initiate websocket
+
+	if (req->ws->has_key && req->ws->has_connection && req->ws->has_upgrade && req->ws->has_version) {
+		// send 101
+		int err = http_response_ws_construct(res, req->ws->accept, config->name.chars);
+		if (err == -1) goto http_process_request_end;
+		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
+			printf("Failed to send responses\n");
+		};
+		FD_SET(inc_sock, ws);
+		goto http_process_request_end;
+	}
+
+	printf("server: sending HTTP response\n\n");
 
 	const Route* route = http_route_select(req, routes);
 	if (route == NULL) {
@@ -249,14 +303,17 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 }
 
 static void process_incoming_data(
-	const SOCKET inc_sock, 
+	const SOCKET inc_sock,
 	const SOCKET server_sock, 
 	const fd_set* main, 
+	const fd_set* ws, 
 	const SOCKET fd_max, 
 	const ServerConfig *config, 
 	const Routes *routes
 ) {
+	// todo: change to heap for larger buffer
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
+
 
 	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
 	if (bytes_read <= 0) {
@@ -281,7 +338,16 @@ static void process_incoming_data(
 	socket_print(inc_sock);
 	printf("\n'%s'\n", buffer);
 
-	http_process_request(inc_sock, server_sock, buffer, main, fd_max, config, routes);
+	// check if websocket
+
+	if (FD_ISSET(inc_sock, ws)) {
+		websocket_process_data(inc_sock, server_sock, buffer, main, ws, config, routes);
+	}
+	else {
+		http_process_request(inc_sock, server_sock, buffer, main, ws, config, routes);
+	}
+
+
 	// TODO
 	//if (config->type == ST_HTTP) {
 	//}
@@ -471,15 +537,18 @@ void korall_run(const char *config_path, const Routes* routes) {
 
 
 	fd_set main_fds = { 0 };
-	fd_set read_fds = { 0 }; // temps 
+	fd_set read_fds = { 0 }; // temps
+	fd_set ws_fds = { 0 }; // fds that are websockets
 	SOCKET fd_max; // biggest fd
+	
 
 
 	FD_ZERO(&main_fds);
 	FD_ZERO(&read_fds);
+	FD_ZERO(&ws_fds);
 
 	SOCKET server_sock = init_listen_socket(&config);
-
+	
 	FD_SET(server_sock, &main_fds);
 	fd_max = server_sock;
 
@@ -499,7 +568,7 @@ void korall_run(const char *config_path, const Routes* routes) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, fd_max, &config, routes);
+				process_incoming_data(i, server_sock, &main_fds, &ws_fds, fd_max, &config, routes);
 			}
 
 		}

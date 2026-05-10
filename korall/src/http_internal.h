@@ -155,7 +155,13 @@ int http_response_construct(
 	const char* body
 );
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, const char* data, const fd_set* main);
+int http_response_ws_construct(
+	HTTPResponse* res,
+	const char* accept,
+	const char* server_name
+);
+
+int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, char* data, const fd_set* main);
 
 HTTPResponse* http_response_init(Arena *arena);
 
