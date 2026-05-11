@@ -117,25 +117,25 @@ typedef struct ServerConfig {
 	bool allow_custom_headers;
 } ServerConfig;
 
-HTTPError http_parse_request(const char* data, HTTPRequest* req, const ServerConfig* config);
+HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerConfig* config);
 
 HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req, const ServerConfig* config);
 
-HTTPError http_process_request_header(const char** str, HTTPRequest* req, const ServerConfig* config);
+HTTPError http_request_process_header(const char** str, HTTPRequest* req, const ServerConfig* config);
 
-HTTPError http_process_request_headers(const char** str, HTTPRequest* req, const ServerConfig* config);
+HTTPError http_request_process_headers(const char** str, HTTPRequest* req, const ServerConfig* config);
 
-HTTPError http_process_request_body(const char* str, HTTPRequest* req);
+HTTPError http_request_process_body(const char* str, HTTPRequest* req);
 
-HTTPError http_process_request_method(const char** str, HTTPRequest* req);
+HTTPError http_request_process_method(const char** str, HTTPRequest* req);
 
-HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req);
+HTTPError http_request_process_target_relative(const char* str, HTTPRequest* req);
 
-HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req);
+HTTPError http_request_process_target_absolute(const char* str, HTTPRequest* req);
 
-HTTPError http_process_request_target(const char** str, HTTPRequest* req);
+HTTPError http_request_process_target(const char** str, HTTPRequest* req);
 
-HTTPError http_process_request_protocol(const char** str);
+HTTPError http_request_process_protocol(const char** str);
 
 HTTPRequest* http_request_init(Arena* arena);
 
@@ -161,7 +161,7 @@ int http_response_ws_construct(
 	const char* server_name
 );
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, char* data, const fd_set* main);
+int http_response_send(const SOCKET inc_sock, const HTTPResponse *res, char* data, const fd_set* main);
 
 HTTPResponse* http_response_init(Arena *arena);
 

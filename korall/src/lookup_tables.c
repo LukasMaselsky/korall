@@ -363,6 +363,22 @@ const LookupEntry http_req_upgrade_lookup_table_entries[HTTP_REQ_UPGRADE_TABLE_C
 	{ HTTP_UPG_WS, "websocket" },
 };
 
+const LookupEntry ws_close_code_lookup_table_entries[WS_CLOSE_CODE_TABLE_COUNT] = {
+	{ WS_CC_1000, "Normal Closure" },
+	{ WS_CC_1001, "Going Away" },
+	{ WS_CC_1002, "Protocol Error" },
+	{ WS_CC_1003, "Unsupported Data" },
+	{ WS_CC_1005, "No Status Received" },
+	{ WS_CC_1006, "Abnormal Closure" },
+	{ WS_CC_1007, "Invalid frame payload data" },
+	{ WS_CC_1008, "Policy Violation" },
+	{ WS_CC_1009, "Message too big" },
+	{ WS_CC_1010, "Extension Required" },
+	{ WS_CC_1011, "Internal Error" },
+	{ WS_CC_1015, "TLS Handshake" },
+};
+
+
 /*****************************************************************************/
 
 const LookupTable http_method_lookup_table = {
@@ -438,4 +454,9 @@ const LookupTable month_lookup_table = {
 const LookupTable http_req_upgrade_lookup_table = {
 	.entries = http_req_upgrade_lookup_table_entries,
 	.size = HTTP_REQ_UPGRADE_TABLE_COUNT
+};
+
+const LookupTable ws_close_code_lookup_table = {
+	.entries = ws_close_code_lookup_table_entries,
+	.size = WS_CLOSE_CODE_TABLE_COUNT
 };

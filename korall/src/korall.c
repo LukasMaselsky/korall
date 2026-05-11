@@ -65,7 +65,6 @@ static void res_full_arena_free(Arena* arena, const char* data) {
 
 static void websocket_process_data(
 	const SOCKET inc_sock,
-	const SOCKET server_sock,
 	const char* data,
 	const fd_set* main,
 	const fd_set* ws,
@@ -76,22 +75,70 @@ static void websocket_process_data(
 
 	Arena inc_arena = arena_init(WS_ARENA_SIZE);
 	Arena out_arena = arena_init(WS_ARENA_SIZE);
+	Arena out_data_arena = arena_init(WS_FULL_ARENA_SIZE);
+	uint8_t* out_data = (uint8_t*)arena_alloc(&out_data_arena, WS_FULL_ARENA_SIZE);
 
-	WebsocketFrame* wsf;
-	wsf = (WebsocketFrame *)arena_alloc(&inc_arena, sizeof(*wsf));
+	WebsocketFrame* in_wsf;
+	in_wsf = (WebsocketFrame *)arena_alloc(&inc_arena, sizeof(*in_wsf));
 
-	uint8_t* payload;
-	payload = (uint8_t*)arena_alloc(&inc_arena, WS_FRAME_PAYLOAD_SIZE);
-	wsf->data = payload;
+	uint8_t* in_payload;
+	in_payload = (uint8_t*)arena_alloc(&inc_arena, WS_FRAME_PAYLOAD_SIZE);
+	in_wsf->data = in_payload;
+
+	WebsocketFrame* out_wsf;
+	out_wsf = (WebsocketFrame *)arena_alloc(&out_arena, sizeof(*out_wsf));
 
 
-	if (websocket_process_frame((uint8_t*)data, wsf) == -1) {
-		
+	if (websocket_frame_process((uint8_t*)data, in_wsf) == -1) {
+		printf("server: invalid websocket message received, syntax\n");
 		goto websocket_process_data_end;
 	}
 
-	// if close frame, remove from ws set
+	if (!(in_wsf->finished)) goto websocket_process_data_end; // todo: add continuous support
 
+	if (in_wsf->opcode == WS_OP_PONG) goto websocket_process_data_end; // ignore pong
+
+	// send pong when you get ping
+	if (in_wsf->opcode == WS_OP_PING) {
+		if (websocket_frame_construct_pong(out_wsf, false, 0) == -1) {
+			printf("server: failed to construct pong message\n");
+			goto websocket_process_data_end;
+		}
+
+		if (websocket_frame_send(inc_sock, out_wsf, out_data) == -1) {
+			printf("server: failed to send pong message\n");
+		}
+		goto websocket_process_data_end;
+	}
+
+	// if close frame, remove from both sets and close socket connection
+
+	if (in_wsf->opcode == WS_OP_CLOSE) {
+
+		// todo: close codes
+		if (websocket_frame_construct_close(out_wsf, WS_CC_1000, false, 0, lookup_int_str(WS_CC_1000, &ws_close_code_lookup_table)) == -1) {
+			printf("server: failed to construct close message\n");
+			goto websocket_process_data_end;
+		}
+
+		if (websocket_frame_send(inc_sock, out_wsf, out_data) == -1) {
+			printf("server: failed to send close message\n");
+			goto websocket_process_data_end;
+		}
+
+		if (socket_close(inc_sock) == -1) {
+			printf("server: failed to close socket ");
+			socket_print(inc_sock);
+			printf("\n");
+		};
+		FD_CLR(inc_sock, ws);
+		FD_CLR(inc_sock, main);
+
+		goto websocket_process_data_end;
+	}
+
+	
+	 
 
 
 	// send response ?
@@ -99,12 +146,12 @@ static void websocket_process_data(
 websocket_process_data_end:
 	arena_free(&inc_arena);
 	arena_free(&out_arena);
+	arena_free(&out_data_arena);
 	return;
 }
 
 static void http_process_request(
-	const SOCKET inc_sock, 
-	const SOCKET server_sock, 
+	const SOCKET inc_sock,
 	const char* data,
 	const fd_set* main,
 	const fd_set* ws,
@@ -121,7 +168,7 @@ static void http_process_request(
 	HTTPResponse *res = http_response_init(&res_arena);
 
 	// first validate format
-	HTTPError parse_res = http_parse_request(data, req, config);
+	HTTPError parse_res = http_request_parse(data, req, config);
 	if (parse_res != HTTP_SUCCESS) {
 		printf("server: invalid HTTP request received, syntax\n");
 
@@ -131,7 +178,7 @@ static void http_process_request(
 
 		int err = http_response_construct(res, sc, config->name.chars, mt, message);
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		}
 		goto http_process_request_end;
@@ -142,7 +189,7 @@ static void http_process_request(
 		printf("server: invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		}
 		goto http_process_request_end;
@@ -158,7 +205,7 @@ static void http_process_request(
 		// send 101
 		int err = http_response_ws_construct(res, req->ws->accept, config->name.chars);
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		};
 		FD_SET(inc_sock, ws);
@@ -172,7 +219,7 @@ static void http_process_request(
 		// send 404 if no matching route
 		int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res, res_data, main) == -1) {
 			printf("Failed to send responses\n");
 		};
 		goto http_process_request_end;
@@ -184,7 +231,7 @@ static void http_process_request(
 		goto http_process_request_end;
 	}
 	
-	if (http_response_send(inc_sock, server_sock, res, res_data, main) == -1) {
+	if (http_response_send(inc_sock, res, res_data, main) == -1) {
 		printf("Failed to send responses\n");
 	}
 
@@ -304,7 +351,6 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 
 static void process_incoming_data(
 	const SOCKET inc_sock,
-	const SOCKET server_sock, 
 	const fd_set* main, 
 	const fd_set* ws, 
 	const SOCKET fd_max, 
@@ -341,10 +387,10 @@ static void process_incoming_data(
 	// check if websocket
 
 	if (FD_ISSET(inc_sock, ws)) {
-		websocket_process_data(inc_sock, server_sock, buffer, main, ws, config, routes);
+		websocket_process_data(inc_sock, buffer, main, ws, config, routes);
 	}
 	else {
-		http_process_request(inc_sock, server_sock, buffer, main, ws, config, routes);
+		http_process_request(inc_sock, buffer, main, ws, config, routes);
 	}
 
 

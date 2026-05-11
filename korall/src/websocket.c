@@ -1,8 +1,9 @@
 #include "websocket.h"
 #include "utils.h"
+#include "sockets.h"
 
 
-int websocket_process_frame(uint8_t *frame, WebsocketFrame* wsf) {
+int websocket_frame_process(uint8_t *frame, WebsocketFrame* wsf) {
 	uint8_t b1 = frame[0];
 	uint8_t b2 = frame[1];
 	bool mask = BITS_MID(b2, 7, 8);
@@ -33,7 +34,7 @@ int websocket_process_frame(uint8_t *frame, WebsocketFrame* wsf) {
 	}
 	masking_key = *mkeyp;
 	uint8_t* data = (uint8_t*)(mkeyp + 1);
-	uint8_t* m_key = &masking_key;
+	uint8_t* m_key = (uint8_t*) &masking_key;
 
 	// unmask data
 	int i = 0;
@@ -42,12 +43,89 @@ int websocket_process_frame(uint8_t *frame, WebsocketFrame* wsf) {
 		i++;
 	}
 
+	WebsocketCloseCode close_code = WS_CC_UNUSED;
+	if (opcode == WS_OP_CLOSE) {
+		close_code = data[0];
+	}
+
 	wsf->data = data;
 	wsf->finished = finished;
 	wsf->length = length;
 	wsf->mask = mask;
 	wsf->masking_key = masking_key;
-	wsf->opcode = opcode;	
+	wsf->opcode = opcode;
+	wsf->close_code = close_code;
 
+
+	return 0;
+}
+
+int websocket_frame_construct(
+	WebsocketFrame* wsf,
+	SOCKET socket,
+	bool finished,
+	WebsocketOpcode opcode,
+	WebsocketCloseCode close_code,
+	bool mask,
+	uint32_t masking_key,
+	uint8_t* data
+) {
+	if (sizeof(data) + 1 > UINT64_MAX) {
+		printf("Couldn't construct ws frame, data too long");
+		return -1;
+	};
+
+	wsf->socket = socket;
+	wsf->length = sizeof(data) + 1;
+	wsf->finished = finished;
+	wsf->opcode = opcode;
+	wsf->close_code = close_code;
+	wsf->data = data;
+	wsf->mask = mask;
+	wsf->masking_key = masking_key;
+
+	return 0;
+}
+
+int websocket_frame_construct_pong(
+	WebsocketFrame* wsf,
+	SOCKET socket,
+	bool mask,
+	uint32_t masking_key
+) {
+	return websocket_frame_construct(wsf, socket, true, WS_OP_PONG, WS_CC_UNUSED, mask, masking_key, NULL);
+}
+
+int websocket_frame_construct_close(
+	WebsocketFrame* wsf,
+	SOCKET socket,
+	WebsocketCloseCode close_code,
+	bool mask,
+	uint32_t masking_key,
+	uint8_t* data
+) {
+	return websocket_frame_construct(wsf, socket, true, WS_OP_CLOSE, close_code, mask, masking_key, data);
+}
+
+int websocket_frame_send(const WebsocketFrame* frame, uint8_t* data) {
+	// todo: convert
+
+	// todo: move data arena create in here ?
+
+	//sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, body);
+	//printf("'%s'", data);
+	
+	if (data == NULL) {
+		printf("server: failed to convert websocket data to str\n");
+		return -1;
+	}
+
+	int r = socket_send(frame->socket, data, strlen(data), 0);
+	if (r == -1) {
+		printf("server: couldn't send data to ");
+		socket_print(frame->socket);
+		printf("\n");
+	}
+	
 	return 0;
 }

@@ -9,23 +9,23 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-HTTPError http_parse_request(const char* data, HTTPRequest* req, const ServerConfig* config) {
+HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerConfig* config) {
 	
-	HTTPError res = http_process_request_method(&data, req);
+	HTTPError res = http_request_process_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 	
 	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process rt
-	res = http_process_request_target(&data, req);
+	res = http_request_process_target(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (*data != ' ') return -1;
 	data++; // advance past space
 
 	// process prot
-	res = http_process_request_protocol(&data);
+	res = http_request_process_protocol(&data);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (*data != '\r' || data[1] != '\n') return HTTP_BAD_REQUEST; // must have \r\n
@@ -33,12 +33,12 @@ HTTPError http_parse_request(const char* data, HTTPRequest* req, const ServerCon
 
 	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return HTTP_SUCCESS; // no header, no body
 
-	res = http_process_request_headers(&data, req, config);
+	res = http_request_process_headers(&data, req, config);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (data[0] == '\0') return HTTP_SUCCESS; // no body
 
-	http_process_request_body(data, req);
+	http_request_process_body(data, req);
 
 	return HTTP_SUCCESS;
 }
@@ -87,7 +87,7 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 	}
 }
 
-HTTPError http_process_request_header(const char** str, HTTPRequest* req, const ServerConfig* config) {
+HTTPError http_request_process_header(const char** str, HTTPRequest* req, const ServerConfig* config) {
 	// process field
 	// todo: full header line instead of field and value len separate
 
@@ -122,12 +122,12 @@ HTTPError http_process_request_header(const char** str, HTTPRequest* req, const 
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_headers(const char** str, HTTPRequest* req, const ServerConfig* config) {
+HTTPError http_request_process_headers(const char** str, HTTPRequest* req, const ServerConfig* config) {
 
 	const* base = *str;
 
 	while (true) {
-		HTTPError res = http_process_request_header(str, req, config);
+		HTTPError res = http_request_process_header(str, req, config);
 		if (res != HTTP_SUCCESS) return res;
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
@@ -140,7 +140,7 @@ HTTPError http_process_request_headers(const char** str, HTTPRequest* req, const
 
 }
 
-HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
+HTTPError http_request_process_body(const char* str, HTTPRequest* req) {
 	HTTPMethod method = req->start_line->method;
 	if (!(method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_POST)) return HTTP_BODY_NOT_ALLOWED;
 
@@ -153,7 +153,7 @@ HTTPError http_process_request_body(const char* str, HTTPRequest* req) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_protocol(const char** str) {
+HTTPError http_request_process_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
 
 	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n", false);
@@ -190,7 +190,7 @@ static bool is_valid_hostname_label(const char c) {
 	return false;
 }
 
-HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req) {
+HTTPError http_request_process_target_relative(const char* str, HTTPRequest* req) {
 	if (str[0] != '/') return HTTP_BAD_REQUEST_TARGET;
 	const char* base = str;
 	str++;
@@ -255,7 +255,7 @@ HTTPError http_process_request_target_relative(const char* str, HTTPRequest* req
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req) {
+HTTPError http_request_process_target_absolute(const char* str, HTTPRequest* req) {
 	const char* base = str;
 	char temp[MAX_HTTP_URL_LEN + 1] = { 0 };
 	int skip;
@@ -302,7 +302,7 @@ HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req
 	if (total_label_len > MAX_DOMAIN_LEN || prev_c == '.' || prev_c == '-') return HTTP_BAD_REQUEST_TARGET;
 
 	if (*str == '/')  {
-		int err = http_process_request_target_relative(str, req);
+		int err = http_request_process_target_relative(str, req);
 		if (err != HTTP_SUCCESS) return err;
 	}
 
@@ -311,7 +311,7 @@ HTTPError http_process_request_target_absolute(const char* str, HTTPRequest* req
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_target(const char **str, HTTPRequest *req) {
+HTTPError http_request_process_target(const char **str, HTTPRequest *req) {
 	HTTPMethod method = req->start_line->method;
 	if (method == -1) return HTTP_ERROR; // for testing purposes, never actually -1
 
@@ -345,17 +345,17 @@ HTTPError http_process_request_target(const char **str, HTTPRequest *req) {
 	const char first_c = value[0];
 	if (first_c == '/') {
 		// relative path
-		return http_process_request_target_relative(value, req);
+		return http_request_process_target_relative(value, req);
 	}
 	else if (first_c == 'h' || first_c == 'H') { // http...
 		// absolute path
-		return http_process_request_target_absolute(value, req);
+		return http_request_process_target_absolute(value, req);
 	}
 
 	return HTTP_BAD_REQUEST_TARGET;
 }
 
-HTTPError http_process_request_method(const char **str, HTTPRequest *req) {
+HTTPError http_request_process_method(const char **str, HTTPRequest *req) {
 
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 	int len = MAX_HTTP_METHOD_STR_LEN;
@@ -498,11 +498,7 @@ int http_response_ws_construct(
 	return 0;
 }
 
-int http_response_send(const SOCKET inc_sock, const SOCKET server_sock, const HTTPResponse *res, char* data, const fd_set* main) {
-	if (inc_sock == server_sock) {
-		printf("server: cannot send HTTP response to itself\n");
-		return -1;
-	}
+int http_response_send(const SOCKET inc_sock, const HTTPResponse *res, char* data, const fd_set* main) {
 	if (!FD_ISSET(inc_sock, main)) { 
 		printf("server: socket is not in set\n");
 		return -1;
