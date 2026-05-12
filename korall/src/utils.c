@@ -3,6 +3,13 @@
 #include <strings.h>
 #endif
 
+void memcpy_reverse(uint8_t *dest, const uint8_t *src, size_t size) {
+    
+    for (int i = 0; i < size; i++) {
+        dest[i] = src[size - i - 1];
+    }
+}
+
 static size_t b64_encoded_size(size_t inlen)
 {
     size_t ret;

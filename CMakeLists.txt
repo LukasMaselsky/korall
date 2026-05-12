@@ -5,3 +5,4 @@ project(${project_name} LANGUAGES C)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/korall/")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/examples/example1/")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/examples/example2/")

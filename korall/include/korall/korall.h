@@ -3,19 +3,28 @@
 
 #include <stdlib.h>
 #include "http.h"
+#include "websocket.h"
 
-#define KORALL_ROUTE(name) void name##(const HTTPRequest* req, HTTPResponse* res)
+#define KORALL_HTTP_ROUTE(name) void name##(const HTTPRequest* req, HTTPResponse* res)
+#define KORALL_WS_ROUTE(name) void name##(const WebsocketFrame* data)
 
+typedef struct HTTPRoutePrivate HTTPRoute;
 
-typedef struct RoutePrivate Route;
+typedef struct HTTPRoutesPrivate HTTPRoutes;
 
-typedef struct RoutesPrivate Routes;
+typedef struct WebsocketRoutePrivate WebsocketRoute;
 
-void korall_run(const char *config_path, const Routes *routes);
+typedef struct WebsocketRoutesPrivate WebsocketRoutes;
 
-Routes* korall_routes_init();
+void korall_run(const char *config_path, const HTTPRoutes *http_routes, const WebsocketRoutes* ws_routes);
 
-void korall_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
+HTTPRoutes* korall_http_routes_init();
+
+WebsocketRoutes* korall_ws_routes_init();
+
+void korall_http_routes_add(HTTPRoutes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
+
+void korall_ws_routes_add(WebsocketRoutes* routes, const char* path, void (* const callback)(const WebsocketFrame*));
 
 
 #endif

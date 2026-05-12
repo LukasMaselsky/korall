@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static KORALL_ROUTE(my_route) {
+static KORALL_HTTP_ROUTE(my_route) {
 
 	char value[100] = { 0 };
 	korall_request_param_get(req, "name", value, 99);
@@ -17,11 +17,11 @@ static KORALL_ROUTE(my_route) {
 
 int main(int argc, char* argv[]) {
 	
-	Routes* routes = korall_routes_init();
-	korall_routes_add(routes, "/", HTTP_GET, my_route);
+	HTTPRoutes* routes = korall_http_routes_init();
+	korall_http_routes_add(routes, "/", HTTP_GET, my_route);
 
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_run(RESOURCES_PATH, routes);
+	korall_run(RESOURCES_PATH, routes, NULL);
 
 	return 0;
 }

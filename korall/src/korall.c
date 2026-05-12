@@ -19,7 +19,7 @@ const ServerConfig default_config = {
 /*
 	Finds which route the request is targeting and returns it
 */
-static Route* http_route_select(HTTPRequest *req, const Routes *routes) {
+static HTTPRoute* http_route_select(HTTPRequest *req, const HTTPRoutes *routes) {
 	const char *path = req->start_line->request_target;
 	char sub_path[MAX_HTTP_URL_LEN + 1] = { 0 };
 	if (fill_string_char(&path, sub_path, MAX_HTTP_URL_LEN, '?') == 0) {
@@ -27,7 +27,7 @@ static Route* http_route_select(HTTPRequest *req, const Routes *routes) {
 	}
 	const HTTPMethod method = req->start_line->method;
 
-	for (Route* route = routes->routes; route != routes->routes + routes->route_count; route++) {
+	for (HTTPRoute* route = routes->routes; route != routes->routes + routes->route_count; route++) {
 		if (route->method != method) continue;
 
 		if (strcmp(route->path, path) != 0) continue;
@@ -35,6 +35,10 @@ static Route* http_route_select(HTTPRequest *req, const Routes *routes) {
 		return route;
 	}
 	return NULL;
+}
+
+static WebsocketRoute* ws_route_select(const WebsocketRoutes *routes) {
+	// todo: 
 }
 
 static bool http_domain_port_match_server(ServerConfig* config, const HTTPRequest* req) {
@@ -69,14 +73,12 @@ static void websocket_process_data(
 	const fd_set* main,
 	const fd_set* ws,
 	const ServerConfig* config,
-	const Routes* routes
+	const WebsocketRoutes* routes
 ) {
 	// process frame
 
 	Arena inc_arena = arena_init(WS_ARENA_SIZE);
 	Arena out_arena = arena_init(WS_ARENA_SIZE);
-	Arena out_data_arena = arena_init(WS_FULL_ARENA_SIZE);
-	uint8_t* out_data = (uint8_t*)arena_alloc(&out_data_arena, WS_FULL_ARENA_SIZE);
 
 	WebsocketFrame* in_wsf;
 	in_wsf = (WebsocketFrame *)arena_alloc(&inc_arena, sizeof(*in_wsf));
@@ -89,7 +91,7 @@ static void websocket_process_data(
 	out_wsf = (WebsocketFrame *)arena_alloc(&out_arena, sizeof(*out_wsf));
 
 
-	if (websocket_frame_process((uint8_t*)data, in_wsf) == -1) {
+	if (websocket_frame_decode((uint8_t*)data, in_wsf) == -1) {
 		printf("server: invalid websocket message received, syntax\n");
 		goto websocket_process_data_end;
 	}
@@ -100,12 +102,12 @@ static void websocket_process_data(
 
 	// send pong when you get ping
 	if (in_wsf->opcode == WS_OP_PING) {
-		if (websocket_frame_construct_pong(out_wsf, false, 0) == -1) {
+		if (websocket_frame_construct_pong(out_wsf, inc_sock, false, 0) == -1) {
 			printf("server: failed to construct pong message\n");
 			goto websocket_process_data_end;
 		}
 
-		if (websocket_frame_send(inc_sock, out_wsf, out_data) == -1) {
+		if (websocket_frame_send(out_wsf) == -1) {
 			printf("server: failed to send pong message\n");
 		}
 		goto websocket_process_data_end;
@@ -116,12 +118,12 @@ static void websocket_process_data(
 	if (in_wsf->opcode == WS_OP_CLOSE) {
 
 		// todo: close codes
-		if (websocket_frame_construct_close(out_wsf, WS_CC_1000, false, 0, lookup_int_str(WS_CC_1000, &ws_close_code_lookup_table)) == -1) {
+		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0, lookup_int_str(WS_CC_1000, &ws_close_code_lookup_table)) == -1) {
 			printf("server: failed to construct close message\n");
 			goto websocket_process_data_end;
 		}
 
-		if (websocket_frame_send(inc_sock, out_wsf, out_data) == -1) {
+		if (websocket_frame_send(out_wsf) == -1) {
 			printf("server: failed to send close message\n");
 			goto websocket_process_data_end;
 		}
@@ -139,14 +141,13 @@ static void websocket_process_data(
 
 	
 	 
+	// todo: route match
 
-
-	// send response ?
+	// todo: send response ?
 
 websocket_process_data_end:
 	arena_free(&inc_arena);
 	arena_free(&out_arena);
-	arena_free(&out_data_arena);
 	return;
 }
 
@@ -156,7 +157,7 @@ static void http_process_request(
 	const fd_set* main,
 	const fd_set* ws,
 	const ServerConfig *config,
-	const Routes *routes
+	const HTTPRoutes *routes
 ) {
 
 	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
@@ -214,7 +215,7 @@ static void http_process_request(
 
 	printf("server: sending HTTP response\n\n");
 
-	const Route* route = http_route_select(req, routes);
+	const HTTPRoute* route = http_route_select(req, routes);
 	if (route == NULL) {
 		// send 404 if no matching route
 		int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
@@ -355,7 +356,8 @@ static void process_incoming_data(
 	const fd_set* ws, 
 	const SOCKET fd_max, 
 	const ServerConfig *config, 
-	const Routes *routes
+	const HTTPRoutes *http_routes,
+	const WebsocketRoutes *ws_routes
 ) {
 	// todo: change to heap for larger buffer
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
@@ -387,10 +389,10 @@ static void process_incoming_data(
 	// check if websocket
 
 	if (FD_ISSET(inc_sock, ws)) {
-		websocket_process_data(inc_sock, buffer, main, ws, config, routes);
+		websocket_process_data(inc_sock, buffer, main, ws, config, ws_routes);
 	}
 	else {
-		http_process_request(inc_sock, buffer, main, ws, config, routes);
+		http_process_request(inc_sock, buffer, main, ws, config, http_routes);
 	}
 
 
@@ -517,21 +519,23 @@ int http_config_init(const char *path, ServerConfig *config, ServerConfig *defau
 
 // PUBLIC FUNCTIONS
 
-static void http_routes_free(Routes* routes) {
-	free(routes->routes);
-	free(routes);
+static void http_routes_free(HTTPRoutes* routes) {
+	if (routes != NULL) {
+		free(routes->routes);
+		free(routes);
+	}
 }
 
-Routes* korall_routes_init() {
-	size_t capacity = sizeof(Route) * HTTP_ROUTES_CAPACITY;
-	Routes* routes = (Routes*)safe_calloc(1, sizeof(Routes));
-	routes->routes = (Route*)safe_calloc(capacity, sizeof(Route));
+HTTPRoutes* korall_http_routes_init() {
+	size_t capacity = sizeof(HTTPRoute) * HTTP_ROUTES_CAPACITY;
+	HTTPRoutes* routes = (HTTPRoutes*)safe_calloc(1, sizeof(HTTPRoutes));
+	routes->routes = (HTTPRoute*)safe_calloc(capacity, sizeof(HTTPRoute));
 	routes->capacity = capacity;
 	routes->route_count = 0;
 	return routes;
 }
 
-void korall_routes_add(Routes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
+void korall_http_routes_add(HTTPRoutes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
 	if (path == NULL) {
 		printf("Failed to add route, path cannot be NULL.\n");
 		return;
@@ -549,12 +553,48 @@ void korall_routes_add(Routes* routes, const char* path, const HTTPMethod method
 		printf("Failed to add route, maximum route count exceeded.\n");
 		return;
 	}
-	Route route = { .path = path, .method = method, .callback = callback };
+	HTTPRoute route = { .path = path, .method = method, .callback = callback };
 	memcpy(routes->routes + count, &route, sizeof(route));
 	routes->route_count = count + 1;
 }
 
-void korall_run(const char *config_path, const Routes* routes) {
+static void ws_routes_free(WebsocketRoutes* routes) {
+	if (routes != NULL) {
+		free(routes->routes);
+		free(routes);
+	}
+}
+
+WebsocketRoutes* korall_ws_routes_init() {
+	size_t capacity = sizeof(WebsocketRoute) * WS_ROUTES_CAPACITY;
+	WebsocketRoutes* routes = (WebsocketRoutes*)safe_calloc(1, sizeof(WebsocketRoutes));
+	routes->routes = (WebsocketRoute*)safe_calloc(capacity, sizeof(WebsocketRoute));
+	routes->capacity = capacity;
+	routes->route_count = 0;
+	return routes;
+}
+
+void korall_ws_routes_add(WebsocketRoutes* routes, const char* path, void (* const callback)(const WebsocketFrame*)) {
+	if (path == NULL) {
+		printf("Failed to add route, path cannot be NULL.\n");
+		return;
+	}
+	if (callback == NULL) {
+		printf("Failed to add route, callback cannot be NULL.\n");
+		return;
+	}
+	
+	size_t count = routes->route_count;
+	if (count >= routes->capacity) {
+		printf("Failed to add route, maximum route count exceeded.\n");
+		return;
+	}
+	WebsocketRoute route = { .path = path, .callback = callback };
+	memcpy(routes->routes + count, &route, sizeof(route));
+	routes->route_count = count + 1;
+}
+
+void korall_run(const char *config_path, const HTTPRoutes* http_routes, const WebsocketRoutes *ws_routes) {
 
 	// config
 
@@ -614,7 +654,7 @@ void korall_run(const char *config_path, const Routes* routes) {
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, server_sock, &main_fds, &ws_fds, fd_max, &config, routes);
+				process_incoming_data(i, &main_fds, &ws_fds, fd_max, &config, http_routes, ws_routes);
 			}
 
 		}
@@ -628,7 +668,8 @@ void korall_run(const char *config_path, const Routes* routes) {
 
 	// free config and routes
 
-	http_routes_free(routes);
+	http_routes_free(http_routes);
+	ws_routes_free(http_routes);
 
 	return;
 }

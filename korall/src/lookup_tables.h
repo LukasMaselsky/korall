@@ -3,7 +3,7 @@
 
 #include "utils.h"
 #include "http_internal.h"
-#include "websocket.h"
+#include "korall/websocket.h"
 
 #define HTTP_METHOD_TABLE_COUNT HTTP_METHOD_COUNT
 #define HTTP_REQ_HEADER_FIELD_TABLE_COUNT HTTP_RQH_COUNT

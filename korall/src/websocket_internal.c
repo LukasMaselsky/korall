@@ -1,9 +1,15 @@
-#include "websocket.h"
+#include "websocket_internal.h"
 #include "utils.h"
 #include "sockets.h"
+#include "arena.h"
 
-
-int websocket_frame_process(uint8_t *frame, WebsocketFrame* wsf) {
+/**
+ * @brief converts raw frame to WebsocketFrame struct
+ * @param frame
+ * @param wsf
+ * @return
+ */
+int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf) {
 	uint8_t b1 = frame[0];
 	uint8_t b2 = frame[1];
 	bool mask = BITS_MID(b2, 7, 8);
@@ -19,7 +25,7 @@ int websocket_frame_process(uint8_t *frame, WebsocketFrame* wsf) {
 	uint64_t length; // actual payload length
 	uint32_t masking_key;
 	uint32_t* mkeyp;
-	
+
 	if (pl >= 0 && pl <= 125) {
 		length = (uint64_t)pl;
 		mkeyp = (uint32_t*)(frame + 2);
@@ -34,7 +40,7 @@ int websocket_frame_process(uint8_t *frame, WebsocketFrame* wsf) {
 	}
 	masking_key = *mkeyp;
 	uint8_t* data = (uint8_t*)(mkeyp + 1);
-	uint8_t* m_key = (uint8_t*) &masking_key;
+	uint8_t* m_key = (uint8_t*)&masking_key;
 
 	// unmask data
 	int i = 0;
@@ -60,6 +66,57 @@ int websocket_frame_process(uint8_t *frame, WebsocketFrame* wsf) {
 	return 0;
 }
 
+/**
+ * @brief converts WebsocketFrame struct to raw frame
+ * @param frame
+ * @param data
+ * @return
+ */
+int websocket_frame_encode(const WebsocketFrame* frame, uint8_t* data) {
+	uint8_t fin = (uint8_t)(frame->finished << 7);
+	uint8_t opcode = (uint8_t)(frame->opcode);
+
+	data[0] = fin | opcode;
+
+	uint8_t mask = (uint8_t)(frame->mask << 7);
+	uint8_t pl;
+	uint8_t* p;
+	if (frame->length <= 125) {
+		pl = (uint8_t)(frame->length);
+		p = data + 2;
+	}
+	else if (frame->length <= UINT16_MAX) {
+		pl = 126;
+		uint16_t len = (uint16_t)(frame->length);
+		memcpy_reverse(data + 2, &len, sizeof(len)); // endian has to be reversed
+		// todo: check system endianess ?
+		p = data + 4;
+	}
+	else {
+		pl = 127;
+		uint64_t len = frame->length;
+		memcpy_reverse(data + 2, &len, sizeof(len));
+		p = data + 10;
+	}
+	data[1] = mask | pl;
+
+	if (frame->mask) {
+		memcpy(p, &(frame->masking_key), sizeof(frame->masking_key));
+		p += sizeof(frame->masking_key);
+	}
+
+	if (frame->close_code != WS_CC_UNUSED) {
+		memcpy(p, &(frame->close_code), 2);
+		p += 2;
+	}
+
+	if (frame->length != 0) {
+		memcpy(p, frame->data, sizeof(frame->data));
+	}
+	uint8_t t = data;
+	return 0;
+}
+
 int websocket_frame_construct(
 	WebsocketFrame* wsf,
 	SOCKET socket,
@@ -70,13 +127,13 @@ int websocket_frame_construct(
 	uint32_t masking_key,
 	uint8_t* data
 ) {
-	if (sizeof(data) + 1 > UINT64_MAX) {
+	if (sizeof(data) > UINT64_MAX) {
 		printf("Couldn't construct ws frame, data too long");
 		return -1;
 	};
 
 	wsf->socket = socket;
-	wsf->length = sizeof(data) + 1;
+	wsf->length = data == NULL ? 0 : sizeof(data);
 	wsf->finished = finished;
 	wsf->opcode = opcode;
 	wsf->close_code = close_code;
@@ -107,18 +164,21 @@ int websocket_frame_construct_close(
 	return websocket_frame_construct(wsf, socket, true, WS_OP_CLOSE, close_code, mask, masking_key, data);
 }
 
-int websocket_frame_send(const WebsocketFrame* frame, uint8_t* data) {
-	// todo: convert
+// PUBLIC FUNCTIONS
 
-	// todo: move data arena create in here ?
+/**
+ * @brief encodes and sends websocket frame
+ * @param frame 
+ * @return 
+ */
+int websocket_frame_send(const WebsocketFrame* frame) {
 
-	//sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, body);
-	//printf("'%s'", data);
-	
-	if (data == NULL) {
-		printf("server: failed to convert websocket data to str\n");
-		return -1;
-	}
+	Arena data_arena = arena_init(WS_FULL_ARENA_SIZE);
+	uint8_t* data = (uint8_t*)arena_alloc(&data_arena, WS_FULL_ARENA_SIZE);
+
+	websocket_frame_encode(frame, data);
+
+	printf("server: sending frame\n");
 
 	int r = socket_send(frame->socket, data, strlen(data), 0);
 	if (r == -1) {
@@ -126,6 +186,7 @@ int websocket_frame_send(const WebsocketFrame* frame, uint8_t* data) {
 		socket_print(frame->socket);
 		printf("\n");
 	}
-	
+	arena_free(&data_arena);
+
 	return 0;
 }

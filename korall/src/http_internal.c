@@ -507,11 +507,11 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res, char* dat
 	const char* body = res->body.chars[0] == '\0' ? "\r\n" : res->body.chars;
 
 	sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, body);
-	printf("'%s'", data);
 	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");
 		return -1;
 	}
+	printf("'%s'", data);
 
 	int r = socket_send(inc_sock, data, strlen(data), 0);
 	if (r == -1) {

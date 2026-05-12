@@ -74,6 +74,8 @@ typedef struct {
     size_t size; // without null terminator
 } String;
 
+void memcpy_reverse(uint8_t* dest, const uint8_t* src, size_t size);
+
 char* b64_encode(const unsigned char* in, size_t len);
 
 str_to_int_errno str_to_int(int* out, const char* s, int base);
