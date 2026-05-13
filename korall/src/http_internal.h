@@ -161,7 +161,7 @@ int http_response_ws_construct(
 	const char* server_name
 );
 
-int http_response_send(const SOCKET inc_sock, const HTTPResponse *res, char* data, const fd_set* main);
+int http_response_send(const SOCKET inc_sock, const HTTPResponse* res);
 
 HTTPResponse* http_response_init(Arena *arena);
 

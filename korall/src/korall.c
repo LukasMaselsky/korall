@@ -5,6 +5,7 @@
 #include "lookup_tables.h"
 #include "cJSON.h"
 #include "websocket.h"
+#include "array.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
@@ -20,6 +21,7 @@ const ServerConfig default_config = {
 	Finds which route the request is targeting and returns it
 */
 static HTTPRoute* http_route_select(HTTPRequest *req, const HTTPRoutes *routes) {
+	if (routes == NULL) return NULL;
 	const char *path = req->start_line->request_target;
 	char sub_path[MAX_HTTP_URL_LEN + 1] = { 0 };
 	if (fill_string_char(&path, sub_path, MAX_HTTP_URL_LEN, '?') == 0) {
@@ -37,8 +39,36 @@ static HTTPRoute* http_route_select(HTTPRequest *req, const HTTPRoutes *routes) 
 	return NULL;
 }
 
-static WebsocketRoute* ws_route_select(const WebsocketRoutes *routes) {
-	// todo: 
+static WebsocketRoute* ws_route_select(HTTPRequest* req, const WebsocketRoutes* routes) {
+	if (routes == NULL) return NULL;
+	const char* path = req->start_line->request_target;
+	char sub_path[MAX_HTTP_URL_LEN + 1] = { 0 };
+	if (fill_string_char(&path, sub_path, MAX_HTTP_URL_LEN, '?') == 0) {
+		path = sub_path;
+	}
+
+	for (WebsocketRoute* route = routes->routes; route != routes->routes + routes->route_count; route++) {
+
+		if (strcmp(route->path, path) != 0) continue;
+
+		return route;
+	}
+	return NULL;
+}
+
+/**
+ * @brief finds if socket belongs to a websocket connection
+ * @param socket 
+ * @param arr 
+ * @return 
+ */
+static int ws_connection_select(const SOCKET socket, Array* arr) {
+	if (arr == NULL) return -1;
+	for (size_t i = 0; i < arr->size; i++) {
+		WebsocketConnection* wsi = (WebsocketConnection*)array_get(arr, i);
+		if (wsi->socket == socket) return i;
+	}
+	return -1;
 }
 
 static bool http_domain_port_match_server(ServerConfig* config, const HTTPRequest* req) {
@@ -63,15 +93,12 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 	return true;
 }
 
-static void res_full_arena_free(Arena* arena, const char* data) {
-	arena_free(arena);
-}
-
 static void websocket_process_data(
 	const SOCKET inc_sock,
 	const char* data,
 	const fd_set* main,
-	const fd_set* ws,
+	Array* ws_arr,
+	int wsc_index,
 	const ServerConfig* config,
 	const WebsocketRoutes* routes
 ) {
@@ -95,6 +122,7 @@ static void websocket_process_data(
 		printf("server: invalid websocket message received, syntax\n");
 		goto websocket_process_data_end;
 	}
+	in_wsf->socket = inc_sock;
 
 	if (!(in_wsf->finished)) goto websocket_process_data_end; // todo: add continuous support
 
@@ -107,7 +135,7 @@ static void websocket_process_data(
 			goto websocket_process_data_end;
 		}
 
-		if (websocket_frame_send(out_wsf) == -1) {
+		if (korall_ws_frame_send(out_wsf) == -1) {
 			printf("server: failed to send pong message\n");
 		}
 		goto websocket_process_data_end;
@@ -123,7 +151,7 @@ static void websocket_process_data(
 			goto websocket_process_data_end;
 		}
 
-		if (websocket_frame_send(out_wsf) == -1) {
+		if (korall_ws_frame_send(out_wsf) == -1) {
 			printf("server: failed to send close message\n");
 			goto websocket_process_data_end;
 		}
@@ -133,17 +161,20 @@ static void websocket_process_data(
 			socket_print(inc_sock);
 			printf("\n");
 		};
-		FD_CLR(inc_sock, ws);
+
+		// remove from ws connections array
+		array_remove(ws_arr, wsc_index);
 		FD_CLR(inc_sock, main);
 
 		goto websocket_process_data_end;
 	}
 
-	
-	 
-	// todo: route match
+	// CALLBACK
 
-	// todo: send response ?
+	WebsocketConnection* wsc = array_get(ws_arr, wsc_index);
+	WebsocketRoute* route = wsc->route;
+
+	route->callback(in_wsf);
 
 websocket_process_data_end:
 	arena_free(&inc_arena);
@@ -151,19 +182,35 @@ websocket_process_data_end:
 	return;
 }
 
+/**
+ * @brief send route not found response
+ * @return 
+ */
+static void route_not_found(HTTPResponse* res, ServerConfig* config, SOCKET inc_sock) {
+	int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
+	if (err == -1) return;
+	if (http_response_send(inc_sock, res) == -1) {
+		printf("Failed to send responses\n");
+	};
+	return;
+}
+
+static bool req_is_ws_upgrade(const HTTPRequest* req) {
+	return req->ws->has_key && req->ws->has_connection && req->ws->has_upgrade && req->ws->has_version;
+}
+
 static void http_process_request(
 	const SOCKET inc_sock,
 	const char* data,
 	const fd_set* main,
-	const fd_set* ws,
+	Array* ws_arr,
 	const ServerConfig *config,
-	const HTTPRoutes *routes
+	const HTTPRoutes *routes,
+	const WebsocketRoutes *ws_routes
 ) {
 
 	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	Arena res_arena = arena_init(HTTP_RES_ARENA_SIZE);
-	Arena res_full_arena = arena_init(HTTP_RES_FULL_ARENA_SIZE + 1); // for concating res parts into full response text
-	char* res_data = (char*)arena_alloc(&res_full_arena, HTTP_RES_FULL_ARENA_SIZE + 1);
 
 	HTTPRequest *req = http_request_init(&req_arena);
 	HTTPResponse *res = http_response_init(&res_arena);
@@ -179,7 +226,7 @@ static void http_process_request(
 
 		int err = http_response_construct(res, sc, config->name.chars, mt, message);
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res) == -1) {
 			printf("Failed to send responses\n");
 		}
 		goto http_process_request_end;
@@ -190,7 +237,7 @@ static void http_process_request(
 		printf("server: invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res) == -1) {
 			printf("Failed to send responses\n");
 		}
 		goto http_process_request_end;
@@ -198,18 +245,28 @@ static void http_process_request(
 
 	printf("server: valid HTTP request received\n");
 
-	if (routes == NULL) return; // no route handlers
+	
+	if (req_is_ws_upgrade(req)) {
 
-	// check if want to initiate websocket
+		// check if WS route exists
 
-	if (req->ws->has_key && req->ws->has_connection && req->ws->has_upgrade && req->ws->has_version) {
+		WebsocketRoute* wsr = ws_route_select(req, ws_routes);
+		if (wsr == NULL) {
+			route_not_found(res, config, inc_sock);
+			goto http_process_request_end;
+		}
+
 		// send 101
 		int err = http_response_ws_construct(res, req->ws->accept, config->name.chars);
 		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res, res_data, main) == -1) {
+		if (http_response_send(inc_sock, res) == -1) {
 			printf("Failed to send responses\n");
-		};
-		FD_SET(inc_sock, ws);
+		}
+		else {
+			WebsocketConnection wsc = { .route = wsr, .socket = inc_sock };
+			array_push(ws_arr, &wsc);
+		}
+
 		goto http_process_request_end;
 	}
 
@@ -218,11 +275,7 @@ static void http_process_request(
 	const HTTPRoute* route = http_route_select(req, routes);
 	if (route == NULL) {
 		// send 404 if no matching route
-		int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
-		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res, res_data, main) == -1) {
-			printf("Failed to send responses\n");
-		};
+		route_not_found(res, config, inc_sock);
 		goto http_process_request_end;
 	}
 	route->callback(req, res); // CALL CALLBACK
@@ -232,14 +285,13 @@ static void http_process_request(
 		goto http_process_request_end;
 	}
 	
-	if (http_response_send(inc_sock, res, res_data, main) == -1) {
+	if (http_response_send(inc_sock, res) == -1) {
 		printf("Failed to send responses\n");
 	}
 
 http_process_request_end:
 	http_response_free(&res_arena, res);
 	http_request_free(&req_arena, req);
-	res_full_arena_free(&res_full_arena, res_data);
 	return;
 }
 
@@ -353,8 +405,7 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 static void process_incoming_data(
 	const SOCKET inc_sock,
 	const fd_set* main, 
-	const fd_set* ws, 
-	const SOCKET fd_max, 
+	Array* ws_arr, 
 	const ServerConfig *config, 
 	const HTTPRoutes *http_routes,
 	const WebsocketRoutes *ws_routes
@@ -386,13 +437,12 @@ static void process_incoming_data(
 	socket_print(inc_sock);
 	printf("\n'%s'\n", buffer);
 
-	// check if websocket
-
-	if (FD_ISSET(inc_sock, ws)) {
-		websocket_process_data(inc_sock, buffer, main, ws, config, ws_routes);
+	int wsci;
+	if ((wsci = ws_connection_select(inc_sock, ws_arr)) != -1) {
+		websocket_process_data(inc_sock, buffer, main, ws_arr, wsci, config, ws_routes);
 	}
 	else {
-		http_process_request(inc_sock, buffer, main, ws, config, http_routes);
+		http_process_request(inc_sock, buffer, main, ws_arr, config, http_routes, ws_routes);
 	}
 
 
@@ -624,14 +674,14 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 
 	fd_set main_fds = { 0 };
 	fd_set read_fds = { 0 }; // temps
-	fd_set ws_fds = { 0 }; // fds that are websockets
 	SOCKET fd_max; // biggest fd
 	
-
+	WebsocketConnection ws_arr_data[FD_SETSIZE] = { 0 };
+	Array ws_arr = { 0 };
+	array_create_stack(&ws_arr, ws_arr_data, sizeof(WebsocketConnection), FD_SETSIZE);
 
 	FD_ZERO(&main_fds);
 	FD_ZERO(&read_fds);
-	FD_ZERO(&ws_fds);
 
 	SOCKET server_sock = init_listen_socket(&config);
 	
@@ -654,7 +704,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 				process_incoming_connection(i, &main_fds, &fd_max);
 			}
 			else {
-				process_incoming_data(i, &main_fds, &ws_fds, fd_max, &config, http_routes, ws_routes);
+				process_incoming_data(i, &main_fds, &ws_arr, &config, http_routes, ws_routes);
 			}
 
 		}

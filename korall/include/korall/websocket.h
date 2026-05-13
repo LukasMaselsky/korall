@@ -1,6 +1,10 @@
 #ifndef WEBSOCKET_H
 #define WEBSOCKET_H
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "socket_definition.h"
+
 typedef enum {
 	WS_OP_CON = 0,
 	WS_OP_TEXT = 1,
@@ -27,8 +31,17 @@ typedef enum {
 	WS_CC_COUNT = 12,
 } WebsocketCloseCode;
 
-typedef struct WebsocketFramePrivate WebsocketFrame;
+typedef struct {
+	uint64_t length;
+	uint32_t masking_key;
+	WebsocketOpcode opcode;
+	WebsocketCloseCode close_code;
+	uint8_t* data;
+	SOCKET socket;
+	bool mask;
+	bool finished;
+} WebsocketFrame;
 
-int websocket_frame_send(const WebsocketFrame* frame);
+int korall_ws_frame_send(const WebsocketFrame* frame);
 
 #endif

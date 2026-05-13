@@ -3,6 +3,7 @@
 
 #include "utils.h"
 #include "korall/websocket.h"
+#include "korall/korall.h";
 
 #define WS_HEADER_SIZE ((3 * 32) + 16)
 #define WS_FRAME_PAYLOAD_SIZE (1 * MEGABYTE) // change ?
@@ -11,17 +12,10 @@
 #define WS_FULL_ARENA_SIZE (WS_HEADER_SIZE + WS_FRAME_PAYLOAD_SIZE + KILOBYTE)
 
 
-
-struct WebsocketFramePrivate {
-	uint64_t length;
-	uint32_t masking_key;
-	WebsocketOpcode opcode;
-	WebsocketCloseCode close_code;
-	uint8_t* data;
+typedef struct {
 	SOCKET socket;
-	bool mask;
-	bool finished;
-};
+	WebsocketRoute* route;
+} WebsocketConnection;
 
 
 #define BITS_LAST(k,n) ((k) & ((1<<(n))-1))

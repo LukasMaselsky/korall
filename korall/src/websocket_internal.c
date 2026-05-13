@@ -171,7 +171,7 @@ int websocket_frame_construct_close(
  * @param frame 
  * @return 
  */
-int websocket_frame_send(const WebsocketFrame* frame) {
+int korall_ws_frame_send(const WebsocketFrame* frame) {
 
 	Arena data_arena = arena_init(WS_FULL_ARENA_SIZE);
 	uint8_t* data = (uint8_t*)arena_alloc(&data_arena, WS_FULL_ARENA_SIZE);

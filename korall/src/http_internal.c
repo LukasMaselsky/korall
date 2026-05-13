@@ -498,17 +498,17 @@ int http_response_ws_construct(
 	return 0;
 }
 
-int http_response_send(const SOCKET inc_sock, const HTTPResponse *res, char* data, const fd_set* main) {
-	if (!FD_ISSET(inc_sock, main)) { 
-		printf("server: socket is not in set\n");
-		return -1;
-	};
+int http_response_send(const SOCKET inc_sock, const HTTPResponse *res) {
+
+	Arena res_full_arena = arena_init(HTTP_RES_FULL_ARENA_SIZE + 1); // for concating res parts into full response text
+	char* data = (char*)arena_alloc(&res_full_arena, HTTP_RES_FULL_ARENA_SIZE + 1);
 
 	const char* body = res->body.chars[0] == '\0' ? "\r\n" : res->body.chars;
 
 	sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, body);
 	if (data == NULL) {
 		printf("server: failed to convert HTTP response to str\n");
+		arena_free(&res_full_arena);
 		return -1;
 	}
 	printf("'%s'", data);
@@ -519,6 +519,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res, char* dat
 		socket_print(inc_sock);
 		printf("\n");
 	}
+	arena_free(&res_full_arena);
 	return 0;
 }
 
