@@ -146,7 +146,7 @@ static void websocket_process_data(
 	if (in_wsf->opcode == WS_OP_CLOSE) {
 
 		// todo: close codes
-		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0, lookup_int_str(WS_CC_1000, &ws_close_code_lookup_table)) == -1) {
+		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0) == -1) {
 			printf("server: failed to construct close message\n");
 			goto websocket_process_data_end;
 		}

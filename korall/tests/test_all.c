@@ -5,3 +5,4 @@
 #include "test_sockets.c"
 #include "test_sha1.c"
 #include "test_websocket.c"
+#include "test_array.c"

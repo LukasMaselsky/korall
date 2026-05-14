@@ -54,7 +54,9 @@ void array_pop(Array* arr, void* item) {
 	if (arr->size == 0) return;
 
 	uint8_t* last = arr->data + ((arr->size - 1) * arr->element_size);
-	memcpy(item, last, arr->element_size);
+	if (item != NULL) {
+		memcpy(item, last, arr->element_size);
+	}
 	memset(last, 0, arr->element_size);
 	arr->size--;
 	return;
@@ -63,7 +65,14 @@ void array_pop(Array* arr, void* item) {
 int array_remove(Array* arr, size_t index) {
 	if (index >= arr->size) return -1;
 
-	array_pop(arr, arr->data + (index * arr->element_size));
+	if (index == arr->size - 1) {
+		array_pop(arr, NULL);
+		return 0;
+	}
+	uint8_t* right = arr->data + ((index + 1) * arr->element_size);
+	uint8_t* left = arr->data + (index * arr->element_size);
+	memmove(left, right, (arr->size - index - 1) * arr->element_size);
+	array_pop(arr, NULL);
 	return 0;
 }
 
@@ -74,4 +83,12 @@ int array_find(Array* arr, void* item, bool (* const compare)(const void *, cons
 		if (compare(item, element)) return i;
 	}
 	return -1;
+}
+
+void array_clear(Array* arr) {
+	if (arr->size == 0) return;
+
+	memset(arr->data, 0, arr->size * arr->element_size);
+	arr->size = 0;
+	return;
 }

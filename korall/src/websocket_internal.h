@@ -41,8 +41,7 @@ int websocket_frame_construct_close(
 	SOCKET socket,
 	WebsocketCloseCode close_code,
 	bool mask,
-	uint32_t masking_key,
-	uint8_t* data
+	uint32_t masking_key
 );
 
 int websocket_frame_construct_pong(

@@ -3,7 +3,6 @@
 
 #include "utils.h"
 
-// UNORDERED
 typedef struct {
 	uint8_t* data;
 	size_t element_size;
@@ -27,5 +26,7 @@ void array_pop(Array* arr, void* item);
 int array_remove(Array* arr, size_t index);
 
 int array_find(Array* arr, void* item, bool (* const compare)(const void*, const void*));
+
+void array_clear(Array* arr);
 
 #endif

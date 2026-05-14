@@ -175,8 +175,7 @@ int websocket_frame_construct_close(
 	SOCKET socket,
 	WebsocketCloseCode close_code,
 	bool mask,
-	uint32_t masking_key,
-	uint8_t* data
+	uint32_t masking_key
 ) {
 	return websocket_frame_construct(wsf, socket, true, WS_OP_CLOSE, close_code, mask, masking_key, NULL);
 }

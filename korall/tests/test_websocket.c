@@ -24,7 +24,7 @@ TEST("websocket_frame_encode") {
 	size = websocket_frame_encode(&frame, data);
 	ASSERT(data[0] == 0x81);
 	ASSERT(data[1] == 0);
-	websocket_frame_print(data, size);
+	//websocket_frame_print(data, size);
 
 
 
@@ -42,7 +42,7 @@ TEST("websocket_frame_encode") {
 	ASSERT(data2[8] == 0x03);
 	ASSERT(data2[9] == 0xe0);
 	ASSERT(data2[10] == 0x61);
-	websocket_frame_print(data2, size);
+	//websocket_frame_print(data2, size);
 
 
 	
@@ -56,13 +56,13 @@ TEST("websocket_frame_encode") {
 	ASSERT(data3[4] == 0x61);
 	ASSERT(data3[5] == 0x61);
 	ASSERT(data3[6] == 0x61);
-	websocket_frame_print(data3, size);
+	//websocket_frame_print(data3, size);
 
 	uint8_t data4[400] = { 0 };
 	WebsocketFrame frame4 = { 0 };
 	websocket_frame_construct_close(&frame4, 0, WS_CC_1000, false, 0, NULL);
 	size = websocket_frame_encode(&frame4, data4);
-	websocket_frame_print(data4, size);
+	//websocket_frame_print(data4, size);
 }
 
 
