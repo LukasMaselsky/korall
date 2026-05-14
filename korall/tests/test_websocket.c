@@ -18,17 +18,19 @@ TEST("websocket_frame_decode") {
 }
 
 TEST("websocket_frame_encode") {
+	size_t size;
 	uint8_t data[200] = { 0 };
 	WebsocketFrame frame = { .finished = true, .opcode = WS_OP_TEXT, .mask = false, .length = 0, .data = NULL, .close_code = WS_CC_UNUSED };
-	websocket_frame_encode(&frame, data);
+	size = websocket_frame_encode(&frame, data);
 	ASSERT(data[0] == 0x81);
 	ASSERT(data[1] == 0);
+	websocket_frame_print(data, size);
 
 
 
 	uint8_t data2[400] = { 0 };
 	WebsocketFrame frame2 = { .finished = true, .opcode = WS_OP_TEXT, .mask = false, .length = 66528, .data = "aaa", .close_code = WS_CC_UNUSED };
-	websocket_frame_encode(&frame2, data2);
+	size = websocket_frame_encode(&frame2, data2);
 	ASSERT(data2[0] == 0x81);
 	ASSERT(data2[1] == 0x7f);
 	ASSERT(data2[2] == 0);
@@ -40,12 +42,13 @@ TEST("websocket_frame_encode") {
 	ASSERT(data2[8] == 0x03);
 	ASSERT(data2[9] == 0xe0);
 	ASSERT(data2[10] == 0x61);
+	websocket_frame_print(data2, size);
 
 
 	
 	uint8_t data3[400] = { 0 };
 	WebsocketFrame frame3 = { .finished = true, .opcode = WS_OP_TEXT, .mask = false, .length = 300, .data = "aaa", .close_code = WS_CC_UNUSED };
-	websocket_frame_encode(&frame3, data3);
+	size = websocket_frame_encode(&frame3, data3);
 	ASSERT(data3[0] == 0x81);
 	ASSERT(data3[1] == 0x7e);
 	ASSERT(data3[2] == 0x01);
@@ -53,7 +56,13 @@ TEST("websocket_frame_encode") {
 	ASSERT(data3[4] == 0x61);
 	ASSERT(data3[5] == 0x61);
 	ASSERT(data3[6] == 0x61);
+	websocket_frame_print(data3, size);
 
+	uint8_t data4[400] = { 0 };
+	WebsocketFrame frame4 = { 0 };
+	websocket_frame_construct_close(&frame4, 0, WS_CC_1000, false, 0, NULL);
+	size = websocket_frame_encode(&frame4, data4);
+	websocket_frame_print(data4, size);
 }
 
 

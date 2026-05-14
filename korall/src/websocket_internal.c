@@ -3,6 +3,13 @@
 #include "sockets.h"
 #include "arena.h"
 
+void websocket_frame_print(uint8_t* frame, size_t frame_length) {
+	for (size_t i = 0; i < frame_length; i++) {
+		printf("%02x ", frame[i]);
+	}
+	printf("\n");
+}
+
 /**
  * @brief converts raw frame to WebsocketFrame struct
  * @param frame
@@ -49,9 +56,14 @@ int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf) {
 		i++;
 	}
 
-	WebsocketCloseCode close_code = WS_CC_UNUSED;
+	WebsocketCloseCode close_code = 0;
 	if (opcode == WS_OP_CLOSE) {
-		close_code = data[0];
+		uint8_t* cc = (uint8_t*)&close_code;
+		cc[0] = data[1];
+		cc[1] = data[0];
+	}
+	else {
+		close_code = WS_CC_UNUSED;
 	}
 
 	wsf->data = data;
@@ -70,9 +82,10 @@ int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf) {
  * @brief converts WebsocketFrame struct to raw frame
  * @param frame
  * @param data
- * @return
+ * @return byte length of data
  */
-int websocket_frame_encode(const WebsocketFrame* frame, uint8_t* data) {
+size_t websocket_frame_encode(const WebsocketFrame* frame, uint8_t* data) {
+	if (frame == NULL) return 0;
 	uint8_t fin = (uint8_t)(frame->finished << 7);
 	uint8_t opcode = (uint8_t)(frame->opcode);
 
@@ -101,20 +114,21 @@ int websocket_frame_encode(const WebsocketFrame* frame, uint8_t* data) {
 	data[1] = mask | pl;
 
 	if (frame->mask) {
-		memcpy(p, &(frame->masking_key), sizeof(frame->masking_key));
+		memcpy_reverse(p, &(frame->masking_key), sizeof(frame->masking_key));
 		p += sizeof(frame->masking_key);
 	}
 
 	if (frame->close_code != WS_CC_UNUSED) {
-		memcpy(p, &(frame->close_code), 2);
+		memcpy_reverse(p, &(frame->close_code), 2);
 		p += 2;
 	}
 
-	if (frame->length != 0) {
+	if (frame->length != 0 && frame->data != NULL) {
 		memcpy(p, frame->data, sizeof(frame->data));
+		p += sizeof(frame->data);
 	}
-	uint8_t t = data;
-	return 0;
+	size_t l = p - data;
+	return l;
 }
 
 int websocket_frame_construct(
@@ -127,13 +141,16 @@ int websocket_frame_construct(
 	uint32_t masking_key,
 	uint8_t* data
 ) {
-	if (sizeof(data) > UINT64_MAX) {
+	if (data != NULL && sizeof(data) > UINT64_MAX) {
 		printf("Couldn't construct ws frame, data too long");
 		return -1;
 	};
 
 	wsf->socket = socket;
 	wsf->length = data == NULL ? 0 : sizeof(data);
+	if (close_code != WS_CC_UNUSED) {
+		wsf->length += 2;
+	}
 	wsf->finished = finished;
 	wsf->opcode = opcode;
 	wsf->close_code = close_code;
@@ -161,7 +178,7 @@ int websocket_frame_construct_close(
 	uint32_t masking_key,
 	uint8_t* data
 ) {
-	return websocket_frame_construct(wsf, socket, true, WS_OP_CLOSE, close_code, mask, masking_key, data);
+	return websocket_frame_construct(wsf, socket, true, WS_OP_CLOSE, close_code, mask, masking_key, NULL);
 }
 
 // PUBLIC FUNCTIONS

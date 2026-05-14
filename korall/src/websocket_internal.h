@@ -21,6 +21,8 @@ typedef struct {
 #define BITS_LAST(k,n) ((k) & ((1<<(n))-1))
 #define BITS_MID(k,m,n) BITS_LAST((k)>>(m),((n)-(m)))
 
+void websocket_frame_print(uint8_t* frame, size_t frame_length);
+
 int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf);
 
 int websocket_frame_construct(
@@ -50,7 +52,7 @@ int websocket_frame_construct_pong(
 	uint32_t masking_key
 );
 
-int websocket_frame_encode(
+size_t websocket_frame_encode(
 	const WebsocketFrame* frame,
 	uint8_t* data
 );

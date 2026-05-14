@@ -328,9 +328,8 @@ HTTPError http_request_process_target(const char **str, HTTPRequest *req) {
 	}
 
 	if (method == HTTP_CONNECT) {
-		// todo: 
 		// rt has to be domain:port format
-		char domain[MAX_DOMAIN_LEN + 1] = { 0 }; // todo: not using these ???
+		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
 		char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
 		bool with_port = false;
 
