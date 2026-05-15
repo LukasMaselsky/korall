@@ -1,6 +1,6 @@
 {
-  "name": "WebsocketServer",
+  "name": "EchoServer",
   "domain": "localhost",
-  "port": 3501,
+  "port": 3500,
   "allow_custom_headers": true
 }

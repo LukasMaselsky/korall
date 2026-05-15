@@ -453,7 +453,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_UPGRADE:
 			return http_process_upgrade(value, NULL);
 		default:
-			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers
+			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers, how without passing config ? global config ?
 	}
 }
 
@@ -537,6 +537,7 @@ HTTPResponse* http_response_init(Arena *arena) {
 	res->headers.chars = headers;
 	res->headers.size = HTTP_RES_HEADERS_LEN;
 	res->header_count = 0;
+	res->header_capacity = HTTP_RES_HEADER_COUNT;
 	res->header_size = HTTP_RES_HEADER_LEN;
 	res->headers_base = headers;
 	res->body.chars = body;
@@ -719,8 +720,9 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 		printf("Failed to set header, field and value must not be NULL\n");
 		return -1;
 	}
-	if (res->header_count >= HTTP_RES_HEADER_COUNT) { // todo: embed in res struct
-		printf("Failed to set header, maximum of %d headers reached\n", HTTP_RES_HEADER_COUNT);
+	
+	if (res->header_count >= res->header_capacity) {
+		printf("Failed to set header, maximum of %llu headers reached\n", res->header_capacity);
 		return -1;
 	}
 
@@ -729,13 +731,13 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 
 	size_t field_len = strlen(field);
 	size_t value_len = strlen(value);
-	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
 
-	if (field_len + value_len + 4 > res->headers.size) {
-		printf("Failed to set header, must be under %d characters\n", HTTP_RES_HEADER_LEN);
+	if (field_len + value_len + 4 > res->header_size) {
+		printf("Failed to set header, must be under %llu characters total\n", res->header_size);
 		return -1;
 	}
 
+	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
 	if (res_field != -1 && http_process_response_header_value(res_field, value) != HTTP_SUCCESS) {
 		// not custom header and invalid
 		printf("Failed to set header, value is not valid for field %s\n", field);

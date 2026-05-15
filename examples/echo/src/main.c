@@ -9,7 +9,7 @@ static KORALL_WS_ROUTE(echo) {
 	frame.opcode = WS_OP_TEXT;
 	frame.finished = true;
 	frame.close_code = WS_CC_UNUSED;
-	frame.length = strlen(frame.data);
+	frame.length = data->length;
 	frame.mask = false;
 	frame.socket = data->socket;
 	korall_ws_frame_send(&frame);

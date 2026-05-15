@@ -105,6 +105,7 @@ struct HTTPResponseInternal {
 	String start_line;
 	String headers;
 	size_t header_count;
+	size_t header_capacity;
 	size_t header_size;
 	char* headers_base;
 	String body;

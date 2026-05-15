@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_C_STANDARD 23)
-set(project_name "korall_example1")
+set(project_name "korall_example_echo")
 
 if(MSVC) 
 	add_compile_options(/arch:AVX2) #make sure SIMD optimizations take place
