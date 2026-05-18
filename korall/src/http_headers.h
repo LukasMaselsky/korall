@@ -6,6 +6,8 @@ HTTPError http_domain_port(const char* value, char* domain, char* port, bool* wi
 
 HTTPError http_process_host(const char* value, HTTPRequest* req);
 
+HTTPError http_process_content_encoding(const char* value);
+
 HTTPError http_process_accept(const char* value);
 
 HTTPError http_process_accept_encoding(const char* value);

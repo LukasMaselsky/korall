@@ -23,7 +23,7 @@
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // todo: cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_MEDIA_TYPE_LEN 73
 #define MAX_HTTP_BOUNDARY_LEN 70
-#define MAX_ENCODING_CHAR_LEN 8
+#define MAX_ACCEPT_ENCODING_CHAR_LEN 8
 #define MAX_TE_LEN 8
 #define MAX_TRANSFER_ENCODING_LEN 8
 #define MAX_HTTP_CHARSET_LEN 12
@@ -31,6 +31,7 @@
 #define MAX_HTTP_RES_CC_LEN 21
 #define MAX_HTTP_USER_AGENT (4 * KILOBYTE)
 #define MAX_REASON_PHRASE_LEN 34
+#define MAX_CONTENT_ENCODING_CHAR_LEN 8
 
 // request
 

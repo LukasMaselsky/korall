@@ -155,6 +155,13 @@ static int http_process_list(
 	return 0;
 }
 
+HTTPError http_process_content_encoding(const char* value) {
+	char temp[MAX_CONTENT_ENCODING_CHAR_LEN + 1] = { 0 };
+	int res = http_process_weighted_list(value, &http_content_encoding_lookup_table, temp, MAX_CONTENT_ENCODING_CHAR_LEN + 1);
+	if (res == -1) return HTTP_BAD_CONTENT_ENC;
+	return HTTP_SUCCESS;
+}
+
 HTTPError http_process_content_length(const char* value) {
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
@@ -314,8 +321,8 @@ HTTPError http_process_accept(const char* value) {
 }
 
 HTTPError http_process_accept_encoding(const char* value) {
-	char temp[MAX_ENCODING_CHAR_LEN + 1] = { 0 };
-	int res = http_process_weighted_list(value, &http_encoding_lookup_table, temp, MAX_ENCODING_CHAR_LEN + 1);
+	char temp[MAX_ACCEPT_ENCODING_CHAR_LEN + 1] = { 0 };
+	int res = http_process_weighted_list(value, &http_accept_encoding_lookup_table, temp, MAX_ACCEPT_ENCODING_CHAR_LEN + 1);
 	if (res == -1) return HTTP_BAD_ACCEPT_ENC;
 	return HTTP_SUCCESS;
 }

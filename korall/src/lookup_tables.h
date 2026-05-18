@@ -10,7 +10,7 @@
 #define HTTP_RES_HEADER_FIELD_TABLE_COUNT HTTP_RSH_COUNT
 #define HTTP_STATUS_CODE_TABLE_COUNT HTTP_SC_COUNT
 #define HTTP_MEDIA_TYPE_TABLE_COUNT HTTP_MT_COUNT
-#define HTTP_ENCODING_TABLE_COUNT HTTP_ENC_COUNT
+#define HTTP_ACCEPT_ENCODING_TABLE_COUNT HTTP_ACCENC_COUNT
 #define HTTP_TE_TABLE_COUNT HTTP_TE_COUNT
 #define HTTP_TRANSFER_ENCODING_TABLE_COUNT HTTP_TRENC_COUNT
 #define HTTP_CHARSET_TABLE_COUNT HTTP_CHS_COUNT
@@ -19,6 +19,7 @@
 #define HTTP_RES_CACHE_CONTROL_TABLE_COUNT HTTP_RES_CC_COUNT
 #define HTTP_REQ_UPGRADE_TABLE_COUNT HTTP_UPG_COUNT
 #define WS_CLOSE_CODE_TABLE_COUNT WS_CC_COUNT
+#define HTTP_CONTENT_ENCODING_TABLE_COUNT HTTP_CONENC_COUNT
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
@@ -41,7 +42,7 @@ extern const LookupTable http_req_header_field_lookup_table;
 extern const LookupTable http_res_header_field_lookup_table;
 extern const LookupTable http_status_code_lookup_table;
 extern const LookupTable http_media_type_lookup_table;
-extern const LookupTable http_encoding_lookup_table;
+extern const LookupTable http_accept_encoding_lookup_table;
 extern const LookupTable http_te_lookup_table;
 extern const LookupTable http_transfer_encoding_lookup_table;
 extern const LookupTable http_charset_lookup_table;
@@ -52,5 +53,6 @@ extern const LookupTable day_lookup_table;
 extern const LookupTable month_lookup_table;
 extern const LookupTable http_req_upgrade_lookup_table;
 extern const LookupTable ws_close_code_lookup_table;
+extern const LookupTable http_content_encoding_lookup_table;
 
 #endif

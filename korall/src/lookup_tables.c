@@ -51,7 +51,7 @@ const LookupEntry http_req_header_field_lookup_table_entries[HTTP_REQ_HEADER_FIE
 	{ HTTP_RQH_AUTHORIZATION, "Authorization" },
 	{ HTTP_RQH_CACHE_CONTROL, "Cache-Control" },
 	{ HTTP_RQH_CONNECTION, "Connection" },
-	{ HTTP_RQH_CONTENT_ENCODING, "Encoding" },
+	{ HTTP_RQH_CONTENT_ENCODING, "Content-Encoding" },
 	{ HTTP_RQH_CONTENT_LENGTH, "Content-Length" },
 	{ HTTP_RQH_CONTENT_MD5, "Content-MD5" },
 	{ HTTP_RQH_CONTENT_TYPE, "Content-Type" },
@@ -246,16 +246,16 @@ const LookupEntry http_media_type_lookup_table_entries[HTTP_MEDIA_TYPE_TABLE_COU
 	{ HTTP_MT_TXT_XML, "text/xml" },
 };	  
 
-const LookupEntry http_encoding_lookup_table_entries[HTTP_ENCODING_TABLE_COUNT] = {
-	{ HTTP_ENC_ANY, "*" },
-	{ HTTP_ENC_GZIP, "gzip" },
-	{ HTTP_ENC_COMPRESS, "compress" },
-	{ HTTP_ENC_DEFLATE, "deflate" },
-	{ HTTP_ENC_BR, "br" },
-	{ HTTP_ENC_ZSTD, "zstd" },
-	{ HTTP_ENC_DCB, "dcb" },
-	{ HTTP_ENC_DCZ, "dcz" },
-	{ HTTP_ENC_IDENTITY, "identity" },
+const LookupEntry http_accept_encoding_lookup_table_entries[HTTP_ACCEPT_ENCODING_TABLE_COUNT] = {
+	{ HTTP_ACCENC_ANY, "*" },
+	{ HTTP_ACCENC_GZIP, "gzip" },
+	{ HTTP_ACCENC_COMPRESS, "compress" },
+	{ HTTP_ACCENC_DEFLATE, "deflate" },
+	{ HTTP_ACCENC_BR, "br" },
+	{ HTTP_ACCENC_ZSTD, "zstd" },
+	{ HTTP_ACCENC_DCB, "dcb" },
+	{ HTTP_ACCENC_DCZ, "dcz" },
+	{ HTTP_ACCENC_IDENTITY, "identity" },
 };
 
 const LookupEntry http_te_lookup_table_entries[HTTP_TE_TABLE_COUNT] = {
@@ -378,6 +378,15 @@ const LookupEntry ws_close_code_lookup_table_entries[WS_CLOSE_CODE_TABLE_COUNT] 
 	{ WS_CC_1015, "TLS Handshake" },
 };
 
+const LookupEntry http_content_encoding_lookup_table_entries[HTTP_CONTENT_ENCODING_TABLE_COUNT] = {
+	{ HTTP_CONENC_GZIP, "gzip" },
+	{ HTTP_CONENC_COMPRESS, "compress" },
+	{ HTTP_CONENC_DEFLATE, "deflate" },
+	{ HTTP_CONENC_BR, "br" },
+	{ HTTP_CONENC_ZSTD, "zstd" },
+	{ HTTP_CONENC_DCB, "dcb" },
+	{ HTTP_CONENC_DCZ, "dcz" },
+};
 
 /*****************************************************************************/
 
@@ -406,9 +415,9 @@ const LookupTable http_media_type_lookup_table = {
 	.size = HTTP_MEDIA_TYPE_TABLE_COUNT
 };
 
-const LookupTable http_encoding_lookup_table = {
-	.entries = http_encoding_lookup_table_entries,
-	.size = HTTP_ENCODING_TABLE_COUNT
+const LookupTable http_accept_encoding_lookup_table = {
+	.entries = http_accept_encoding_lookup_table_entries,
+	.size = HTTP_ACCEPT_ENCODING_TABLE_COUNT
 };
 
 const LookupTable http_te_lookup_table = {
@@ -459,4 +468,9 @@ const LookupTable http_req_upgrade_lookup_table = {
 const LookupTable ws_close_code_lookup_table = {
 	.entries = ws_close_code_lookup_table_entries,
 	.size = WS_CLOSE_CODE_TABLE_COUNT
+};
+
+const LookupTable http_content_encoding_lookup_table = {
+	.entries = http_content_encoding_lookup_table_entries,
+	.size = HTTP_CONTENT_ENCODING_TABLE_COUNT
 };
