@@ -51,7 +51,7 @@ uintptr_t arena_alloc(Arena *arena, size_t size) {
     }
 
     arena->size = ali_size + size;
-    arena->cur = new_cur + size;
+    arena->cur = (void *)(new_cur + size);
 
     return new_cur;
 }
