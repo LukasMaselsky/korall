@@ -46,6 +46,8 @@ HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerCon
 HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req, const ServerConfig* config) {
 	// massive switch for each header
 	switch (field) {
+		case HTTP_RQH_ACCEPT_LANGUAGE:
+			return http_process_accept_language(value);
 		case HTTP_RQH_CONTENT_ENCODING:
 			return http_process_content_encoding(value);
 		case HTTP_RQH_HOST:
@@ -571,6 +573,8 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_ACCEPT_LANG:
+			return ERROR_MESSAGE("Bad request", "Invalid Accept-Language header.");
 		case HTTP_BAD_CONTENT_ENC:
 			return ERROR_MESSAGE("Bad request", "Invalid Content-Encoding header.");
 		case HTTP_BAD_WS_VERSION:

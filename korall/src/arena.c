@@ -1,5 +1,4 @@
 #include "arena.h"
-#include "utils.h"
 
 uintptr_t align_forward(uintptr_t ptr, size_t alignment) {
     uintptr_t p, a, modulo;
@@ -38,7 +37,7 @@ void arena_free(Arena* arena) {
     arena->cur = NULL;
 }
 
-void* arena_alloc(Arena *arena, size_t size) {
+uintptr_t arena_alloc(Arena *arena, size_t size) {
     if (size == 0) return 0;
    
     size_t alignment = ALIGNMENT;

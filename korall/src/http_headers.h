@@ -12,6 +12,8 @@ HTTPError http_process_accept(const char* value);
 
 HTTPError http_process_accept_encoding(const char* value);
 
+HTTPError http_process_accept_language(const char* value);
+
 HTTPError http_process_content_length(const char* value);
 
 HTTPError http_process_content_type(const char* value);

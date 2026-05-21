@@ -357,6 +357,7 @@ typedef enum {
 
 typedef enum {
 	// todo
+	HTTP_BAD_ACCEPT_LANG = -35,
 	HTTP_BAD_CONTENT_ENC = -34,
 	HTTP_BAD_WS_KEY_CALC = -33,
 	HTTP_BAD_WS_KEY = -32,

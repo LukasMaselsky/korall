@@ -327,6 +327,11 @@ HTTPError http_process_accept_encoding(const char* value) {
 	return HTTP_SUCCESS;
 }
 
+HTTPError http_process_accept_language(const char* value) {
+	// todo:
+	return HTTP_SUCCESS;
+}
+
 HTTPError http_process_access_control_request_method(const char* value) {
 	int res = lookup_str_int(value, &http_method_lookup_table, true);
 	if (res == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD;
