@@ -100,7 +100,7 @@ int socket_reuse_port(SOCKET sockfd) {
     #ifdef _WIN32
         return setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
     #else
-        return setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+        return setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     #endif
 
 }

@@ -1,6 +1,6 @@
 #if defined HEADERS
 #include <string.h>
-#include "websocket.h"
+#include "websocket_internal.h"
 #elif defined TESTS
 
 // https://sachin9996.github.io/websocket-frames-explained/
@@ -60,7 +60,7 @@ TEST("websocket_frame_encode") {
 
 	uint8_t data4[400] = { 0 };
 	WebsocketFrame frame4 = { 0 };
-	websocket_frame_construct_close(&frame4, 0, WS_CC_1000, false, 0, NULL);
+	websocket_frame_construct_close(&frame4, 0, WS_CC_1000, false, 0);
 	size = websocket_frame_encode(&frame4, data4);
 	//websocket_frame_print(data4, size);
 }

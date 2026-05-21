@@ -5,8 +5,8 @@
 #include "http.h"
 #include "websocket.h"
 
-#define KORALL_HTTP_ROUTE(name) void name##(const HTTPRequest* req, HTTPResponse* res)
-#define KORALL_WS_ROUTE(name) void name##(const WebsocketFrame* data)
+#define KORALL_HTTP_ROUTE(name) void name(const HTTPRequest* req, HTTPResponse* res)
+#define KORALL_WS_ROUTE(name) void name(const WebsocketFrame* data)
 
 typedef struct HTTPRoutePrivate HTTPRoute;
 

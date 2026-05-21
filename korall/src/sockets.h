@@ -13,6 +13,11 @@
 #include <signal.h>
 #include "korall/socket_definition.h"
 
+#ifndef _WIN32
+#include <sys/types.h>
+#include <sys/wait.h>
+#endif
+
 
 #define MAX_PORT_NUM_CHAR_LEN 5
 #define MIN_PORT_NUM 1024
@@ -28,7 +33,7 @@ typedef enum {
     AF_IPV4 = AF_INET,
     AF_IPV6 = AF_INET6,
     AF_ANY = AF_UNSPEC,
-    AF_LOCAL = AF_UNIX
+    AF_LOC = AF_UNIX
 } AddressFamily;
 
 typedef enum {

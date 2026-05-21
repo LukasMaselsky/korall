@@ -128,7 +128,7 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req, const 
 
 HTTPError http_request_process_headers(const char** str, HTTPRequest* req, const ServerConfig* config) {
 
-	const* base = *str;
+	const char* base = *str;
 
 	while (true) {
 		HTTPError res = http_request_process_header(str, req, config);

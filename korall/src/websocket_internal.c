@@ -101,25 +101,25 @@ size_t websocket_frame_encode(const WebsocketFrame* frame, uint8_t* data) {
 	else if (frame->length <= UINT16_MAX) {
 		pl = 126;
 		uint16_t len = (uint16_t)(frame->length);
-		memcpy_reverse(data + 2, &len, sizeof(len)); // endian has to be reversed
+		memcpy_reverse(data + 2, (uint8_t*)&len, sizeof(len)); // endian has to be reversed
 		// todo: check system endianess ?
 		p = data + 4;
 	}
 	else {
 		pl = 127;
 		uint64_t len = frame->length;
-		memcpy_reverse(data + 2, &len, sizeof(len));
+		memcpy_reverse(data + 2, (uint8_t*)&len, sizeof(len));
 		p = data + 10;
 	}
 	data[1] = mask | pl;
 
 	if (frame->mask) {
-		memcpy_reverse(p, &(frame->masking_key), sizeof(frame->masking_key));
+		memcpy_reverse(p, (uint8_t*)&(frame->masking_key), sizeof(frame->masking_key));
 		p += sizeof(frame->masking_key);
 	}
 
 	if (frame->close_code != WS_CC_UNUSED) {
-		memcpy_reverse(p, &(frame->close_code), 2);
+		memcpy_reverse(p, (uint8_t*)&(frame->close_code), 2);
 		p += 2;
 	}
 

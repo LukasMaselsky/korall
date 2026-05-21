@@ -151,6 +151,17 @@ bool starts_with(const char* pre, const char* str)
     return strncmp(pre, str, strlen(pre)) == 0;
 }
 
+static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
+    if (arr != NULL) {
+        const size_t sub_len = end - s;
+        if (sub_len > arr_len) return -1;
+        memcpy(arr, s, sub_len);
+        arr[sub_len] = '\0';
+    }
+    *str = end;
+    return 0;
+}
+
 /*
     Fills char array with substring based on matching
 */
@@ -160,6 +171,13 @@ int fill_string_char(const char **str, char *arr, size_t arr_len, const char mat
     if (end == NULL) return -1;
 
     return fill_str(str, s, end, arr, arr_len);
+}
+
+static char* strlwr (char* s) {
+    for (int i = 0; i < strlen(s); ++i)
+        if (s[i] >= 'A' && s[i] <= 'Z')
+            s[i] += 'a' - 'A';
+    return s;
 }
 
 int fill_string_str(const char** str, char* arr, size_t arr_len, const char *match, bool case_insensitive) {
@@ -173,15 +191,4 @@ int fill_string_str(const char** str, char* arr, size_t arr_len, const char *mat
     if (end == NULL) return -1;
 
     return fill_str(str, s, end, arr, arr_len);
-}
-
-static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
-    if (arr != NULL) {
-        const size_t sub_len = end - s;
-        if (sub_len > arr_len) return -1;
-        memcpy(arr, s, sub_len);
-        arr[sub_len] = '\0';
-    }
-    *str = end;
-    return 0;
 }

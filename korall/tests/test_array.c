@@ -46,11 +46,12 @@ TEST("array_get") {
 	ASSERT(array_get(arr, 4) == NULL);
 	array_remove(arr, 1);
 	ASSERT(*((int*)array_get(arr, 1)) == 2);
-
+	
 	array_clear(arr);
-	ASSERT(*((int*)array_get(arr, 0)) == 0);
-	ASSERT(*((int*)array_get(arr, 1)) == 0);
-	ASSERT(*((int*)array_get(arr, 2)) == 0);
+	
+	ASSERT(array_get(arr, 0) == NULL);
+	ASSERT(array_get(arr, 1) == NULL);
+	ASSERT(array_get(arr, 2) == NULL);
 }
 
 

@@ -4,7 +4,7 @@
 #include "arena.h"
 #include "lookup_tables.h"
 #include "cJSON.h"
-#include "websocket.h"
+#include "websocket_internal.h"
 #include "array.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
@@ -71,7 +71,7 @@ static int ws_connection_select(const SOCKET socket, Array* arr) {
 	return -1;
 }
 
-static bool http_domain_port_match_server(ServerConfig* config, const HTTPRequest* req) {
+static bool http_domain_port_match_server(const ServerConfig* config, const HTTPRequest* req) {
 
 	if (req->start_line->method == HTTP_CONNECT) {
 		// know rt is valid domain:port
@@ -96,7 +96,7 @@ static bool http_domain_port_match_server(ServerConfig* config, const HTTPReques
 static void websocket_process_data(
 	const SOCKET inc_sock,
 	const char* data,
-	const fd_set* main,
+	fd_set* main,
 	Array* ws_arr,
 	int wsc_index,
 	const ServerConfig* config,
@@ -186,7 +186,7 @@ websocket_process_data_end:
  * @brief send route not found response
  * @return 
  */
-static void route_not_found(HTTPResponse* res, ServerConfig* config, SOCKET inc_sock) {
+static void route_not_found(HTTPResponse* res, const ServerConfig* config, SOCKET inc_sock) {
 	int err = http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 	if (err == -1) return;
 	if (http_response_send(inc_sock, res) == -1) {
@@ -404,7 +404,7 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 
 static void process_incoming_data(
 	const SOCKET inc_sock,
-	const fd_set* main, 
+	fd_set* main, 
 	Array* ws_arr, 
 	const ServerConfig *config, 
 	const HTTPRoutes *http_routes,
@@ -719,7 +719,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 	// free config and routes
 
 	http_routes_free(http_routes);
-	ws_routes_free(http_routes);
+	ws_routes_free(ws_routes);
 
 	return;
 }
