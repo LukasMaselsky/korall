@@ -173,12 +173,14 @@ int fill_string_char(const char **str, char *arr, size_t arr_len, const char mat
     return fill_str(str, s, end, arr, arr_len);
 }
 
+#ifndef _WIN32
 static char* strlwr (char* s) {
     for (int i = 0; i < strlen(s); ++i)
         if (s[i] >= 'A' && s[i] <= 'Z')
             s[i] += 'a' - 'A';
     return s;
 }
+#endif
 
 int fill_string_str(const char** str, char* arr, size_t arr_len, const char *match, bool case_insensitive) {
     const char* s = *str;

@@ -3,6 +3,7 @@
 #include "arena.h"
 #include "sockets.h"
 #include "utils.h"
+#include "config.h"
 #include "korall/http.h"
 
 #define WS_VERSION 13
@@ -113,20 +114,13 @@ struct HTTPResponseInternal {
 	String body;
 };
 
-typedef struct ServerConfig {
-	String domain;
-	String port;
-	String name;
-	bool allow_custom_headers;
-} ServerConfig;
+HTTPError http_request_parse(const char* data, HTTPRequest* req);
 
-HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerConfig* config);
+HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req);
 
-HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest* req, const ServerConfig* config);
+HTTPError http_request_process_header(const char** str, HTTPRequest* req);
 
-HTTPError http_request_process_header(const char** str, HTTPRequest* req, const ServerConfig* config);
-
-HTTPError http_request_process_headers(const char** str, HTTPRequest* req, const ServerConfig* config);
+HTTPError http_request_process_headers(const char** str, HTTPRequest* req);
 
 HTTPError http_request_process_body(const char* str, HTTPRequest* req);
 

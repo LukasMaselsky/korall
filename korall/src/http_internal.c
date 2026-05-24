@@ -9,7 +9,7 @@
 /*
 	Check if the format of the HTTP request is correct
 */
-HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerConfig* config) {
+HTTPError http_request_parse(const char* data, HTTPRequest* req) {
 	
 	HTTPError res = http_request_process_method(&data, req);
 	if (res != HTTP_SUCCESS) return res;
@@ -33,7 +33,7 @@ HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerCon
 
 	if (*data == '\r' && data[1] == '\n' && data[2] == '\0') return HTTP_SUCCESS; // no header, no body
 
-	res = http_request_process_headers(&data, req, config);
+	res = http_request_process_headers(&data, req);
 	if (res != HTTP_SUCCESS) return res;
 
 	if (data[0] == '\0') return HTTP_SUCCESS; // no body
@@ -43,7 +43,7 @@ HTTPError http_request_parse(const char* data, HTTPRequest* req, const ServerCon
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req, const ServerConfig* config) {
+HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_ACCEPT_LANGUAGE:
@@ -87,11 +87,11 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 		case HTTP_RQH_WS_VERSION:
 			return http_process_ws_version(value, req);
 		default:
-			return config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
+			return g_config.allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}
 }
 
-HTTPError http_request_process_header(const char** str, HTTPRequest* req, const ServerConfig* config) {
+HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 	// process field
 	// todo: full header line instead of field and value len separate
 
@@ -102,7 +102,7 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req, const 
 	const char *s = *str;
 
 	int header_field = lookup_str_int(field, &http_req_header_field_lookup_table, true);
-	if (header_field == -1 && !(config->allow_custom_headers)) return HTTP_BAD_HEADER; // todo: better error msg
+	if (header_field == -1 && !(g_config.allow_custom_headers)) return HTTP_BAD_HEADER; // todo: better error msg
 
 	
 	s++; // skip colon
@@ -119,19 +119,19 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req, const 
 	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n", false);
 	if (res == -1) return HTTP_BAD_HEADER_VAL;
 
-	HTTPError hv_res = http_process_request_header_value(header_field, value, req, config);
+	HTTPError hv_res = http_process_request_header_value(header_field, value, req);
 	if (hv_res != HTTP_SUCCESS) return hv_res;
 
 	*str += 2; // \r\n
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_request_process_headers(const char** str, HTTPRequest* req, const ServerConfig* config) {
+HTTPError http_request_process_headers(const char** str, HTTPRequest* req) {
 
 	const char* base = *str;
 
 	while (true) {
-		HTTPError res = http_request_process_header(str, req, config);
+		HTTPError res = http_request_process_header(str, req);
 		if (res != HTTP_SUCCESS) return res;
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
@@ -457,7 +457,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_UPGRADE:
 			return http_process_upgrade(value, NULL);
 		default:
-			return HTTP_BAD_HEADER_VAL; // todo: allow custom headers, how without passing config ? global config ?
+			return g_config.allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}
 }
 
@@ -746,8 +746,7 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 	}
 
 	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
-	if (res_field != -1 && http_process_response_header_value(res_field, value) != HTTP_SUCCESS) {
-		// not custom header and invalid
+	if (http_process_response_header_value(res_field, value) != HTTP_SUCCESS) {
 		printf("Failed to set header, value is not valid for field %s\n", field);
 		return -1;
 	}
