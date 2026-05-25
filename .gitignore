@@ -7,6 +7,5 @@ library/.vs
 /.vs
 .idea/
 CMakeSettings.json
-Makefile
 
 logs.txt
