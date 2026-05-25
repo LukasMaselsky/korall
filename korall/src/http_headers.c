@@ -341,7 +341,7 @@ HTTPError http_process_access_control_request_method(const char* value) {
 
 HTTPError http_process_access_control_request_headers(const char* value) {
 	char val[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
-	HTTPRequestHeaderField field;
+	int field;
 	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1 || fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') != -1) {
 		if ((field = lookup_str_int(val, &http_req_header_field_lookup_table, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
 		if (value[0] == '\0') return HTTP_SUCCESS;
@@ -462,8 +462,8 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 	// concat with GUID
 
 	unsigned char concated[WS_KEY_LEN + WS_GUID_LEN + 1] = { 0 };
-	strcpy(concated, value);
-	strcpy(concated + WS_KEY_LEN, WS_GUID);
+	strcpy((char * restrict) concated, value);
+	strcpy((char * restrict) (concated + WS_KEY_LEN), WS_GUID);
 
 	//printf("%s\n", concated);
 
@@ -480,7 +480,7 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 		return HTTP_BAD_WS_KEY_CALC;
 	}
 
-	err = SHA1Input(&sha, (const unsigned char*)concated, strlen(concated));
+	err = SHA1Input(&sha, (const unsigned char*)concated, strlen((const char *)concated));
 	if (err)
 	{
 		fprintf(stderr, "SHA1Input Error %d.\n", err);

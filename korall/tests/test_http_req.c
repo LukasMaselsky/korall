@@ -41,7 +41,7 @@ TEST("http_request_parse") {
 	
 	
 	
-	http_request_free(&arena, req);
+	http_request_free(&arena);
 }
 
 TEST("http_process_header") {
@@ -73,7 +73,7 @@ TEST("http_process_headers") {
 	res = http_request_process_headers(&str, req);
 	ASSERT(res == HTTP_BAD_HEADER);
 
-	http_request_free(&arena, req);
+	http_request_free(&arena);
 }
 
 
@@ -131,7 +131,7 @@ TEST("http_request_process_target") {
 
 	// todo: absolute paths
 
-	http_request_free(&arena, req);
+	http_request_free(&arena);
 }
 
 TEST("http_request_process_target_relative") {
@@ -221,7 +221,7 @@ TEST("http_request_process_target_relative") {
 
 	// todo: more tests
 
-	http_request_free(&arena, req);
+	http_request_free(&arena);
 
 }
 
@@ -275,7 +275,7 @@ TEST("http_request_process_target_absolute") {
 	ASSERT(res == HTTP_BAD_REQUEST_TARGET);
 
 
-	http_request_free(&arena, req);
+	http_request_free(&arena);
 
 }
 

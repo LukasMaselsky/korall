@@ -20,7 +20,7 @@ typedef struct ServerConfig {
 	bool allow_custom_headers;
 } ServerConfig;
 
-int config_free(ServerConfig* config);
+void config_free(ServerConfig* config);
 
 ServerConfig* config_init(const char* path);
 

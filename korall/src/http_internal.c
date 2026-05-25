@@ -221,14 +221,12 @@ HTTPError http_request_process_target_relative(const char* str, HTTPRequest* req
 		str++;
 		if (*str == '\0') return HTTP_BAD_REQUEST_TARGET; // cannot have ".../?" ?
 		int part_len = 0;
-		char prev_c = 0;
 		bool in_val = false;
 		bool in_field = true;
 		for (char c = *str; c != '\0'; c = *(++str)) {
 			if (c == '=') {
 				if (part_len < 1 || !in_field) return HTTP_BAD_REQUEST_TARGET;
 				part_len = 0;
-				prev_c = c;
 				in_val = true;
 				in_field = false;
 				continue;
@@ -236,7 +234,6 @@ HTTPError http_request_process_target_relative(const char* str, HTTPRequest* req
 			if (c == '&') {
 				if (part_len < 1 || !in_val) return HTTP_BAD_REQUEST_TARGET;
 				part_len = 0;
-				prev_c = c;
 				in_val = false;
 				in_field = true;
 				continue;
@@ -248,7 +245,6 @@ HTTPError http_request_process_target_relative(const char* str, HTTPRequest* req
 			}
 
 			if (!is_valid_path_segment(c)) return HTTP_BAD_REQUEST_TARGET;
-			prev_c = c;
 			part_len++;
 		}
 		if (!in_val) return HTTP_BAD_REQUEST_TARGET; // must end on value
@@ -424,7 +420,7 @@ HTTPRequest* http_request_init(Arena *arena) {
 	return req;
 }
 
-void http_request_free(Arena *arena, HTTPRequest* req) {
+void http_request_free(Arena *arena) {
 	arena_free(arena);
 }
 
@@ -549,7 +545,7 @@ HTTPResponse* http_response_init(Arena *arena) {
 	return res;
 }
 
-void http_response_free(Arena* arena, HTTPResponse* res) {
+void http_response_free(Arena* arena) {
 	arena_free(arena);
 }
 

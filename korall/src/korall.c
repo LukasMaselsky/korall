@@ -93,8 +93,7 @@ static void websocket_process_data(
 	const char* data,
 	fd_set* main,
 	Array* ws_arr,
-	int wsc_index,
-	const WebsocketRoutes* routes
+	int wsc_index
 ) {
 	// process frame
 
@@ -196,7 +195,6 @@ static bool req_is_ws_upgrade(const HTTPRequest* req) {
 static void http_process_request(
 	const SOCKET inc_sock,
 	const char* data,
-	const fd_set* main,
 	Array* ws_arr,
 	const HTTPRoutes *routes,
 	const WebsocketRoutes *ws_routes
@@ -283,8 +281,8 @@ static void http_process_request(
 	}
 
 http_process_request_end:
-	http_response_free(&res_arena, res);
-	http_request_free(&req_arena, req);
+	http_response_free(&res_arena);
+	http_request_free(&req_arena);
 	return;
 }
 
@@ -430,10 +428,10 @@ static void process_incoming_data(
 
 	int wsci;
 	if ((wsci = ws_connection_select(inc_sock, ws_arr)) != -1) {
-		websocket_process_data(inc_sock, buffer, main, ws_arr, wsci, ws_routes);
+		websocket_process_data(inc_sock, buffer, main, ws_arr, wsci);
 	}
 	else {
-		http_process_request(inc_sock, buffer, main, ws_arr, http_routes, ws_routes);
+		http_process_request(inc_sock, buffer, ws_arr, http_routes, ws_routes);
 	}
 
 

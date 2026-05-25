@@ -23,5 +23,8 @@ int main(int argc, char* argv[]) {
 	// RESOURCES_PATH is from CMakeLists.txt
 	korall_run(RESOURCES_PATH, NULL, routes);
 
+	// with Make
+	// korall_run("./resources/", NULL, routes);
+
 	return 0;
 }

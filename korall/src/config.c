@@ -10,8 +10,8 @@ ServerConfig g_default_config = {
 
 ServerConfig g_config = { 0 };
 
-int config_free(ServerConfig* config) {
-	if (config == NULL) return 0;
+void config_free(ServerConfig* config) {
+	if (config == NULL) return;
 
 	free(config->domain.chars);
 	free(config->port.chars);
@@ -95,13 +95,17 @@ ServerConfig* config_init(const char* path) {
 
 	FILE* fp = fopen(file_path, "r");
 	if (fp == NULL) {
-		printf("Could not find a korall_config.json, file using default config.\nIf you are using a custom config, make sure the path is correct.");
+		printf("Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
 		return default_config;
 	};
 
 	// read the file contents into a string
 	char buffer[CONFIG_BUFFER_LEN + 1];
-	size_t len = fread(buffer, 1, sizeof(buffer), fp);
+	fread(buffer, 1, sizeof(buffer), fp);
+	if (ferror(fp)) {
+		printf("Could not read from korall_config.json, using default config.\n");
+		return default_config;
+	}
 	fclose(fp);
 
 	// parse the JSON data

@@ -5,7 +5,7 @@
 
 void memcpy_reverse(uint8_t *dest, const uint8_t *src, size_t size) {
     
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         dest[i] = src[size - i - 1];
     }
 }
@@ -175,7 +175,7 @@ int fill_string_char(const char **str, char *arr, size_t arr_len, const char mat
 
 #ifndef _WIN32
 static char* strlwr (char* s) {
-    for (int i = 0; i < strlen(s); ++i)
+    for (size_t i = 0; i < strlen(s); ++i)
         if (s[i] >= 'A' && s[i] <= 'Z')
             s[i] += 'a' - 'A';
     return s;
@@ -183,8 +183,8 @@ static char* strlwr (char* s) {
 #endif
 
 int fill_string_str(const char** str, char* arr, size_t arr_len, const char *match, bool case_insensitive) {
-    const char* s = *str;
-    const char* t = match;
+    char* s = *str;
+    char* t = match;
     if (case_insensitive) {
         s = strlwr(s);
         t = strlwr(t);

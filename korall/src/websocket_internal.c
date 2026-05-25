@@ -33,7 +33,7 @@ int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf) {
 	uint32_t masking_key;
 	uint32_t* mkeyp;
 
-	if (pl >= 0 && pl <= 125) {
+	if (pl <= 125) {
 		length = (uint64_t)pl;
 		mkeyp = (uint32_t*)(frame + 2);
 	}
@@ -50,7 +50,7 @@ int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf) {
 	uint8_t* m_key = (uint8_t*)&masking_key;
 
 	// unmask data
-	int i = 0;
+	uint64_t i = 0;
 	while (i < length) {
 		data[i] = data[i] ^ m_key[i % 4]; // ! modifies wsf in place
 		i++;
@@ -196,7 +196,7 @@ int korall_ws_frame_send(const WebsocketFrame* frame) {
 
 	printf("server: sending frame\n");
 
-	int r = socket_send(frame->socket, data, strlen(data), 0);
+	int r = socket_send(frame->socket, data, strlen((const char *)data), 0);
 	if (r == -1) {
 		printf("server: couldn't send data to ");
 		socket_print(frame->socket);

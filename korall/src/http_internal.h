@@ -136,7 +136,7 @@ HTTPError http_request_process_protocol(const char** str);
 
 HTTPRequest* http_request_init(Arena* arena);
 
-void http_request_free(Arena *arena, HTTPRequest* req);
+void http_request_free(Arena *arena);
 
 void http_request_clear(Arena *arena, HTTPRequest** req);
 
@@ -162,7 +162,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse* res);
 
 HTTPResponse* http_response_init(Arena *arena);
 
-void http_response_free(Arena* arena, HTTPResponse* res);
+void http_response_free(Arena* arena);
 
 void http_response_clear(Arena* arena, HTTPResponse** res);
 
