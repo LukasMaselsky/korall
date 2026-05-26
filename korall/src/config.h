@@ -18,11 +18,12 @@ typedef struct ServerConfig {
 	String port;
 	String name;
 	bool allow_custom_headers;
+	bool on_heap;
 } ServerConfig;
 
 void config_free(ServerConfig* config);
 
-ServerConfig* config_init(const char* path);
+void config_init(const char* path);
 
 extern ServerConfig g_default_config;
 extern ServerConfig g_config;

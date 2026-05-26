@@ -2,16 +2,17 @@
 #include "cJSON.h"
 
 ServerConfig g_default_config = {
-	.domain = { .chars = DEFAULT_DOMAIN, .size = 0 },
-	.port = {.chars = DEFAULT_PORT, .size = 0 },
-	.name = { .chars = DEFAULT_SERVER_NAME, .size = 0 },
-	.allow_custom_headers = true
+	.domain = {.chars = DEFAULT_DOMAIN, .size = 9 },
+	.port = {.chars = DEFAULT_PORT, .size = 4 },
+	.name = {.chars = DEFAULT_SERVER_NAME, .size = 12 },
+	.allow_custom_headers = true,
+	.on_heap = false
 };
 
 ServerConfig g_config = { 0 };
 
 void config_free(ServerConfig* config) {
-	if (config == NULL) return;
+	if (config == NULL || !(config->on_heap)) return;
 
 	free(config->domain.chars);
 	free(config->port.chars);
@@ -28,6 +29,8 @@ static ServerConfig* config_alloc(ServerConfig* config) {
 
 	config->name.chars = safe_calloc(1, MAX_SERVER_NAME_LEN);
 	config->name.size = MAX_SERVER_NAME_LEN;
+
+	config->on_heap = true;
 
 	return config;
 }
@@ -64,11 +67,11 @@ static void cjson_read_bool(cJSON* json, bool* val, bool def, const char* field)
 }
 
 /**
- * @brief Loads config from .json file, else fills config with default values from default_config
- * @param path path of configuration file location
- * @return -1 if default_config should be used fully
+ * @brief 
+ * @param path 
+ * @return -1 if use default, 0 if use custom 
  */
-ServerConfig* config_init(const char* path) {
+static int config_init_inner(const char* path) {
 
 	ServerConfig* config = config_alloc(&g_config);
 	ServerConfig* default_config = &g_default_config;
@@ -77,18 +80,19 @@ ServerConfig* config_init(const char* path) {
 	char file_path[MAX_FILE_PATH + 1] = { 0 };
 
 	if (path == NULL) {
-		strcpy(file_path, config_file_name);
+		printf("Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
+		return -1;
 	}
 	else {
 		size_t path_len = strlen(path);
 		if (path_len > MAX_FILE_PATH) {
 			printf("File path too long.");
-			return default_config;
+			return -1;
 		};
 		strcpy(file_path, path);
 		if (strlen(config_file_name) + path_len > MAX_FILE_PATH) {
 			printf("File path too long.");
-			return default_config;
+			return -1;
 		};
 		strcat(file_path, config_file_name);
 	}
@@ -96,7 +100,7 @@ ServerConfig* config_init(const char* path) {
 	FILE* fp = fopen(file_path, "r");
 	if (fp == NULL) {
 		printf("Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
-		return default_config;
+		return -1;
 	};
 
 	// read the file contents into a string
@@ -104,7 +108,7 @@ ServerConfig* config_init(const char* path) {
 	fread(buffer, 1, sizeof(buffer), fp);
 	if (ferror(fp)) {
 		printf("Could not read from korall_config.json, using default config.\n");
-		return default_config;
+		return -1;
 	}
 	fclose(fp);
 
@@ -116,7 +120,7 @@ ServerConfig* config_init(const char* path) {
 			printf("%s\n", error_ptr);
 		}
 		cJSON_Delete(json);
-		return default_config;
+		return -1;
 	}
 
 	// access the JSON data
@@ -153,5 +157,19 @@ ServerConfig* config_init(const char* path) {
 
 	cJSON_Delete(json);
 
-	return config;
+	return 0;
+}
+
+/**
+ * @brief Loads config from .json file, else fills config with default values from default_config
+ * @param path path of configuration file location
+ * @return
+ */
+void config_init(const char* path) {
+
+	int res = config_init_inner(path);
+	if (res == -1) {
+		g_config = g_default_config;
+	}
+	return;
 }

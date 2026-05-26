@@ -527,7 +527,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 
 	// config
 
-	ServerConfig* config = config_init(config_path);
+	config_init(config_path);
 	
 	// sockets
 
@@ -586,7 +586,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 
 	http_routes_free(http_routes);
 	ws_routes_free(ws_routes);
-	config_free(config);
+	config_free(&g_config);
 
 	return;
 }
