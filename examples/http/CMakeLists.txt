@@ -10,14 +10,22 @@ project(${project_name} LANGUAGES C)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-file(GLOB MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 
 add_executable(${project_name})
-target_sources(${project_name} PRIVATE ${MY_SOURCES})
+target_sources(${project_name} PRIVATE ${PROJECT_SOURCES})
 
 # This is useful to get an ASSETS_PATH in your IDE during development
 target_compile_definitions(${project_name} PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
-   
+
+# Include directories
+target_include_directories(${project_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+
+# Link libraries that use CMake
+target_link_libraries(${project_name} PRIVATE korall)
+
+# Compiler flags
+
 # If using the VS compiler...
 if(MSVC)
     target_compile_definitions(${project_name} PUBLIC _CRT_SECURE_NO_WARNINGS)
@@ -29,14 +37,6 @@ if (WIN32)
 	target_compile_options(${project_name} PRIVATE /UUNICODE /U_UNICODE)
 endif()
 
-
-# Include directories
-target_include_directories(${project_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
-
-# Link libraries that use CMake
-target_link_libraries(${project_name} PRIVATE korall)
-
-# Compiler flags
 
 if(MSVC)
     add_compile_options("/Wall" "$<$<CONFIG:RELEASE>:/O2>" "/WX" "/fsanitize=address")

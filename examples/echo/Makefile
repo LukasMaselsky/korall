@@ -1,6 +1,6 @@
 BINARY=bin
-CODEDIRS=src ../../korall/src/ 
-INCDIRS=./include/ ./src/ ../../korall/include/ ../../korall/src/
+CODEDIRS=src ../../src/ 
+INCDIRS=./include/ ./src/ ../../include/ ../../src/
 
 
 CC=gcc
