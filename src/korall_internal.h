@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "http_internal.h"
 #include "websocket_internal.h"
+#include "array.h"
 #include "korall/korall.h"
 
 #define READ_BUFFER_LEN KILOBYTE
@@ -11,6 +12,8 @@
 
 #define HTTP_ROUTES_CAPACITY 100 // todo: ?
 #define WS_ROUTES_CAPACITY 100 // todo: ?
+
+#define MAX_THREADS 32
 
 
 struct HTTPRoutePrivate {
@@ -35,5 +38,11 @@ struct WebsocketRoutesPrivate {
 	size_t route_count;
 	size_t capacity;
 };
+
+typedef struct {
+	SOCKET sock;
+	HTTPRoutes* http_routes;
+	WebsocketRoutes* ws_routes;
+} ProcessArgs;
 
 #endif

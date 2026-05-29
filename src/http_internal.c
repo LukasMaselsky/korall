@@ -726,7 +726,7 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 	}
 	
 	if (res->header_count >= res->header_capacity) {
-		printf("Failed to set header, maximum of %llu headers reached\n", res->header_capacity);
+		printf("Failed to set header, maximum of %zu headers reached\n", res->header_capacity);
 		return -1;
 	}
 
@@ -737,7 +737,7 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 	size_t value_len = strlen(value);
 
 	if (field_len + value_len + 4 > res->header_size) {
-		printf("Failed to set header, must be under %llu characters total\n", res->header_size);
+		printf("Failed to set header, must be under %zu characters total\n", res->header_size);
 		return -1;
 	}
 

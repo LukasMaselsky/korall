@@ -13,9 +13,13 @@
 #include <signal.h>
 #include "korall/socket_definition.h"
 
-#ifndef _WIN32
-#include <sys/types.h>
-#include <sys/wait.h>
+#ifdef _WIN32
+    #define socket_invalid(sock) (sock == INVALID_SOCKET)
+#else
+    #include <sys/types.h>
+    #include <sys/wait.h>
+    #define socket_invalid(sock) (sock == -1)
+
 #endif
 
 

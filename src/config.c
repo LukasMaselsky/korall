@@ -44,7 +44,7 @@ static void cjson_read_string(cJSON* json, String str, String def, const char* f
 	}
 	else {
 		if (strlen(item->valuestring) > str.size) {
-			printf("Config \"%s\" field is too long, maximum %llu characters, using default value.\n", field, str.size);
+			printf("Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, str.size);
 			val = def.chars;
 		}
 		else {

@@ -7,6 +7,7 @@
 #include "websocket_internal.h"
 #include "array.h"
 #include "config.h"
+#include "gui.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
@@ -51,21 +52,6 @@ static WebsocketRoute* ws_route_select(HTTPRequest* req, const WebsocketRoutes* 
 	return NULL;
 }
 
-/**
- * @brief finds if socket belongs to a websocket connection
- * @param socket 
- * @param arr 
- * @return 
- */
-static int ws_connection_select(const SOCKET socket, Array* arr) {
-	if (arr == NULL) return -1;
-	for (size_t i = 0; i < arr->size; i++) {
-		WebsocketConnection* wsi = (WebsocketConnection*)array_get(arr, i);
-		if (wsi->socket == socket) return i;
-	}
-	return -1;
-}
-
 static bool http_domain_port_match_server(const HTTPRequest* req) {
 
 	if (req->start_line->method == HTTP_CONNECT) {
@@ -88,14 +74,19 @@ static bool http_domain_port_match_server(const HTTPRequest* req) {
 	return true;
 }
 
-static void websocket_process_data(
+/**
+ * @brief 
+ * @param inc_sock 
+ * @param data 
+ * @param route 
+ * @return true if close 
+ */
+static bool websocket_process_data(
 	const SOCKET inc_sock,
 	const char* data,
-	fd_set* main,
-	Array* ws_arr,
-	int wsc_index
+	const WebsocketRoute* route
 ) {
-	// process frame
+	bool close = false;
 
 	Arena inc_arena = arena_init(WS_ARENA_SIZE);
 	Arena out_arena = arena_init(WS_ARENA_SIZE);
@@ -155,24 +146,19 @@ static void websocket_process_data(
 			printf("\n");
 		};
 
-		// remove from ws connections array
-		array_remove(ws_arr, wsc_index);
-		FD_CLR(inc_sock, main);
-
+		close = true;
+		
 		goto websocket_process_data_end;
 	}
 
 	// CALLBACK
-
-	WebsocketConnection* wsc = array_get(ws_arr, wsc_index);
-	WebsocketRoute* route = wsc->route;
 
 	route->callback(in_wsf);
 
 websocket_process_data_end:
 	arena_free(&inc_arena);
 	arena_free(&out_arena);
-	return;
+	return close;
 }
 
 /**
@@ -195,9 +181,10 @@ static bool req_is_ws_upgrade(const HTTPRequest* req) {
 static void http_process_request(
 	const SOCKET inc_sock,
 	const char* data,
-	Array* ws_arr,
 	const HTTPRoutes *routes,
-	const WebsocketRoutes *ws_routes
+	const WebsocketRoutes *ws_routes,
+	bool* is_websocket,
+	WebsocketRoute** websocket_route
 ) {
 
 	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
@@ -254,8 +241,8 @@ static void http_process_request(
 			printf("Failed to send responses\n");
 		}
 		else {
-			WebsocketConnection wsc = { .route = wsr, .socket = inc_sock };
-			array_push(ws_arr, &wsc);
+			*is_websocket = true;
+			*websocket_route = wsr;
 		}
 
 		goto http_process_request_end;
@@ -354,26 +341,27 @@ static SOCKET init_listen_socket() {
 	return sock;
 }
 
-static void process_incoming_connection(SOCKET sock, fd_set* main, SOCKET* fd_max) {
+/**
+ * @brief 
+ * @param sock - server_sock
+ * @return 
+ */
+static SOCKET process_incoming_connection(SOCKET sock) {
 	SOCKET incoming;
 	struct sockaddr_storage incoming_addr;
 	socklen_t incoming_addr_len = sizeof(incoming_addr);
 	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
 
-	
 	incoming = socket_accept(sock, &incoming_addr, &incoming_addr_len);
-	if (incoming == -1) {
-		perror("server: couldn't accept");
-		return;
+	if (socket_invalid(incoming)) {
+		printf("server: couldn't accept\n");
+		return incoming;
 	}
 
-	FD_SET(incoming, main); // add fd to set
-	if (incoming > *fd_max) {
-		*fd_max = incoming;
-	}
 	get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver, sizeof(ipver));
 	printf("server: got connection from %s (%s)\n", ip, ipver);
+	return incoming;
 }
 
 static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_len, fd_set* main, SOCKET fd_max) {
@@ -392,58 +380,53 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 	}
 }
 
-static void process_incoming_data(
-	const SOCKET inc_sock,
-	fd_set* main, 
-	Array* ws_arr, 
-	const HTTPRoutes *http_routes,
-	const WebsocketRoutes *ws_routes
-) {
+static void process_incoming_data(void* arg) {
+	// todo: handle empty ws data frame in echo example
+	ProcessArgs* args = (ProcessArgs*)arg;
+	const SOCKET inc_sock = args->sock;
+	const HTTPRoutes* http_routes = args->http_routes;
+	const WebsocketRoutes* ws_routes = args->ws_routes;
+
 	// todo: change to heap for larger buffer
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
 
+	bool is_websocket = false;
+	WebsocketRoute* ws_route = NULL;
+	bool close = false;
 
-	int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
-	if (bytes_read <= 0) {
-		if (bytes_read == 0) {
-			printf("server: socket ");
-			socket_print(inc_sock);
-			printf(" closed connection\n");
+	while (true) {
+		int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
+		if (bytes_read <= 0) {
+			if (bytes_read == 0) {
+				printf("server: socket ");
+				socket_print(inc_sock);
+				printf(" closed connection\n");
+			}
+			else {
+				printf("server: couldn't read from ");
+				socket_print(inc_sock);
+				printf("\n");
+			}
+
+			socket_close(inc_sock);
+			return;
+		}
+
+		buffer[bytes_read] = '\0';
+		printf("server: received data from ");
+		socket_print(inc_sock);
+		printf("\n'%s'\n", buffer);
+
+
+		if (is_websocket && ws_route != NULL) {
+			close = websocket_process_data(inc_sock, buffer, ws_route);
+			if (close) return;
 		}
 		else {
-			printf("server: couldn't read from ");
-			socket_print(inc_sock);
-			printf("\n");
+			http_process_request(inc_sock, buffer, http_routes, ws_routes, &is_websocket, &ws_route);
 		}
-
-		socket_close(inc_sock);
-		FD_CLR(inc_sock, main); // remove from set
-		return;
+		memset(buffer, 0, READ_BUFFER_LEN);
 	}
-
-	buffer[bytes_read] = '\0';
-	printf("server: received data from ");
-	socket_print(inc_sock);
-	printf("\n'%s'\n", buffer);
-
-	int wsci;
-	if ((wsci = ws_connection_select(inc_sock, ws_arr)) != -1) {
-		websocket_process_data(inc_sock, buffer, main, ws_arr, wsci);
-	}
-	else {
-		http_process_request(inc_sock, buffer, ws_arr, http_routes, ws_routes);
-	}
-
-
-	// TODO
-	//if (config->type == ST_HTTP) {
-	//}
-	//else {
-		//broadcast(inc_sock, server_sock, buffer, bytes_read, main, fd_max);
-	//}
-	
-
-	return;
 }
 
 // PUBLIC FUNCTIONS
@@ -538,42 +521,40 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 	}
 
 
-	fd_set main_fds = { 0 };
-	fd_set read_fds = { 0 }; // temps
-	SOCKET fd_max; // biggest fd
 	
 	WebsocketConnection ws_arr_data[FD_SETSIZE] = { 0 };
 	Array ws_arr = { 0 };
 	array_create_stack(&ws_arr, ws_arr_data, sizeof(WebsocketConnection), FD_SETSIZE);
 
-	FD_ZERO(&main_fds);
-	FD_ZERO(&read_fds);
-
 	SOCKET server_sock = init_listen_socket();
 	
-	FD_SET(server_sock, &main_fds);
-	fd_max = server_sock;
+	ProcessArgs args = {
+		.sock = 0,
+		.http_routes = http_routes,
+		.ws_routes = ws_routes,
+	}; // todo: heap
+
+	HANDLE threads[MAX_THREADS] = { NULL };
+	int thread_num = 0;
+
+	SOCKET sock;
 
 	while (true) {
-		read_fds = main_fds; // copy
+		
+		sock = process_incoming_connection(server_sock);
+		if (socket_invalid(sock)) continue;
+				
+		// spawn 1 thread for each connection
 
-		int res = socket_select_read_only(fd_max + 1, &read_fds, SELECT_NO_TIMEOUT);
-		if (res == -1) {
-			perror("Couldn't select");
-			exit(EXIT_FAILURE);
-		}
+		if (thread_num >= MAX_THREADS) continue;
 
-		for (int i = 0; i <= fd_max; i++) {
-			if (!FD_ISSET(i, &read_fds)) continue;
+		thread_num++;
+		printf("tn: %d", thread_num);
+		args.sock = sock;
 
-			if (i == server_sock) {
-				process_incoming_connection(i, &main_fds, &fd_max);
-			}
-			else {
-				process_incoming_data(i, &main_fds, &ws_arr, http_routes, ws_routes);
-			}
-
-		}
+		threads[thread_num] = (HANDLE)_beginthread(process_incoming_data, 0, (void*)&args);
+			
+		
 	}
 
 	socket_close(server_sock);
