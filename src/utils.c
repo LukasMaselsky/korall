@@ -3,6 +3,26 @@
 #include <strings.h>
 #endif
 
+void logger(LogType pt, const char* const format, ...) {
+    va_list argp;
+    va_start(argp, format);
+    switch (pt) {
+        case LOG_ERR:
+            printf(TEXT_COLOR(ANSI_COLOR_RED, "[ERROR] "));
+            break;
+        case LOG_WARN:
+            printf(TEXT_COLOR(ANSI_COLOR_YELLOW, "[WARNING] "));
+            break;
+        case LOG_INFO:
+        default:
+            printf("[INFO] ");
+            break;
+    }
+
+    vprintf(format, argp);
+    va_end(argp);
+}
+
 void memcpy_reverse(uint8_t *dest, const uint8_t *src, size_t size) {
     
     for (size_t i = 0; i < size; i++) {
@@ -133,7 +153,7 @@ int strcmp_ci(const char* str1, const char* str2) {
 void* safe_calloc(size_t count, size_t size) {
     void* p = calloc(count, size);
     if (p == NULL) {
-        fprintf(stderr, "Fatal: failed to allocate %zu bytes.\n", size);
+        logger(LOG_ERR, "failed to allocate %zu bytes, exiting\n", size);
         exit(EXIT_FAILURE);
     }
     return p;

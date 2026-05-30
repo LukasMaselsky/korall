@@ -6,7 +6,7 @@
 */
 int socket_init(void) {
 #ifdef _WIN32
-    printf("Windows platform detected, beginning startup\n");
+    logger(LOG_INFO, "windows platform detected, beginning startup\n");
 
     WSADATA wsa_data;
     WVersionInfo w_versions[VERSION_COUNT] = {
@@ -21,26 +21,26 @@ int socket_init(void) {
         byte lobyte = w_version_info.lobyte;
         byte hibyte = w_version_info.hibyte;
         WORD w_version = w_version_info.w_version;
-        printf("Trying v%u.%u\n", lobyte, hibyte);
+        logger(LOG_INFO, "trying v%u.%u\n", lobyte, hibyte);
 
         memset(&wsa_data, 0, sizeof(wsa_data));
         int err = WSAStartup(w_version, &wsa_data);
         if (err != 0) {
-            printf("WSAStartup failed with error: %d\n", err);
+            logger(LOG_WARN, "WSAStartup failed with error: %d\n", err);
             continue;
         }
 
         if (LOBYTE(wsa_data.wVersion) != lobyte || HIBYTE(wsa_data.wVersion) != hibyte) {
-            printf("Could not find a usable version of Winsock.dll\n");
+            logger(LOG_ERR, "could not find a usable version of Winsock.dll\n");
             WSACleanup();
             continue;
         }
 
-        printf("Startup success!\n");
+        logger(LOG_INFO, "Startup success!\n");
         return 0;
     }
 
-    printf("Could not initialise any version of winsock");
+    logger(LOG_ERR, "could not initialise any version of winsock");
     return 1;
 
 #else
