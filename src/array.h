@@ -29,4 +29,6 @@ int array_find(Array* arr, void* item, bool (* const compare)(const void*, const
 
 void array_clear(Array* arr);
 
+bool array_full(Array* arr);
+
 #endif

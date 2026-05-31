@@ -8,6 +8,7 @@
 #include "array.h"
 #include "config.h"
 #include "gui.h"
+#include "thread.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
@@ -354,7 +355,7 @@ static SOCKET process_incoming_connection(SOCKET sock) {
 	char ipver[IP_VER_STR_LEN];
 
 	incoming = socket_accept(sock, &incoming_addr, &incoming_addr_len);
-	if (socket_invalid(incoming)) {
+	if (incoming == INVALID_SOCKET) {
 		logger(LOG_ERR, "failed to accept connection\n");
 		return incoming;
 	}
@@ -430,6 +431,57 @@ static void process_incoming_data(void* arg) {
 process_incoming_data_end:
 	free(arg);
 	return;
+}
+
+/**
+ * @brief cleans up finished threads to free up array so they can be reused
+ * @param threads 
+ * @param size 
+ */
+static void sync_threads(Array *thread_arr) {
+	if (thread_arr == NULL || thread_arr->data == NULL) return;
+
+	for (size_t i = 0; i < thread_arr->size; i++) {
+		THREAD_T thread = (THREAD_T)array_get(thread_arr, i);
+		
+		
+		DWORD res = WaitForSingleObject(thread, 0);
+		if (res == WAIT_OBJECT_0) {
+			CloseHandle(thread);
+			array_remove(thread_arr, i);
+		}
+	}
+}
+
+static int get_thread_num(Array *thread_arr) {
+	if (thread_arr == NULL || thread_arr->data == NULL) return;
+
+	if (array_full(thread_arr)) return -1;
+
+	return thread_arr->size;
+}
+
+static int create_thread(Array* thread_arr, ProcessArgs *t_args) {
+
+	// win
+
+	uintptr_t btx = _beginthreadex(NULL, 0, process_incoming_data, (void*)t_args, 0, NULL);
+	if (btx == 0) {
+		logger(LOG_ERR, "failed to create thread, could not process connection\n", MAX_THREADS);
+		return -1;
+	}
+
+	logger(LOG_INFO, "created thread\n");
+	array_push(&thread_arr, (void*)((THREAD_T)btx));
+
+
+	// lin
+
+	//THREAD_T thread;
+	//pthread_create(&thread, NULL, process_incoming_data, (void*)t_args);
+
+
+	return 0;
 }
 
 // PUBLIC FUNCTIONS
@@ -531,22 +583,26 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 		.ws_routes = ws_routes,
 	};
 
-	HANDLE threads[MAX_THREADS] = { NULL };
-	int thread_num = 0;
+	THREAD_T threads[MAX_THREADS] = { 0 };
+	Array thread_arr = { 0 };
+	array_create_stack(&thread_arr, threads, sizeof(THREAD_T), MAX_THREADS);
 
 	SOCKET sock;
 
 	while (true) {
 		
 		sock = process_incoming_connection(server_sock);
-		if (socket_invalid(sock)) continue;
-				
+		if (sock == INVALID_SOCKET) continue;
+
+		sync_threads(threads, MAX_THREADS);
+	
 		// spawn 1 thread for each connection
 
-		if (thread_num >= MAX_THREADS) continue;
-
-		thread_num++;
-		printf("tn: %d\n", thread_num);
+		int thread_num = get_thread_num(threads, MAX_THREADS);
+		if (thread_num == -1) {
+			logger(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
+			continue;
+		}
 		
 		// make copy of args
 
@@ -554,21 +610,8 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 		memcpy(t_args, &args, sizeof(*t_args));
 		t_args->sock = sock;
 
-		threads[thread_num] = (HANDLE)_beginthread(process_incoming_data, 0, (void*)t_args);
-		
-		
+		create_thread(&thread_arr, t_args);
 	}
-
-	/*
-	DWORD r = WaitForSingleObject(thread, 0);
-	if (r == WAIT_OBJECT_0) {
-		CloseHandle(thread);
-		// more
-	}
-	else if (r == WAIT_TIMEOUT) {
-		// still running
-	}
-	*/
 
 	socket_close(server_sock);
 

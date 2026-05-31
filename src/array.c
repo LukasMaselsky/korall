@@ -92,3 +92,7 @@ void array_clear(Array* arr) {
 	arr->size = 0;
 	return;
 }
+
+bool array_full(Array* arr) {
+	return arr->size >= arr->capacity;
+}

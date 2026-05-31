@@ -510,7 +510,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res) {
 		arena_free(&res_full_arena);
 		return -1;
 	}
-	printf("'%s'", data);
+	printf("'%s'\n", data);
 
 	int r = socket_send(inc_sock, data, strlen(data), 0);
 	if (r == -1) {

@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef KORALL_UTILS_H
+#define KORALL_UTILS_H
 
 #include <stdio.h>
 #include <stdlib.h>
