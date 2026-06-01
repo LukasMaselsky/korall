@@ -1,7 +1,7 @@
 #include "array.h"
 
 
-void array_create_stack(Array* arr, void *data, size_t element_size, size_t capacity) {
+void array_create_stack(Array* arr, void *data, const size_t element_size, const size_t capacity) {
 	arr->data = data;
 	arr->size = 0;
 	arr->capacity = capacity;
@@ -10,7 +10,7 @@ void array_create_stack(Array* arr, void *data, size_t element_size, size_t capa
 	return;
 }
 
-Array* array_create_heap(size_t element_size, size_t capacity) {
+Array* array_create_heap(const size_t element_size, const size_t capacity) {
 
 	Array* arr = (Array*)malloc(sizeof(Array));
 
@@ -36,12 +36,12 @@ void array_free(Array* arr) {
 	return;
 }
 
-void* array_get(Array* arr, size_t index) {
+void* array_get(const Array* arr, const size_t index) {
 	if (index >= arr->size) return NULL;
 	return arr->data + (index * arr->element_size);
 }
 
-int array_push(Array* arr, void* item) {
+int array_push(Array* arr, const void* item) {
 	if (arr->size >= arr->capacity) return -1;
 	
 	memcpy(arr->data + (arr->size * arr->element_size), item, arr->element_size);
@@ -62,7 +62,7 @@ void array_pop(Array* arr, void* item) {
 	return;
 }
 
-int array_remove(Array* arr, size_t index) {
+int array_remove(Array* arr, const size_t index) {
 	if (index >= arr->size) return -1;
 
 	if (index == arr->size - 1) {
@@ -73,6 +73,34 @@ int array_remove(Array* arr, size_t index) {
 	uint8_t* left = arr->data + (index * arr->element_size);
 	memmove(left, right, (arr->size - index - 1) * arr->element_size);
 	array_pop(arr, NULL);
+	return 0;
+}
+
+/**
+ * @brief removes list of items
+ * @param arr 
+ * @param indices must be in ascending order
+ * @param len 
+ * @return 
+ */
+int array_remove_list(Array* arr, const size_t* indices, const size_t len) {
+	if (len == 0) return -1;
+	size_t i = len - 1;
+	while (true) {
+		size_t index = indices[i];
+		array_remove(arr, index);
+		if (i == 0) break;
+		i--;
+	}
+
+	return 0;
+}
+
+int array_set(Array* arr, const size_t index, const void* item) {
+	if (index >= arr->size) return -1;
+
+	memcpy(arr->data + (index * arr->element_size), item, arr->element_size);
+
 	return 0;
 }
 

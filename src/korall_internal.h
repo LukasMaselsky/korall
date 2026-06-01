@@ -6,6 +6,7 @@
 #include "websocket_internal.h"
 #include "array.h"
 #include "korall/korall.h"
+#include "thread.h"
 
 #define READ_BUFFER_LEN KILOBYTE
 #define RESPONSE_BUFFER_LEN KILOBYTE
@@ -40,9 +41,12 @@ struct WebsocketRoutesPrivate {
 };
 
 typedef struct {
+	size_t thread_num;
+	pthread_mutex_t *lock;
+	Array* thread_arr;
 	SOCKET sock;
 	HTTPRoutes* http_routes;
 	WebsocketRoutes* ws_routes;
-} ProcessArgs;
+} ProcessDataArgs;
 
 #endif

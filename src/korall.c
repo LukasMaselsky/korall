@@ -381,12 +381,19 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 	}
 }
 
+/**
+ * @brief thread that processes data on a socket connection
+ * @param arg ProcessDataArgs
+ */
 static void process_incoming_data(void* arg) {
-	// todo: handle empty ws data frame in echo example
-	ProcessArgs* args = (ProcessArgs*)arg;
-	const SOCKET inc_sock = args->sock;
-	const HTTPRoutes* http_routes = args->http_routes;
-	const WebsocketRoutes* ws_routes = args->ws_routes;
+	
+	ProcessDataArgs* p_args = (ProcessDataArgs*)arg;
+	const SOCKET inc_sock = p_args->sock;
+	const HTTPRoutes* http_routes = p_args->http_routes;
+	const WebsocketRoutes* ws_routes = p_args->ws_routes;
+	const size_t thread_num = p_args->thread_num;
+	pthread_mutex_t* lock = p_args->lock;
+	Array* thread_arr = p_args->thread_arr;
 
 	// todo: change to heap for larger buffer
 	char buffer[READ_BUFFER_LEN];    // buffer for client data
@@ -429,8 +436,20 @@ static void process_incoming_data(void* arg) {
 		memset(buffer, 0, READ_BUFFER_LEN);
 	}
 process_incoming_data_end:
+
+	#ifndef _WIN32
+	pthread_mutex_lock(lock);
+	// set running state of thread to false
+	ThreadState* old_ts = (ThreadState*)array_get(thread_arr, thread_num);
+	ThreadState new_ts = { .running = false, .thread = old_ts->thread };
+	array_set(thread_arr, thread_num, (void *)&new_ts);
+	#endif
 	free(arg);
-	return;
+
+	#ifndef _WIN32
+	pthread_mutex_unlock(lock);
+	#endif
+
 }
 
 /**
@@ -438,49 +457,75 @@ process_incoming_data_end:
  * @param threads 
  * @param size 
  */
-static void sync_threads(Array *thread_arr) {
+static void sync_threads(Array *thread_arr, pthread_mutex_t *lock) {
 	if (thread_arr == NULL || thread_arr->data == NULL) return;
 
+	#ifndef _WIN32
+	pthread_mutex_lock(lock);
+	#endif
+	size_t* remove_list = safe_calloc(thread_arr->size, sizeof(size_t));
+	size_t len = 0;
 	for (size_t i = 0; i < thread_arr->size; i++) {
-		THREAD_T thread = (THREAD_T)array_get(thread_arr, i);
 		
+		ThreadState *ts = (ThreadState*)array_get(thread_arr, i);
 		
-		DWORD res = WaitForSingleObject(thread, 0);
-		if (res == WAIT_OBJECT_0) {
-			CloseHandle(thread);
-			array_remove(thread_arr, i);
+		#ifdef _WIN32
+			DWORD res = WaitForSingleObject(ts->thread, 0);
+			if (res != WAIT_OBJECT_0) continue;
+			CloseHandle(ts->thread);		
+		#else
+			if (ts->running) continue;
+			pthread_join(ts->thread, NULL);
+		#endif
+		remove_list[len] = i;
+		len++;
+	}
+	array_remove_list(thread_arr, remove_list, len);
+	free(remove_list);
+
+	#ifndef _WIN32
+	pthread_mutex_unlock(lock);
+	#endif
+}
+
+/**
+ * @brief starts thread and adds it state to array
+ * @param thread_arr 
+ * @param t_args 
+ * @return 
+ */
+static void create_thread(Array* thread_arr, ProcessDataArgs *t_args) {
+	
+	pthread_mutex_t* lock = t_args->lock;
+	THREAD_T thread;
+
+	#ifndef _WIN32
+	pthread_mutex_lock(lock);
+	#endif
+
+	#ifdef _WIN32
+		uintptr_t btx = _beginthreadex(NULL, 0, process_incoming_data, (void*)t_args, 0, NULL);
+		if (btx == 0) {
+			logger(LOG_ERR, "failed to create thread, could not process connection\n");
+			goto create_thread_end;
 		}
-	}
-}
+		thread = (THREAD_T)btx;
+	#else
+		int res = pthread_create(&thread, NULL, process_incoming_data, (void*)t_args);
+		if (res != 0) {
+			logger(LOG_ERR, "failed to create thread, could not process connection\n");
+			goto create_thread_end;
+		}
+	#endif
 
-static int get_thread_num(Array *thread_arr) {
-	if (thread_arr == NULL || thread_arr->data == NULL) return;
-
-	if (array_full(thread_arr)) return -1;
-
-	return thread_arr->size;
-}
-
-static int create_thread(Array* thread_arr, ProcessArgs *t_args) {
-
-	// win
-
-	uintptr_t btx = _beginthreadex(NULL, 0, process_incoming_data, (void*)t_args, 0, NULL);
-	if (btx == 0) {
-		logger(LOG_ERR, "failed to create thread, could not process connection\n", MAX_THREADS);
-		return -1;
-	}
-
+	ThreadState ts = { .running = true, .thread = thread };
 	logger(LOG_INFO, "created thread\n");
-	array_push(&thread_arr, (void*)((THREAD_T)btx));
+	array_push(thread_arr, (void*)(&ts));
 
-
-	// lin
-
-	//THREAD_T thread;
-	//pthread_create(&thread, NULL, process_incoming_data, (void*)t_args);
-
-
+create_thread_end:
+	#ifndef _WIN32
+	pthread_mutex_unlock(lock);
+	#endif
 	return 0;
 }
 
@@ -577,15 +622,21 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 
 	SOCKET server_sock = init_listen_socket();
 	
-	ProcessArgs args = {
+
+	ThreadState threads[MAX_THREADS] = { 0 };
+	Array thread_arr = { 0 };
+	array_create_stack(&thread_arr, threads, sizeof(ThreadState), MAX_THREADS);
+	
+	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+	ProcessDataArgs args = {
 		.sock = 0,
 		.http_routes = http_routes,
 		.ws_routes = ws_routes,
+		.thread_num = 0,
+		.thread_arr = &thread_arr,
+		.lock = &lock,
 	};
-
-	THREAD_T threads[MAX_THREADS] = { 0 };
-	Array thread_arr = { 0 };
-	array_create_stack(&thread_arr, threads, sizeof(THREAD_T), MAX_THREADS);
 
 	SOCKET sock;
 
@@ -593,22 +644,24 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 		
 		sock = process_incoming_connection(server_sock);
 		if (sock == INVALID_SOCKET) continue;
-
-		sync_threads(threads, MAX_THREADS);
+		
+		sync_threads(&thread_arr, &lock);
 	
 		// spawn 1 thread for each connection
 
-		int thread_num = get_thread_num(threads, MAX_THREADS);
-		if (thread_num == -1) {
+		// ! no mutex needed here since threads don't change array size
+		
+		if (array_full(&thread_arr)) { 
 			logger(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
 			continue;
 		}
 		
 		// make copy of args
 
-		ProcessArgs* t_args = safe_calloc(1, sizeof(ProcessArgs));
+		ProcessDataArgs* t_args = safe_calloc(1, sizeof(ProcessDataArgs));
 		memcpy(t_args, &args, sizeof(*t_args));
 		t_args->sock = sock;
+		t_args->thread_num = thread_arr.size;
 
 		create_thread(&thread_arr, t_args);
 	}
