@@ -179,7 +179,17 @@ static bool req_is_ws_upgrade(const HTTPRequest* req) {
 	return req->ws->has_key && req->ws->has_connection && req->ws->has_upgrade && req->ws->has_version;
 }
 
-static void http_process_request(
+/**
+ * @brief 
+ * @param inc_sock 
+ * @param data 
+ * @param routes 
+ * @param ws_routes 
+ * @param is_websocket 
+ * @param websocket_route 
+ * @return true if should close connection
+ */
+static bool http_process_request(
 	const SOCKET inc_sock,
 	const char* data,
 	const HTTPRoutes *routes,
@@ -187,7 +197,7 @@ static void http_process_request(
 	bool* is_websocket,
 	WebsocketRoute** websocket_route
 ) {
-
+	bool should_close = false;
 	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
 	Arena res_arena = arena_init(HTTP_RES_ARENA_SIZE);
 
@@ -268,10 +278,20 @@ static void http_process_request(
 		logger(LOG_ERR, "failed to send responses\n");
 	}
 
+	// check if Connection: close
+
+	char con[20] = { 0 };
+	int get_res = korall_request_header_get(req, "Connection", con, 20);
+	if (get_res == -1) goto http_process_request_end;
+
+	if (strcmp_ci(con, "close") == 0) {
+		should_close = true;
+	}
+
 http_process_request_end:
 	http_response_free(&res_arena);
 	http_request_free(&req_arena);
-	return;
+	return should_close;
 }
 
 /**
@@ -428,11 +448,11 @@ static void process_incoming_data(void* arg) {
 
 		if (is_websocket && ws_route != NULL) {
 			close = websocket_process_data(inc_sock, buffer, ws_route);
-			if (close) goto process_incoming_data_end;
 		}
 		else {
-			http_process_request(inc_sock, buffer, http_routes, ws_routes, &is_websocket, &ws_route);
+			close = http_process_request(inc_sock, buffer, http_routes, ws_routes, &is_websocket, &ws_route);
 		}
+		if (close) goto process_incoming_data_end;
 		memset(buffer, 0, READ_BUFFER_LEN);
 	}
 process_incoming_data_end:

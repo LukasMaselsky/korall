@@ -66,7 +66,7 @@ static bool cjson_read_bool(cJSON* json, bool def, const char* field) {
 
 static int cjson_read_num(cJSON* json, int def, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
-	if (!(cJSON_IsNumber(field))) {
+	if (!(cJSON_IsNumber(item))) {
 		printf("Config \"%s\" field is not valid, using default value.\n", field);
 		return def;
 	}
