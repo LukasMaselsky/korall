@@ -55,15 +55,22 @@ static void cjson_read_string(cJSON* json, String str, String def, const char* f
 	return;
 }
 
-static void cjson_read_bool(cJSON* json, bool* val, bool def, const char* field) {
+static bool cjson_read_bool(cJSON* json, bool def, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsBool(item))) {
 		printf("Config \"%s\" field is not valid, using default value.\n", field);
-		*val = def;
+		return def;
 	}
-	else {
-		*val = item->valueint;
+	return item->valueint;
+}
+
+static int cjson_read_num(cJSON* json, int def, const char* field) {
+	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
+	if (!(cJSON_IsNumber(field))) {
+		printf("Config \"%s\" field is not valid, using default value.\n", field);
+		return def;
 	}
+	return item->valueint;
 }
 
 /**
@@ -137,23 +144,22 @@ static int config_init_inner(const char* path) {
 
 	// port
 
-	cJSON* port = cJSON_GetObjectItemCaseSensitive(json, "port");
-	if (!(cJSON_IsNumber(port))) {
-		printf("Config \"port\" field is not valid.\n");
-		strncpy(config->port.chars, default_config->port.chars, config->port.size);
-	}
-	else if (!is_valid_port_num(port->valueint)) {
+	int def;
+	str_to_int(&def, default_config->port.chars, 10);
+	int port = cjson_read_num(json, def, "port");
+
+	if (!is_valid_port_num(port)) {
 		printf("Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
 		strncpy(config->port.chars, default_config->port.chars, config->port.size);
 	}
 	else {
-		int_to_str(port->valueint, config->port.chars);
+		int_to_str(port, config->port.chars);
 	};
 
 
 	// allow_custom_headers
 
-	cjson_read_bool(json, &(config->allow_custom_headers), default_config->allow_custom_headers, "allow_custom_headers");
+	config->allow_custom_headers = cjson_read_bool(json, default_config->allow_custom_headers, "allow_custom_headers");
 
 	cJSON_Delete(json);
 
