@@ -39,12 +39,12 @@ static void cjson_read_string(cJSON* json, String str, String def, const char* f
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	const char* val;
 	if (!(cJSON_IsString(item) && (item->valuestring != NULL))) {
-		printf("Config \"%s\" field is not valid, using default value.\n", field);
+		logger(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
 		val = def.chars;
 	}
 	else {
 		if (strlen(item->valuestring) > str.size) {
-			printf("Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, str.size);
+			logger(LOG_WARN, "Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, str.size);
 			val = def.chars;
 		}
 		else {
@@ -67,7 +67,7 @@ static bool cjson_read_bool(cJSON* json, bool def, const char* field) {
 static int cjson_read_num(cJSON* json, int def, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsNumber(item))) {
-		printf("Config \"%s\" field is not valid, using default value.\n", field);
+		logger(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
 		return def;
 	}
 	return item->valueint;
@@ -87,18 +87,18 @@ static int config_init_inner(const char* path) {
 	char file_path[MAX_FILE_PATH + 1] = { 0 };
 
 	if (path == NULL) {
-		printf("Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
+		logger(LOG_WARN, "Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
 		return -1;
 	}
 	else {
 		size_t path_len = strlen(path);
 		if (path_len > MAX_FILE_PATH) {
-			printf("File path too long.");
+			logger(LOG_WARN, "File path too long, using default config.");
 			return -1;
 		};
 		strcpy(file_path, path);
 		if (strlen(config_file_name) + path_len > MAX_FILE_PATH) {
-			printf("File path too long.");
+			logger(LOG_WARN, "File path too long, using default config.");
 			return -1;
 		};
 		strcat(file_path, config_file_name);
@@ -106,7 +106,7 @@ static int config_init_inner(const char* path) {
 
 	FILE* fp = fopen(file_path, "r");
 	if (fp == NULL) {
-		printf("Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
+		logger(LOG_WARN, "Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
 		return -1;
 	};
 
@@ -114,7 +114,7 @@ static int config_init_inner(const char* path) {
 	char buffer[CONFIG_BUFFER_LEN + 1];
 	fread(buffer, 1, sizeof(buffer), fp);
 	if (ferror(fp)) {
-		printf("Could not read from korall_config.json, using default config.\n");
+		logger(LOG_WARN, "Could not read from korall_config.json, using default config.\n");
 		return -1;
 	}
 	fclose(fp);
@@ -149,7 +149,7 @@ static int config_init_inner(const char* path) {
 	int port = cjson_read_num(json, def, "port");
 
 	if (!is_valid_port_num(port)) {
-		printf("Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
+		logger(LOG_WARN, "Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
 		strncpy(config->port.chars, default_config->port.chars, config->port.size);
 	}
 	else {
