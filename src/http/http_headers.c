@@ -1,10 +1,10 @@
-#include "http_headers.h"
-#include "utils.h"
-#include "http_internal.h"
-#include "lookup_tables.h"
-#include "sockets.h"
-#include "date.h"
-#include "sha1.h"
+#include "http/http_headers.h"
+#include "utils/utils.h"
+#include "http/http_internal.h"
+#include "lookup/lookup_tables.h"
+#include "socket/socket.h"
+#include "utils/date/date.h"
+#include "utils/sha1/sha1.h"
 
 /* General */
 

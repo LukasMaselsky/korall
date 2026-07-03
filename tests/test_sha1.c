@@ -1,5 +1,5 @@
 #if defined HEADERS
-#include "sha1.h"
+#include "utils/sha1/sha1.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>

@@ -1,5 +1,5 @@
-#include "utils.h"
-#include "sockets.h"
+#include "utils/utils.h"
+#include "socket/socket.h"
 
 /*
     Needed for Windows

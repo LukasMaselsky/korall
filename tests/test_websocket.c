@@ -1,6 +1,6 @@
 #if defined HEADERS
 #include <string.h>
-#include "websocket_internal.h"
+#include "http/websocket/websocket_internal.h"
 #elif defined TESTS
 
 // https://sachin9996.github.io/websocket-frames-explained/

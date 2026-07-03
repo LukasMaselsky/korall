@@ -1,9 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "utils.h"
-#include "cJSON.h"
-#include "sockets.h"
+#include "utils/utils.h"
+#include "cJSON/cJSON.h"
+#include "socket/socket.h"
 
 #define DEFAULT_PORT "3500"
 #define DEFAULT_DOMAIN "localhost"

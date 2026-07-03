@@ -1,7 +1,7 @@
 #if defined HEADERS
-#include "http_internal.h"
-#include "lookup_tables.h"
-#include "http_headers.h"
+#include "http/http_internal.h"
+#include "lookup/lookup_tables.h"
+#include "http/http_headers.h"
 #elif defined TESTS
 
 TEST("http_process_host") {

@@ -1,5 +1,5 @@
 #if defined HEADERS
-#include "sockets.h"
+#include "socket/socket.h"
 #elif defined TESTS
 
 TEST("is_valid_ipv4") {

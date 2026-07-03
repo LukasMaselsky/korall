@@ -1,7 +1,7 @@
-#include "websocket_internal.h"
-#include "utils.h"
-#include "sockets.h"
-#include "arena.h"
+#include "http/websocket/websocket_internal.h"
+#include "utils/utils.h"
+#include "socket/socket.h"
+#include "arena/arena.h"
 
 void websocket_frame_print(uint8_t* frame, size_t frame_length) {
 	for (size_t i = 0; i < frame_length; i++) {

@@ -1,5 +1,5 @@
 #if defined HEADERS
-#include "array.h"
+#include "array/array.h"
 #elif defined TESTS
 
 TEST("array_create_stack") {

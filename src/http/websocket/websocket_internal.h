@@ -1,7 +1,7 @@
 #ifndef WEBSOCKET_INTERNAL_H
 #define WEBSOCKET_INTERNAL_H
 
-#include "utils.h"
+#include "utils/utils.h"
 #include "korall/websocket.h"
 #include "korall/korall.h"
 

@@ -7,7 +7,7 @@ project(${project_name} LANGUAGES C)
 add_subdirectory(deps/glfw-3.4)
 add_subdirectory(deps/glad)
 
-file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_library(${project_name} STATIC ${PROJECT_SOURCES})
 
 # PUBLIC to allow examples access to it

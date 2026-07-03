@@ -1,5 +1,5 @@
-#include "http_internal.h"
-#include "cJSON.h"
+#include "http/http_internal.h"
+#include "cJSON/cJSON.h"
 
 ServerConfig g_default_config = {
 	.domain = {.chars = DEFAULT_DOMAIN, .size = 9 },

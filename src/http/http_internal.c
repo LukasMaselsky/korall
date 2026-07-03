@@ -1,7 +1,7 @@
-#include "http_internal.h"
-#include "lookup_tables.h"
-#include "http_headers.h"
-#include "sockets.h"
+#include "http/http_internal.h"
+#include "lookup/lookup_tables.h"
+#include "http/http_headers.h"
+#include "socket/socket.h"
 #include "korall_internal.h"
 
 // Request

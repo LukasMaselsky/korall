@@ -1,7 +1,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include "utils.h"
+#include "utils/utils.h"
 
 typedef struct {
 	uint8_t* data;

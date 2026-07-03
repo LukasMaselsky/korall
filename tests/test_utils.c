@@ -1,6 +1,6 @@
 #if defined HEADERS
 #include <string.h>
-#include "utils.h"
+#include "utils/utils.h"
 #elif defined TESTS
 
 TEST("is_digits_only") {

@@ -2,11 +2,11 @@
 #define KORALL_INTERNAL_H
 
 #include <stdlib.h>
-#include "http_internal.h"
-#include "websocket_internal.h"
-#include "array.h"
+#include "http/http_internal.h"
+#include "http/websocket/websocket_internal.h"
+#include "array/array.h"
 #include "korall/korall.h"
-#include "thread.h"
+#include "thread/thread.h"
 
 #define READ_BUFFER_LEN KILOBYTE
 #define RESPONSE_BUFFER_LEN KILOBYTE

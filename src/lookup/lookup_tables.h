@@ -1,8 +1,8 @@
 #ifndef LOOKUP_TABLES_H
 #define LOOKUP_TABLES_H
 
-#include "utils.h"
-#include "http_internal.h"
+#include "utils/utils.h"
+#include "http/http_internal.h"
 #include "korall/websocket.h"
 
 #define HTTP_METHOD_TABLE_COUNT HTTP_METHOD_COUNT

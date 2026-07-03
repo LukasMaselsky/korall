@@ -1,9 +1,9 @@
 #ifndef HTTP_INTERNAL_H
 #define HTTP_INTERNAL_H
-#include "arena.h"
-#include "sockets.h"
-#include "utils.h"
-#include "config.h"
+#include "arena/arena.h"
+#include "socket/socket.h"
+#include "utils/utils.h"
+#include "config/config.h"
 #include "korall/http.h"
 
 #define WS_VERSION 13

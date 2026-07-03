@@ -4,7 +4,7 @@ set(project_name "korall_tests")
 
 project(${project_name} LANGUAGES C)
 
-file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
+file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 add_executable(${project_name})
 target_sources(${project_name} PRIVATE ${PROJECT_SOURCES})
