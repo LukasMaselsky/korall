@@ -142,7 +142,7 @@ int websocket_frame_construct(
 	uint8_t* data
 ) {
 	if (data != NULL && sizeof(data) > UINT64_MAX) {
-		logger(LOG_ERR, "failed construct websocket frame, data too long");
+		log_msg(LOG_ERR, "failed construct websocket frame, data too long");
 		return -1;
 	};
 
@@ -194,11 +194,11 @@ int korall_ws_frame_send(const WebsocketFrame* frame) {
 
 	websocket_frame_encode(frame, data);
 
-	logger(LOG_INFO, "sending frame\n");
+	log_msg(LOG_INFO, "sending frame\n");
 
 	int r = socket_send(frame->socket, data, strlen((const char *)data), 0);
 	if (r == -1) {
-		logger(LOG_ERR, "failed to send data to ");
+		log_msg(LOG_ERR, "failed to send data to ");
 		socket_print(frame->socket);
 		printf("\n");
 	}

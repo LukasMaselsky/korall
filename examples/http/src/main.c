@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define USING_CMAKE true
+
 static KORALL_HTTP_ROUTE(my_route) {
 
 	char value[100] = { 0 };
@@ -20,11 +22,18 @@ int main(int argc, char* argv[]) {
 	HTTPRoutes* routes = korall_http_routes_init();
 	korall_http_routes_add(routes, "/", HTTP_GET, my_route);
 
+
+	#if USING_CMAKE
+
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_run(RESOURCES_PATH, routes, NULL);
+	korall_run(RESOURCES_PATH, routes, NULL, NULL);
+
+	#else
 
 	// with Make
-	//korall_run("./resources/", routes, NULL);
+	korall_run("./resources/", routes, NULL, NULL);
+
+	#endif
 
 	return 0;
 }

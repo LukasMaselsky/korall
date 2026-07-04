@@ -469,7 +469,7 @@ int http_response_construct(
 	if (body != NULL) {
 		const char* ct_str = lookup_int_str(content_type, &http_media_type_lookup_table);
 		if (ct_str == NULL) {
-			logger(LOG_ERR, "response construction failed, content type lookup\n");
+			log_msg(LOG_ERR, "response construction failed, content type lookup\n");
 			return -1;
 		}
 
@@ -506,7 +506,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res) {
 
 	sprintf(data, "%s%s%s", res->start_line.chars, res->headers_base, body);
 	if (data == NULL) {
-		logger(LOG_ERR, "failed to convert HTTP response to str\n");
+		log_msg(LOG_ERR, "failed to convert HTTP response to str\n");
 		arena_free(&res_full_arena);
 		return -1;
 	}
@@ -514,7 +514,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res) {
 
 	int r = socket_send(inc_sock, data, strlen(data), 0);
 	if (r == -1) {
-		logger(LOG_ERR, "couldn't send data to ");
+		log_msg(LOG_ERR, "couldn't send data to ");
 		socket_print(inc_sock);
 		printf("\n");
 	}
@@ -694,7 +694,7 @@ char* korall_request_body_get(const HTTPRequest* req) {
 int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
 	const char* reason_phrase = lookup_int_str(code, &http_status_code_lookup_table);
 	if (reason_phrase == NULL) {
-		logger(LOG_ERR, "failed to set response, invalid code\n");
+		log_msg(LOG_ERR, "failed to set response, invalid code\n");
 		return -1;
 	}
 	String start_line = res->start_line;
@@ -721,12 +721,12 @@ int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
 */
 int korall_response_header_set(HTTPResponse* res, const char* field, const char* value) {
 	if (field == NULL || value == NULL) {
-		logger(LOG_ERR, "failed to set header, field and value must not be NULL\n");
+		log_msg(LOG_ERR, "failed to set header, field and value must not be NULL\n");
 		return -1;
 	}
 	
 	if (res->header_count >= res->header_capacity) {
-		logger(LOG_ERR, "failed to set header, maximum of %zu headers reached\n", res->header_capacity);
+		log_msg(LOG_ERR, "failed to set header, maximum of %zu headers reached\n", res->header_capacity);
 		return -1;
 	}
 
@@ -737,13 +737,13 @@ int korall_response_header_set(HTTPResponse* res, const char* field, const char*
 	size_t value_len = strlen(value);
 
 	if (field_len + value_len + 4 > res->header_size) {
-		logger(LOG_ERR, "failed to set header, must be under %zu characters total\n", res->header_size);
+		log_msg(LOG_ERR, "failed to set header, must be under %zu characters total\n", res->header_size);
 		return -1;
 	}
 
 	HTTPResponseHeaderField res_field = lookup_str_int(field, &http_res_header_field_lookup_table, true);
 	if (http_process_response_header_value(res_field, value) != HTTP_SUCCESS) {
-		logger(LOG_ERR, "failed to set header, value is not valid for field %s\n", field);
+		log_msg(LOG_ERR, "failed to set header, value is not valid for field %s\n", field);
 		return -1;
 	}
 
@@ -760,7 +760,7 @@ int korall_response_body_set(HTTPResponse* res, const char* body) {
 
 	size_t body_len = strlen(body);
 	if (body_len > res->body.size) {
-		logger(LOG_ERR, "failed to set body, body too long\n");
+		log_msg(LOG_ERR, "failed to set body, body too long\n");
 		return -1;
 	}
 

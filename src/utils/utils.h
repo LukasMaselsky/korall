@@ -15,6 +15,8 @@
 #include <process.h>
 #include <stdarg.h>
 
+#include "logging/logging.h"
+
 #define ANSI_COLOR_BLACK   "\x1b[30m"
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -39,12 +41,6 @@
 #define KILOBYTE 1024
 #define MEGABYTE (KILOBYTE * 1024)
 #define GIGABYTE (MEGABYTE * 1024)
-
-typedef enum {
-    LOG_ERR,
-    LOG_WARN,
-    LOG_INFO,
-} LogType;
 
 typedef enum {
     DAY_MON,
@@ -85,8 +81,6 @@ typedef struct {
     char* chars;
     size_t size; // without null terminator
 } String;
-
-void logger(LogType pt, const char* const format, ...);
 
 void memcpy_reverse(uint8_t* dest, const uint8_t* src, size_t size);
 

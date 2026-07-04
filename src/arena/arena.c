@@ -46,7 +46,7 @@ uintptr_t arena_alloc(Arena *arena, size_t size) {
     unsigned int ali_size = new_cur - (uintptr_t)arena->base;
 
     if (ali_size + size > arena->capacity) {
-        logger(LOG_ERR, "failed to allocate %zu bytes in arena, over capacity, exiting\n", size);
+        log_msg(LOG_ERR, "failed to allocate %zu bytes in arena, over capacity, exiting\n", size);
         exit(EXIT_FAILURE);
     }
 

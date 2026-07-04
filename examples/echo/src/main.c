@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define USING_CMAKE true
+
 static KORALL_WS_ROUTE(echo) {
 	WebsocketFrame frame = { 0 };
 	frame.data = data->data;
@@ -16,15 +18,29 @@ static KORALL_WS_ROUTE(echo) {
 }
 
 int main(int argc, char* argv[]) {
-	
+
 	WebsocketRoutes* routes = korall_ws_routes_init();
 	korall_ws_routes_add(routes, "/", echo);
 
+	FILE* log_file = NULL;
+
+	#if USING_CMAKE
+	
+	log_file = fopen(RESOURCES_PATH "log_file.txt", "a");
+
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_run(RESOURCES_PATH, NULL, routes);
+	korall_run(RESOURCES_PATH, NULL, routes, log_file);
+	
+	#else
+
+	log_file = fopen("./resources/log_file.txt", "a");
 
 	// with Make
-	// korall_run("./resources/", NULL, routes);
+	korall_run("./resources/", NULL, routes, log_file);
+
+	#endif
+
+
 
 	return 0;
 }

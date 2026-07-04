@@ -104,7 +104,7 @@ static bool websocket_process_data(
 
 
 	if (websocket_frame_decode((uint8_t*)data, in_wsf) == -1) {
-		logger(LOG_ERR, "invalid websocket message received, syntax\n");
+		log_msg(LOG_ERR, "invalid websocket message received, syntax\n");
 		goto websocket_process_data_end;
 	}
 	in_wsf->socket = inc_sock;
@@ -116,12 +116,12 @@ static bool websocket_process_data(
 	// send pong when you get ping
 	if (in_wsf->opcode == WS_OP_PING) {
 		if (websocket_frame_construct_pong(out_wsf, inc_sock, false, 0) == -1) {
-			logger(LOG_ERR, "failed to construct pong message\n");
+			log_msg(LOG_ERR, "failed to construct pong message\n");
 			goto websocket_process_data_end;
 		}
 
 		if (korall_ws_frame_send(out_wsf) == -1) {
-			logger(LOG_ERR, "failed to send pong message\n");
+			log_msg(LOG_ERR, "failed to send pong message\n");
 		}
 		goto websocket_process_data_end;
 	}
@@ -132,17 +132,17 @@ static bool websocket_process_data(
 
 		// todo: close codes
 		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0) == -1) {
-			logger(LOG_ERR, "failed to construct close message\n");
+			log_msg(LOG_ERR, "failed to construct close message\n");
 			goto websocket_process_data_end;
 		}
 
 		if (korall_ws_frame_send(out_wsf) == -1) {
-			logger(LOG_ERR, "failed to send close message\n");
+			log_msg(LOG_ERR, "failed to send close message\n");
 			goto websocket_process_data_end;
 		}
 
 		if (socket_close(inc_sock) == -1) {
-			logger(LOG_ERR, "failed to close socket ");
+			log_msg(LOG_ERR, "failed to close socket ");
 			socket_print(inc_sock);
 			printf("\n");
 		};
@@ -170,7 +170,7 @@ static void route_not_found(HTTPResponse* res, SOCKET inc_sock) {
 	int err = http_response_construct(res, HTTP_SC_404, g_config.name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 	if (err == -1) return;
 	if (http_response_send(inc_sock, res) == -1) {
-		logger(LOG_ERR, "failed to send response\n");
+		log_msg(LOG_ERR, "failed to send response\n");
 	};
 	return;
 }
@@ -207,7 +207,7 @@ static bool http_process_request(
 	// first validate format
 	HTTPError parse_res = http_request_parse(data, req);
 	if (parse_res != HTTP_SUCCESS) {
-		logger(LOG_ERR, "invalid HTTP request received, syntax\n");
+		log_msg(LOG_ERR, "invalid HTTP request received, syntax\n");
 
 		HTTPStatusCode sc;
 		HTTPMediaType mt;
@@ -216,23 +216,23 @@ static bool http_process_request(
 		int err = http_response_construct(res, sc, g_config.name.chars, mt, message);
 		if (err == -1) goto http_process_request_end;
 		if (http_response_send(inc_sock, res) == -1) {
-			logger(LOG_ERR, "failed to send response\n");
+			log_msg(LOG_ERR, "failed to send response\n");
 		}
 		goto http_process_request_end;
 	}
 
 	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
 	if (!http_domain_port_match_server(req)) { 
-		logger(LOG_ERR, "invalid HTTP request received, host\n");
+		log_msg(LOG_ERR, "invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, g_config.name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (err == -1) goto http_process_request_end;
 		if (http_response_send(inc_sock, res) == -1) {
-			logger(LOG_ERR, "failed to send response\n");
+			log_msg(LOG_ERR, "failed to send response\n");
 		}
 		goto http_process_request_end;
 	}
 
-	logger(LOG_INFO, "valid HTTP request received\n");
+	log_msg(LOG_INFO, "valid HTTP request received\n");
 
 	
 	if (req_is_ws_upgrade(req)) {
@@ -249,7 +249,7 @@ static bool http_process_request(
 		int err = http_response_ws_construct(res, req->ws->accept, g_config.name.chars);
 		if (err == -1) goto http_process_request_end;
 		if (http_response_send(inc_sock, res) == -1) {
-			logger(LOG_ERR, "failed to send response\n");
+			log_msg(LOG_ERR, "failed to send response\n");
 		}
 		else {
 			*is_websocket = true;
@@ -259,7 +259,7 @@ static bool http_process_request(
 		goto http_process_request_end;
 	}
 
-	logger(LOG_INFO, "sending HTTP response\n\n");
+	log_msg(LOG_INFO, "sending HTTP response\n\n");
 
 	const HTTPRoute* route = http_route_select(req, routes);
 	if (route == NULL) {
@@ -270,12 +270,12 @@ static bool http_process_request(
 	route->callback(req, res); // CALL CALLBACK
 
 	if (res->start_line.chars[0] == '\0') {
-		logger(LOG_ERR, "failed to send response, no start line set\n");
+		log_msg(LOG_ERR, "failed to send response, no start line set\n");
 		goto http_process_request_end;
 	}
 	
 	if (http_response_send(inc_sock, res) == -1) {
-		logger(LOG_ERR, "failed to send responses\n");
+		log_msg(LOG_ERR, "failed to send responses\n");
 	}
 
 	// check if Connection: close
@@ -318,20 +318,20 @@ static SOCKET init_listen_socket() {
 	for (addrinfo = serverinfo; addrinfo != NULL; addrinfo = addrinfo->ai_next) {
 		sock = socket_create(addrinfo);
 		if (sock == -1) {
-			logger(LOG_ERR, "socket creation failed\n");
+			log_msg(LOG_ERR, "socket creation failed\n");
 			continue;
 		}
 
 		res = socket_reuse_port(sock);
 		if (res == -1) {
-			logger(LOG_ERR, "setsockopt failed\n");
+			log_msg(LOG_ERR, "setsockopt failed\n");
 			exit(EXIT_FAILURE);
 		}
 
 		res = socket_bind(sock, addrinfo);
 		if (res == -1) {
 			socket_close(sock);
-			logger(LOG_ERR, "socket bind failed\n");
+			log_msg(LOG_ERR, "socket bind failed\n");
 			continue;
 		}
 
@@ -343,19 +343,19 @@ static SOCKET init_listen_socket() {
 
 
 	if (addrinfo == NULL) {
-		logger(LOG_ERR, "failed to freeaddrinfo");
+		log_msg(LOG_ERR, "failed to freeaddrinfo");
 		exit(EXIT_FAILURE);
 	}
 
 	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
 	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
-	logger(LOG_INFO, "started \"%s\"\n", g_config.name.chars);
-	logger(LOG_INFO, "opened socket on %s PORT %s (%s)\n", ip, service, ipver);
+	log_msg(LOG_INFO, "started \"%s\"\n", g_config.name.chars);
+	log_msg(LOG_INFO, "opened socket on %s PORT %s (%s)\n", ip, service, ipver);
 
 	res = socket_listen(sock);
 	if (res == -1) {
-		logger(LOG_ERR, "socket listen failed\n");
+		log_msg(LOG_ERR, "socket listen failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -376,12 +376,12 @@ static SOCKET process_incoming_connection(SOCKET sock) {
 
 	incoming = socket_accept(sock, &incoming_addr, &incoming_addr_len);
 	if (incoming == INVALID_SOCKET) {
-		logger(LOG_ERR, "failed to accept connection\n");
+		log_msg(LOG_ERR, "failed to accept connection\n");
 		return incoming;
 	}
 
 	get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver, sizeof(ipver));
-	logger(LOG_INFO, "got connection from %s (%s)\n", ip, ipver);
+	log_msg(LOG_INFO, "got connection from %s (%s)\n", ip, ipver);
 	return incoming;
 }
 
@@ -394,7 +394,7 @@ static void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int
 			
 		int res = socket_send(fd, data, data_len, 0);
 		if (res == -1) {
-			logger(LOG_ERR, "couldn't send data to ");
+			log_msg(LOG_ERR, "couldn't send data to ");
 			socket_print(fd);
 			printf("\n");
 		}
@@ -426,12 +426,12 @@ static void process_incoming_data(void* arg) {
 		int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
 		if (bytes_read <= 0) {
 			if (bytes_read == 0) {
-				logger(LOG_INFO, "socket ");
+				log_msg(LOG_INFO, "socket ");
 				socket_print(inc_sock);
 				printf(" closed connection\n");
 			}
 			else {
-				logger(LOG_ERR, "couldn't read from ");
+				log_msg(LOG_ERR, "couldn't read from ");
 				socket_print(inc_sock);
 				printf("\n");
 			}
@@ -441,7 +441,7 @@ static void process_incoming_data(void* arg) {
 		}
 
 		buffer[bytes_read] = '\0';
-		logger(LOG_INFO, "received data from ");
+		log_msg(LOG_INFO, "received data from ");
 		socket_print(inc_sock);
 		printf("\n'%s'\n", buffer);
 
@@ -526,20 +526,20 @@ static void create_thread(Array* thread_arr, ProcessDataArgs *t_args) {
 	#ifdef _WIN32
 		uintptr_t btx = _beginthreadex(NULL, 0, process_incoming_data, (void*)t_args, 0, NULL);
 		if (btx == 0) {
-			logger(LOG_ERR, "failed to create thread, could not process connection\n");
+			log_msg(LOG_ERR, "failed to create thread, could not process connection\n");
 			goto create_thread_end;
 		}
 		thread = (THREAD_T)btx;
 	#else
 		int res = pthread_create(&thread, NULL, process_incoming_data, (void*)t_args);
 		if (res != 0) {
-			logger(LOG_ERR, "failed to create thread, could not process connection\n");
+			log_msg(LOG_ERR, "failed to create thread, could not process connection\n");
 			goto create_thread_end;
 		}
 	#endif
 
 	ThreadState ts = { .running = true, .thread = thread };
-	logger(LOG_INFO, "created thread\n");
+	log_msg(LOG_INFO, "created thread\n");
 	array_push(thread_arr, (void*)(&ts));
 
 create_thread_end:
@@ -569,20 +569,20 @@ HTTPRoutes* korall_http_routes_init() {
 
 void korall_http_routes_add(HTTPRoutes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
 	if (path == NULL) {
-		logger(LOG_ERR, "failed to add route, path cannot be NULL\n");
+		log_msg(LOG_ERR, "failed to add route, path cannot be NULL\n");
 		return;
 	}
 	if (callback == NULL) {
-		logger(LOG_ERR, "failed to add route, callback cannot be NULL\n");
+		log_msg(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
 	if (lookup_int_str(method, &http_method_lookup_table) == NULL) {
-		logger(LOG_ERR, "failed to add route, method is not valid\n");
+		log_msg(LOG_ERR, "failed to add route, method is not valid\n");
 		return;
 	}
 	size_t count = routes->route_count;
 	if (count >= routes->capacity) {
-		logger(LOG_ERR, "failed to add route, maximum route count exceeded\n");
+		log_msg(LOG_ERR, "failed to add route, maximum route count exceeded\n");
 		return;
 	}
 	HTTPRoute route = { .path = path, .method = method, .callback = callback };
@@ -608,17 +608,17 @@ WebsocketRoutes* korall_ws_routes_init() {
 
 void korall_ws_routes_add(WebsocketRoutes* routes, const char* path, void (* const callback)(const WebsocketFrame*)) {
 	if (path == NULL) {
-		logger(LOG_ERR, "failed to add route, path cannot be NULL\n");
+		log_msg(LOG_ERR, "failed to add route, path cannot be NULL\n");
 		return;
 	}
 	if (callback == NULL) {
-		logger(LOG_ERR, "failed to add route, callback cannot be NULL\n");
+		log_msg(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
 	
 	size_t count = routes->route_count;
 	if (count >= routes->capacity) {
-		logger(LOG_ERR, "failed to add route, maximum route count exceeded\n");
+		log_msg(LOG_ERR, "failed to add route, maximum route count exceeded\n");
 		return;
 	}
 	WebsocketRoute route = { .path = path, .callback = callback };
@@ -626,7 +626,11 @@ void korall_ws_routes_add(WebsocketRoutes* routes, const char* path, void (* con
 	routes->route_count = count + 1;
 }
 
-void korall_run(const char *config_path, const HTTPRoutes* http_routes, const WebsocketRoutes *ws_routes) {
+void korall_run(const char *config_path, const HTTPRoutes* http_routes, const WebsocketRoutes *ws_routes, const FILE* log_file) {
+
+	// logging
+
+	logging_init(log_file);
 
 	// config
 
@@ -636,7 +640,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 	
 	int res = socket_init();
 	if (res != 0) {
-		logger(LOG_ERR, "socket initialisation failed, exiting\n");
+		log_msg(LOG_ERR, "socket initialisation failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -672,7 +676,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 		// ! no mutex needed here since threads don't change array size
 		
 		if (array_full(&thread_arr)) { 
-			logger(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
+			log_msg(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
 			continue;
 		}
 		
@@ -688,7 +692,7 @@ void korall_run(const char *config_path, const HTTPRoutes* http_routes, const We
 
 	socket_close(server_sock);
 
-	logger(LOG_INFO, "closed socket\n");
+	log_msg(LOG_INFO, "closed socket\n");
 
 	socket_quit();
 

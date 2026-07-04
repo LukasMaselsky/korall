@@ -2,6 +2,7 @@
 #define KORALL_H
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "http.h"
 #include "websocket.h"
 
@@ -16,7 +17,7 @@ typedef struct WebsocketRoutePrivate WebsocketRoute;
 
 typedef struct WebsocketRoutesPrivate WebsocketRoutes;
 
-void korall_run(const char *config_path, const HTTPRoutes *http_routes, const WebsocketRoutes* ws_routes);
+void korall_run(const char *config_path, const HTTPRoutes *http_routes, const WebsocketRoutes* ws_routes, const FILE* log_file);
 
 HTTPRoutes* korall_http_routes_init();
 
