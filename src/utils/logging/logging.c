@@ -11,7 +11,7 @@ void logging_init(FILE* file) {
     log_file = stdout;
 }
 
-void log_msg(LogLevel ll, const char* const format, ...) {
+void log_msg(LogLevel log_level, const char* const format, ...) {
     time_t timer;
     char buffer[26];
     struct tm* tm_info;
@@ -24,7 +24,7 @@ void log_msg(LogLevel ll, const char* const format, ...) {
 
     va_list argp;
     va_start(argp, format);
-    switch (ll) {
+    switch (log_level) {
     case LOG_ERR:
         fprintf(log_file, TEXT_COLOR(ANSI_COLOR_RED, "[ERROR] "));
         break;

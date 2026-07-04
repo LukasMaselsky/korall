@@ -259,7 +259,7 @@ static bool http_process_request(
 		goto http_process_request_end;
 	}
 
-	log_msg(LOG_INFO, "sending HTTP response\n\n");
+	log_msg(LOG_INFO, "sending HTTP response\n");
 
 	const HTTPRoute* route = http_route_select(req, routes);
 	if (route == NULL) {
@@ -443,7 +443,8 @@ static void process_incoming_data(void* arg) {
 		buffer[bytes_read] = '\0';
 		log_msg(LOG_INFO, "received data from ");
 		socket_print(inc_sock);
-		printf("\n'%s'\n", buffer);
+		printf("\n");
+		log_msg(LOG_INFO, "'%s'\n", buffer);
 
 
 		if (is_websocket && ws_route != NULL) {

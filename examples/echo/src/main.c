@@ -6,15 +6,15 @@
 #define USING_CMAKE true
 
 static KORALL_WS_ROUTE(echo) {
-	WebsocketFrame frame = { 0 };
-	frame.data = data->data;
-	frame.opcode = WS_OP_TEXT;
-	frame.finished = true;
-	frame.close_code = WS_CC_UNUSED;
-	frame.length = data->length;
-	frame.mask = false;
-	frame.socket = data->socket;
-	korall_ws_frame_send(&frame);
+	WebsocketFrame res_frame = { 0 };
+	res_frame.data = frame->data;
+	res_frame.opcode = WS_OP_TEXT;
+	res_frame.finished = true;
+	res_frame.close_code = WS_CC_UNUSED;
+	res_frame.length = frame->length;
+	res_frame.mask = false;
+	res_frame.socket = frame->socket;
+	korall_ws_frame_send(&res_frame);
 }
 
 int main(int argc, char* argv[]) {
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
 
 	#endif
 
-
+	fclose(log_file);
 
 	return 0;
 }

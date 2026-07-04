@@ -510,7 +510,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res) {
 		arena_free(&res_full_arena);
 		return -1;
 	}
-	printf("'%s'\n", data);
+	log_msg(LOG_INFO, "'%s'\n", data);
 
 	int r = socket_send(inc_sock, data, strlen(data), 0);
 	if (r == -1) {
@@ -691,7 +691,12 @@ char* korall_request_body_get(const HTTPRequest* req) {
 /*
 	Sets the type of response
 */
-int korall_response_start_set(HTTPResponse* res, HTTPStatusCode code) {
+int korall_response_start_set(HTTPResponse* res, const int code) {
+	if (code < 100 || code > 599) {
+		log_msg(LOG_ERR, "failed to set response, invalid code\n");
+		return -1;
+	}
+
 	const char* reason_phrase = lookup_int_str(code, &http_status_code_lookup_table);
 	if (reason_phrase == NULL) {
 		log_msg(LOG_ERR, "failed to set response, invalid code\n");
