@@ -19,21 +19,21 @@ static KORALL_HTTP_ROUTE(my_route) {
 
 int main(int argc, char* argv[]) {
 	
-	HTTPRoutes* routes = korall_http_routes_init();
-	korall_http_routes_add(routes, "/", HTTP_GET, my_route);
-
-
 	#if USING_CMAKE
 
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_run(RESOURCES_PATH, routes, NULL, NULL);
+	korall_init(RESOURCES_PATH, NULL);
 
 	#else
 
 	// with Make
-	korall_run("./resources/", routes, NULL, NULL);
+	korall_init("./resources/", NULL);
 
 	#endif
+
+	korall_http_routes_add("/", HTTP_GET, my_route);
+	
+	korall_run();
 
 	return 0;
 }

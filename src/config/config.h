@@ -17,15 +17,16 @@ typedef struct ServerConfig {
 	String domain;
 	String port;
 	String name;
+	unsigned int max_http_routes;
+	unsigned int max_ws_routes;
 	bool allow_custom_headers;
 	bool on_heap;
 } ServerConfig;
 
+ServerConfig* config_get();
+
 void config_free(ServerConfig* config);
 
-void config_init(const char* path);
-
-extern ServerConfig g_default_config;
-extern ServerConfig g_config;
+ServerConfig* config_init(const char* path);
 
 #endif

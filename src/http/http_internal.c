@@ -2,7 +2,7 @@
 #include "lookup/lookup_tables.h"
 #include "http/http_headers.h"
 #include "socket/socket.h"
-#include "korall_internal.h"
+
 
 // Request
 
@@ -44,6 +44,7 @@ HTTPError http_request_parse(const char* data, HTTPRequest* req) {
 }
 
 HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, const char* value, HTTPRequest *req) {
+	ServerConfig* g_config = config_get();
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RQH_ACCEPT_LANGUAGE:
@@ -87,14 +88,14 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 		case HTTP_RQH_WS_VERSION:
 			return http_process_ws_version(value, req);
 		default:
-			return g_config.allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
+			return g_config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}
 }
 
 HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 	// process field
 	// todo: full header line instead of field and value len separate
-
+	ServerConfig* g_config = config_get();
 	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 }; // todo: allow custom headers (longer header field?)
 	
 	int res = fill_string_char(str, field, MAX_HTTP_HEADER_FIELD_LEN, ':');
@@ -102,7 +103,7 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 	const char *s = *str;
 
 	int header_field = lookup_str_int(field, &http_req_header_field_lookup_table, true);
-	if (header_field == -1 && !(g_config.allow_custom_headers)) return HTTP_BAD_HEADER; // todo: better error msg
+	if (header_field == -1 && !(g_config->allow_custom_headers)) return HTTP_BAD_HEADER; // todo: better error msg
 
 	
 	s++; // skip colon
@@ -432,6 +433,7 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 // Response
 
 HTTPError http_process_response_header_value(const HTTPResponseHeaderField field, const char* value) {
+	ServerConfig* g_config = config_get();
 	// massive switch for each header
 	switch (field) {
 		case HTTP_RSH_CONTENT_LENGTH:
@@ -453,7 +455,7 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_UPGRADE:
 			return http_process_upgrade(value, NULL);
 		default:
-			return g_config.allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
+			return g_config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}
 }
 

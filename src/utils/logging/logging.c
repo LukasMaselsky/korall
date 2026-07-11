@@ -1,14 +1,14 @@
 #include "logging.h"
-#include "../colours/colours.h"
+#include "utils/colours/colours.h"
 
-FILE* log_file = NULL;
+static FILE* g_log_file = NULL;
 
 void logging_init(FILE* file) {
     if (file != NULL) {
-        log_file = file;
+        g_log_file = file;
         return;
     } 
-    log_file = stdout;
+    g_log_file = stdout;
 }
 
 void log_msg(LogLevel log_level, const char* const format, ...) {
@@ -20,23 +20,23 @@ void log_msg(LogLevel log_level, const char* const format, ...) {
     tm_info = localtime(&timer);
 
     strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-    fprintf(log_file, "[%s] ", buffer);
+    fprintf(g_log_file, "[%s] ", buffer);
 
     va_list argp;
     va_start(argp, format);
     switch (log_level) {
     case LOG_ERR:
-        fprintf(log_file, TEXT_COLOR(ANSI_COLOR_RED, "[ERROR] "));
+        fprintf(g_log_file, TEXT_COLOR(ANSI_COLOR_RED, "[ERROR] "));
         break;
     case LOG_WARN:
-        fprintf(log_file, TEXT_COLOR(ANSI_COLOR_YELLOW, "[WARNING] "));
+        fprintf(g_log_file, TEXT_COLOR(ANSI_COLOR_YELLOW, "[WARNING] "));
         break;
     case LOG_INFO:
     default:
-        fprintf(log_file, "[INFO] ");
+        fprintf(g_log_file, "[INFO] ");
         break;
     }
 
-    vfprintf(log_file, format, argp);
+    vfprintf(g_log_file, format, argp);
     va_end(argp);
 }

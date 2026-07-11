@@ -17,15 +17,13 @@ typedef struct WebsocketRoutePrivate WebsocketRoute;
 
 typedef struct WebsocketRoutesPrivate WebsocketRoutes;
 
-void korall_run(const char *config_path, const HTTPRoutes *http_routes, const WebsocketRoutes* ws_routes, const FILE* log_file);
+void korall_init(const char* config_path, const FILE* log_file);
 
-HTTPRoutes* korall_http_routes_init();
+void korall_run();
 
-WebsocketRoutes* korall_ws_routes_init();
+void korall_http_routes_add(const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
 
-void korall_http_routes_add(HTTPRoutes* routes, const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
-
-void korall_ws_routes_add(WebsocketRoutes* routes, const char* path, void (* const callback)(const WebsocketFrame*));
+void korall_ws_routes_add(const char* path, void (* const callback)(const WebsocketFrame*));
 
 
 #endif

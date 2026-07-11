@@ -59,15 +59,15 @@ TEST("sha1") {
         */
     for (j = 0; j < 4; ++j)
     {
-        printf("\nTest %d: %d, '%s'\n",
-            j + 1,
-            repeatcount[j],
-            testarray[j]);
+        // printf("\nTest %d: %d, '%s'\n",
+        //    j + 1,
+        //    repeatcount[j],
+        //    testarray[j]);
 
         err = SHA1Reset(&sha);
         if (err)
         {
-            fprintf(stderr, "SHA1Reset Error %d.\n", err);
+            // fprintf(stderr, "SHA1Reset Error %d.\n", err);
             break;    /* out of for j loop */
         }
 
@@ -78,7 +78,7 @@ TEST("sha1") {
                 strlen(testarray[j]));
             if (err)
             {
-                fprintf(stderr, "SHA1Input Error %d.\n", err);
+                // fprintf(stderr, "SHA1Input Error %d.\n", err);
                 break;    /* out of for i loop */
             }
         }
@@ -86,27 +86,27 @@ TEST("sha1") {
         err = SHA1Result(&sha, Message_Digest);
         if (err)
         {
-            fprintf(stderr,
-                "SHA1Result Error %d, could not compute message digest.\n",
-                err);
+            // fprintf(stderr,
+            //    "SHA1Result Error %d, could not compute message digest.\n",
+            //    err);
         }
         else
         {
-            printf("\t");
+            // printf("\t");
             for (i = 0; i < 20; ++i)
             {
-                printf("%02X ", Message_Digest[i]);
+                // printf("%02X ", Message_Digest[i]);
             }
-            printf("\n");
+            // printf("\n");
         }
-        printf("Should match:\n");
-        printf("\t%s\n", resultarray[j]);
+        // printf("Should match:\n");
+        // printf("\t%s\n", resultarray[j]);
     }
 
     /* Test some error returns */
     err = SHA1Input(&sha, (const unsigned char*)testarray[1], 1);
-    printf("\nError %d. Should be %d.\n", err, shaStateError);
+    // printf("\nError %d. Should be %d.\n", err, shaStateError);
     err = SHA1Reset(0);
-    printf("\nError %d. Should be %d.\n", err, shaNull);
+    // printf("\nError %d. Should be %d.\n", err, shaNull);
 }
 #endif

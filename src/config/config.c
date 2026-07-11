@@ -1,15 +1,22 @@
 #include "http/http_internal.h"
 #include "cJSON/cJSON.h"
+#include "server/http/server_http.h"
 
-ServerConfig g_default_config = {
-	.domain = {.chars = DEFAULT_DOMAIN, .size = 9 },
-	.port = {.chars = DEFAULT_PORT, .size = 4 },
-	.name = {.chars = DEFAULT_SERVER_NAME, .size = 12 },
+static ServerConfig g_default_config = {
+	.domain = {.chars = DEFAULT_DOMAIN, .size = sizeof(DEFAULT_DOMAIN) - 1 },
+	.port = {.chars = DEFAULT_PORT, .size = sizeof(DEFAULT_PORT) - 1 },
+	.name = {.chars = DEFAULT_SERVER_NAME, .size = sizeof(DEFAULT_SERVER_NAME) - 1 },
 	.allow_custom_headers = true,
+	.max_http_routes = HTTP_ROUTES_CAPACITY,
+	.max_ws_routes = WS_ROUTES_CAPACITY,
 	.on_heap = false
 };
 
-ServerConfig g_config = { 0 };
+static ServerConfig g_config = { 0 };
+
+ServerConfig* config_get() {
+	return &g_config;
+}
 
 void config_free(ServerConfig* config) {
 	if (config == NULL || !(config->on_heap)) return;
@@ -20,7 +27,7 @@ void config_free(ServerConfig* config) {
 }
 
 static ServerConfig* config_alloc(ServerConfig* config) {
-
+	
 	config->domain.chars = safe_calloc(1, MAX_DOMAIN_LEN);
 	config->domain.size = MAX_DOMAIN_LEN;
 
@@ -35,17 +42,17 @@ static ServerConfig* config_alloc(ServerConfig* config) {
 	return config;
 }
 
-static void cjson_read_string(cJSON* json, String str, String def, const char* field) {
+static void cjson_read_string(cJSON* json, String str, String default_val, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	const char* val;
 	if (!(cJSON_IsString(item) && (item->valuestring != NULL))) {
 		log_msg(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
-		val = def.chars;
+		val = default_val.chars;
 	}
 	else {
 		if (strlen(item->valuestring) > str.size) {
 			log_msg(LOG_WARN, "Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, str.size);
-			val = def.chars;
+			val = default_val.chars;
 		}
 		else {
 			val = item->valuestring;
@@ -55,20 +62,20 @@ static void cjson_read_string(cJSON* json, String str, String def, const char* f
 	return;
 }
 
-static bool cjson_read_bool(cJSON* json, bool def, const char* field) {
+static bool cjson_read_bool(cJSON* json, bool default_val, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsBool(item))) {
 		printf("Config \"%s\" field is not valid, using default value.\n", field);
-		return def;
+		return default_val;
 	}
 	return item->valueint;
 }
 
-static int cjson_read_num(cJSON* json, int def, const char* field) {
+static int cjson_read_num(cJSON* json, int default_val, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsNumber(item))) {
 		log_msg(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
-		return def;
+		return default_val;
 	}
 	return item->valueint;
 }
@@ -161,8 +168,16 @@ static int config_init_inner(const char* path) {
 
 	config->allow_custom_headers = cjson_read_bool(json, default_config->allow_custom_headers, "allow_custom_headers");
 
-	cJSON_Delete(json);
 
+	// max_http_routes
+
+	config->max_http_routes = cjson_read_num(json, default_config->max_http_routes, "max_http_routes");
+	
+	// max_ws_routes
+	
+	config->max_ws_routes = cjson_read_num(json, default_config->max_ws_routes, "max_ws_routes");
+
+	cJSON_Delete(json);
 	return 0;
 }
 
@@ -171,11 +186,11 @@ static int config_init_inner(const char* path) {
  * @param path path of configuration file location
  * @return
  */
-void config_init(const char* path) {
+ServerConfig* config_init(const char* path) {
 
 	int res = config_init_inner(path);
 	if (res == -1) {
 		g_config = g_default_config;
 	}
-	return;
+	return &g_config;
 }
