@@ -517,6 +517,11 @@ HTTPError http_process_ws_version(const char* value, HTTPRequest* req) {
 	return HTTP_SUCCESS;
 }
 
+HTTPError http_process_origin(const char* value) {
+	// only processes FORMAT, not if origins allowed
+	// todo: 
+}
+
 /* Response */
 
 HTTPError http_process_cache_control_res(const char* value) {

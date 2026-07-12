@@ -222,6 +222,7 @@ const LookupEntry http_media_type_lookup_table_entries[HTTP_MEDIA_TYPE_TABLE_COU
 	{ HTTP_MT_APP_VND_DOCX, "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
 	{ HTTP_MT_APP_X_WWW_FORM_URLENCODED, "application/x-www-form-urlencoded" },
 	{ HTTP_MT_APP_XML, "application/xml" },
+	{ HTTP_MT_APP_XHTML_XML, "application/xhtml+xml"},
 	{ HTTP_MT_APP_ZIP, "application/zip" },
 	{ HTTP_MT_APP_ZSTD, "application/zstd" },
 	{ HTTP_MT_AUD, "audio/*" },

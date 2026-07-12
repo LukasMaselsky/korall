@@ -1,15 +1,6 @@
 #include "array.h"
 
 
-void array_create_stack(Array* arr, void *data, const size_t element_size, const size_t capacity) {
-	arr->data = data;
-	arr->size = 0;
-	arr->capacity = capacity;
-	arr->element_size = element_size;
-	arr->on_heap = false;
-	return;
-}
-
 Array* array_create_heap(const size_t element_size, const size_t capacity) {
 
 	Array* arr = (Array*)malloc(sizeof(Array));
@@ -123,4 +114,15 @@ void array_clear(Array* arr) {
 
 bool array_full(Array* arr) {
 	return arr->size >= arr->capacity;
+}
+
+void array_for_each(Array* arr, void (* const callback)(const void*, va_list), ...) {
+	if (arr == NULL) return -1;
+	for (size_t i = 0; i < arr->size; i++) {
+		void* element = array_get(arr, i);
+		va_list argp;
+		va_start(argp, callback);
+		callback(element, argp);
+		va_end(argp);
+	}
 }

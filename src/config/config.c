@@ -1,11 +1,16 @@
 #include "http/http_internal.h"
 #include "cJSON/cJSON.h"
 #include "server/http/server_http.h"
+#include <stdarg.h>
+
+static char* g_default_allow_origins[1] = {"*"};
+static Array g_default_allow_origins_arr = array_create_stack(&g_default_allow_origins, sizeof(char *), 1);
 
 static ServerConfig g_default_config = {
 	.domain = {.chars = DEFAULT_DOMAIN, .size = sizeof(DEFAULT_DOMAIN) - 1 },
 	.port = {.chars = DEFAULT_PORT, .size = sizeof(DEFAULT_PORT) - 1 },
 	.name = {.chars = DEFAULT_SERVER_NAME, .size = sizeof(DEFAULT_SERVER_NAME) - 1 },
+	.allow_origins = &g_default_allow_origins_arr,
 	.allow_custom_headers = true,
 	.max_http_routes = HTTP_ROUTES_CAPACITY,
 	.max_ws_routes = WS_ROUTES_CAPACITY,
@@ -24,6 +29,8 @@ void config_free(ServerConfig* config) {
 	free(config->domain.chars);
 	free(config->port.chars);
 	free(config->name.chars);
+	// todo
+	free(config->allow_origins);
 }
 
 static ServerConfig* config_alloc(ServerConfig* config) {
@@ -37,16 +44,26 @@ static ServerConfig* config_alloc(ServerConfig* config) {
 	config->name.chars = safe_calloc(1, MAX_SERVER_NAME_LEN);
 	config->name.size = MAX_SERVER_NAME_LEN;
 
+	Array* arr = (Array*)array_create_heap(sizeof(char*), MAX_ALLOW_ORIGINS);
+	if (arr == NULL)
+		exit(EXIT_FAILURE);
+	
+	config->allow_origins = arr;
+
 	config->on_heap = true;
 
 	return config;
+}
+
+static inline void log_field_not_valid(const char* field) {
+	log_msg(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
 }
 
 static void cjson_read_string(cJSON* json, String str, String default_val, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	const char* val;
 	if (!(cJSON_IsString(item) && (item->valuestring != NULL))) {
-		log_msg(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
+		log_field_not_valid(field);
 		val = default_val.chars;
 	}
 	else {
@@ -65,7 +82,7 @@ static void cjson_read_string(cJSON* json, String str, String default_val, const
 static bool cjson_read_bool(cJSON* json, bool default_val, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsBool(item))) {
-		printf("Config \"%s\" field is not valid, using default value.\n", field);
+		log_field_not_valid(field);
 		return default_val;
 	}
 	return item->valueint;
@@ -74,10 +91,43 @@ static bool cjson_read_bool(cJSON* json, bool default_val, const char* field) {
 static int cjson_read_num(cJSON* json, int default_val, const char* field) {
 	cJSON* item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsNumber(item))) {
-		log_msg(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
+		log_field_not_valid(field);
 		return default_val;
 	}
 	return item->valueint;
+}
+
+static int cjson_read_arr_string(cJSON* json, const char* field, void (*callback)(const char*, va_list), ...) {
+	cJSON* arr = cJSON_GetObjectItemCaseSensitive(json, field);
+	if (!(cJSON_IsArray(arr))) {
+		log_field_not_valid(field);
+		return -1;
+	};
+
+	const cJSON* item = NULL;
+	cJSON_ArrayForEach(item, arr) {
+		if (!cJSON_IsString(item)) continue;
+		char* str = item->valuestring;
+		va_list argp;
+		va_start(argp, callback);
+		callback(str, argp);
+		va_end(argp);
+	}
+
+	return 0;
+}
+
+static void allow_origins_add(const char *str, va_list args) {
+	Array* origins_arr = va_arg(args, Array*);
+	const size_t str_len = strlen(str);
+	// MAX_HTTP_URL ?
+	if (str_len > MAX_DOMAIN_LEN) return;
+	char* origin = safe_calloc(1, str_len + 1);
+	strncpy(origin, str, str_len);
+	int res = array_push(origins_arr, &origin);
+	if (res == -1) {
+		log_msg(LOG_WARN, "failed to load origin from \"allow_origins\", over capacity\n");
+	}
 }
 
 /**
@@ -176,6 +226,13 @@ static int config_init_inner(const char* path) {
 	// max_ws_routes
 	
 	config->max_ws_routes = cjson_read_num(json, default_config->max_ws_routes, "max_ws_routes");
+
+	// allow_origins
+
+	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
+	if (ao_res == -1) {
+		config->allow_origins = default_config->allow_origins;
+	}
 
 	cJSON_Delete(json);
 	return 0;

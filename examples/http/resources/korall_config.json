@@ -2,5 +2,6 @@
   "name": "HTTPServer",
   "domain": "localhost",
   "port": 3500,
-  "allow_custom_headers": true
+  "allow_custom_headers": true,
+  "allow_origins": ["*"]
 }

@@ -87,6 +87,8 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 			return http_process_ws_key(value, req);
 		case HTTP_RQH_WS_VERSION:
 			return http_process_ws_version(value, req);
+		case HTTP_RQH_ORIGIN:
+			return http_process_origin(value);
 		default:
 			return g_config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
 	}

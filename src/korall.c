@@ -132,8 +132,7 @@ void korall_run() {
 	
 
 	ThreadState threads[MAX_THREADS] = { 0 };
-	Array thread_arr = { 0 };
-	array_create_stack(&thread_arr, threads, sizeof(ThreadState), MAX_THREADS);
+	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), MAX_THREADS);
 	
 	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 

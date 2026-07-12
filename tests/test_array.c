@@ -3,9 +3,8 @@
 #elif defined TESTS
 
 TEST("array_create_stack") {
-	Array arr = { 0 };
 	int data[30] = { 0 };
-	array_create_stack(&arr, data, sizeof(int), 30);
+	Array arr = array_create_stack(data, sizeof(int), 30);
 	ASSERT(arr.capacity == 30);
 	ASSERT(arr.size == 0);
 	ASSERT(arr.element_size == sizeof(int));

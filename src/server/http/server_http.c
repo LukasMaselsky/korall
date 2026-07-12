@@ -231,6 +231,10 @@ bool http_process_request(
 		goto http_process_request_end;
 	}
 
+	// todo: check if origin is allowed, config
+
+	
+
 	log_msg(LOG_INFO, "valid HTTP request received\n");
 
 

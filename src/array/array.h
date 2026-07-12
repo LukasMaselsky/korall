@@ -3,6 +3,7 @@
 
 #include "utils/utils.h"
 
+
 typedef struct {
 	uint8_t* data;
 	size_t element_size;
@@ -11,7 +12,7 @@ typedef struct {
 	bool on_heap;
 } Array;
 
-void array_create_stack(Array* arr, void* data, const size_t element_size, const size_t capacity);
+#define array_create_stack(a_data, a_element_size, a_capacity) { .data = a_data, .size = 0, .capacity = a_capacity, .element_size = a_element_size, .on_heap = false };
 
 Array* array_create_heap(const size_t element_size, const size_t capacity);
 
@@ -34,5 +35,7 @@ int array_find(Array* arr, void* item, bool (* const compare)(const void*, const
 void array_clear(Array* arr);
 
 bool array_full(Array* arr);
+
+void array_for_each(Array* arr, void (* const callback)(const void*, va_list), ...);
 
 #endif

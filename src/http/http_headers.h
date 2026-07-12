@@ -48,6 +48,8 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req);
 
 HTTPError http_process_ws_version(const char* value, HTTPRequest* req);
 
+HTTPError http_process_origin(const char* value);
+
 /* Response */
 
 HTTPError http_process_cache_control_res(const char* value);
