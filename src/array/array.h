@@ -34,6 +34,8 @@ int array_find(Array* arr, void* item, bool (* const compare)(const void*, const
 
 void array_clear(Array* arr);
 
+bool array_empty(Array* arr);
+
 bool array_full(Array* arr);
 
 void array_for_each(Array* arr, void (* const callback)(const void*, va_list), ...);

@@ -230,7 +230,7 @@ static int config_init_inner(const char* path) {
 	// allow_origins
 
 	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
-	if (ao_res == -1) {
+	if (ao_res == -1 || array_empty(config->allow_origins)) {
 		config->allow_origins = default_config->allow_origins;
 	}
 

@@ -67,7 +67,6 @@ typedef struct {
 #define MAX_LISTEN_QUEUE_LEN 10
 #define IP_VER_STR_LEN 5
 #define SELECT_NO_TIMEOUT -1.0
-#define LOCALHOST_NODE "127.0.0.1"
 
 typedef enum {
     AF_IPV4 = AF_INET,

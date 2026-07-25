@@ -230,6 +230,7 @@ const LookupEntry http_media_type_lookup_table_entries[HTTP_MEDIA_TYPE_TABLE_COU
 	{ HTTP_MT_AUD_OGG, "audio/ogg" },
 	{ HTTP_MT_IMG, "image/*" },
 	{ HTTP_MT_IMG_AVIF, "image/avif" },
+	{ HTTP_MT_IMG_WEBP, "image/webp" },
 	{ HTTP_MT_IMG_JPEG, "image/jpeg" },
 	{ HTTP_MT_IMG_PNG, "image/png" },
 	{ HTTP_MT_IMG_SVG_XML, "image/svg+xml" },

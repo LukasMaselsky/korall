@@ -112,6 +112,10 @@ void array_clear(Array* arr) {
 	return;
 }
 
+bool array_empty(Array* arr) {
+	return arr->size == 0;
+}
+
 bool array_full(Array* arr) {
 	return arr->size >= arr->capacity;
 }

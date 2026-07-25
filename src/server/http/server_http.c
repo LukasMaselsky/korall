@@ -164,6 +164,7 @@ websocket_process_data_end:
  * @return
  */
 void route_not_found(HTTPResponse* res, SOCKET inc_sock) {
+	log_msg(LOG_ERR, "route not found\n");
 	ServerConfig* g_config = config_get();
 	int err = http_response_construct(res, HTTP_SC_404, g_config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 	if (err == -1) return;
@@ -232,6 +233,7 @@ bool http_process_request(
 	}
 
 	// todo: check if origin is allowed, config
+
 
 	
 
@@ -309,12 +311,10 @@ SOCKET init_listen_socket() {
 
 	const char* node = g_config->domain.chars;
 	const char* service = g_config->port.chars;
-	if (node == NULL || strcmp(node, "localhost") == 0) {
-		node = LOCALHOST_NODE; // default server to localhost
-	}
 	res = get_addr_info(node, service, &serverinfo);
 
 	if (res != 0) {
+		log_msg(LOG_ERR, "invalid \"domain\" header\n");
 		exit(EXIT_FAILURE);
 	}
 

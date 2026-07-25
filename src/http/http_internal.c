@@ -432,6 +432,20 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 	*req = http_request_init(arena);
 }
 
+void http_verify_origin(HTTPRequest* req) {
+	// ! ONLY ADD Access-Control-Allow-Origin if "allowed"
+	ServerConfig* config = config_get();
+	const char* e1 = (char *)array_get(config->allow_origins, 0);
+	if (config->allow_origins->size == 1 && strcmp(e1, "*")) {
+		// any origin
+		// todo: "But that will only allow certain types of communication, excluding everything that involves credentials: Cookies, Authorization headers like those used with Bearer Tokens, etc."
+
+	}
+	const char* origin = req->start_line->request_target;
+
+	// get_ip_info_addr()
+}
+
 // Response
 
 HTTPError http_process_response_header_value(const HTTPResponseHeaderField field, const char* value) {
