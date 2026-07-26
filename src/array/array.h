@@ -12,7 +12,9 @@ typedef struct {
 	bool on_heap;
 } Array;
 
-#define array_create_stack(a_data, a_element_size, a_capacity) { .data = a_data, .size = 0, .capacity = a_capacity, .element_size = a_element_size, .on_heap = false };
+#define array_create_stack(a_data, a_element_size, a_size, a_capacity) { .data = a_data, .size = a_size, .capacity = a_capacity, .element_size = a_element_size, .on_heap = false };
+
+#define array_for_loop(i, arr) for(i = 0; i < arr->size; i++)
 
 Array* array_create_heap(const size_t element_size, const size_t capacity);
 

@@ -232,13 +232,35 @@ bool http_process_request(
 		goto http_process_request_end;
 	}
 
-	// todo: check if origin is allowed, config
 
-
+	// check if origin is allowed (CORS)
 	
+	const char* allow_origin = http_verify_origin(req);
+	if (allow_origin != NULL) {
+		korall_response_header_set(res, "Access-Control-Allow-Origin", allow_origin);
+	}
+
+	// CORS preflight
+	if (req->start_line->method == HTTP_OPTIONS) {
+		// Access-Control-Request-Method
+		char acrm[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
+		int acrm_res = korall_request_header_get(req, "Access-Control-Request-Method", acrm, MAX_HTTP_METHOD_STR_LEN);
+		if (acrm_res == -1) {
+			log_msg(LOG_ERR, "invalid HTTP request received, host\n");
+			int err = http_response_construct(res, HTTP_SC_400, g_config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "OPTIONS request must contain Access-Control-Request-Method header."));
+			if (err == -1) goto http_process_request_end;
+			if (http_response_send(inc_sock, res) == -1) {
+				log_msg(LOG_ERR, "failed to send response\n");
+			}
+			goto http_process_request_end;
+		}
+		// todo: GET,PUT..., stack char*
+		korall_response_header_set(res, "Access-Control-Allow-Methods", http_allowed_methods());
+
+		// Access-Control-Request-Headers
+	}
 
 	log_msg(LOG_INFO, "valid HTTP request received\n");
-
 
 	if (req_is_ws_upgrade(req)) {
 
@@ -266,13 +288,15 @@ bool http_process_request(
 
 	log_msg(LOG_INFO, "sending HTTP response\n");
 
-	const HTTPRoute* route = http_route_select(req, routes);
-	if (route == NULL) {
-		// send 404 if no matching route
-		route_not_found(res, inc_sock);
-		goto http_process_request_end;
+	if (req->start_line->method != HTTP_OPTIONS) {
+		const HTTPRoute* route = http_route_select(req, routes);
+		if (route == NULL) {
+			// send 404 if no matching route
+			route_not_found(res, inc_sock);
+			goto http_process_request_end;
+		}
+		route->callback(req, res); // CALL CALLBACK
 	}
-	route->callback(req, res); // CALL CALLBACK
 
 	if (res->start_line.chars[0] == '\0') {
 		log_msg(LOG_ERR, "failed to send response, no start line set\n");

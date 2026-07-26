@@ -12,6 +12,8 @@
 #define SERVER_CONFIG_FILE_NAME "korall_config.json"
 #define DEFAULT_SERVER_NAME "KorallServer"
 #define MAX_ALLOW_ORIGINS 100 // todo
+#define MAX_ALLOW_METHODS HTTP_METHOD_COUNT // todo
+#define MAX_ALLOW_HEADERS 100 // todo
 #define MAX_SERVER_NAME_LEN 100 // todo 
 #define CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?
 
@@ -20,9 +22,10 @@ typedef struct ServerConfig {
 	String port;
 	String name;
 	Array* allow_origins;
+	Array* allow_headers;
+	Array* allow_methods;
 	unsigned int max_http_routes;
 	unsigned int max_ws_routes;
-	bool allow_custom_headers;
 	bool on_heap;
 } ServerConfig;
 

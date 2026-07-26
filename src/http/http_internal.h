@@ -20,7 +20,7 @@
 #define MIN_DOMAIN_LABEL_LEN 1
 #define MAX_HTTP_BODY_LEN MEGABYTE // todo: 1mb?
 #define MAX_HTTP_BODY_DIGIT_LEN 7 // 7 digits
-#define MAX_HTTP_HEADER_FIELD_LEN 32
+#define MAX_HTTP_HEADER_FIELD_LEN 32 // todo: allow custom headers (longer header field?)
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // todo: cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
 #define MAX_MEDIA_TYPE_LEN 73
 #define MAX_HTTP_BOUNDARY_LEN 70
@@ -522,6 +522,8 @@ HTTPRequest* http_request_init(Arena* arena);
 void http_request_free(Arena *arena);
 
 void http_request_clear(Arena *arena, HTTPRequest** req);
+
+char* http_verify_origin(HTTPRequest* req);
 
 // Response
 

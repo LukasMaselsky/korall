@@ -20,6 +20,7 @@ Array* array_create_heap(const size_t element_size, const size_t capacity) {
 }
 
 void array_free(Array* arr) {
+	if (arr == NULL) return;
 	if (!arr->on_heap) return;
 
 	free(arr->data);
@@ -28,11 +29,13 @@ void array_free(Array* arr) {
 }
 
 void* array_get(const Array* arr, const size_t index) {
+	if (arr == NULL) return NULL;
 	if (index >= arr->size) return NULL;
 	return arr->data + (index * arr->element_size);
 }
 
 int array_push(Array* arr, const void* item) {
+	if (arr == NULL) return -1;
 	if (arr->size >= arr->capacity) return -1;
 	
 	memcpy(arr->data + (arr->size * arr->element_size), item, arr->element_size);
@@ -42,6 +45,7 @@ int array_push(Array* arr, const void* item) {
 }
 
 void array_pop(Array* arr, void* item) {
+	if (arr == NULL) return;
 	if (arr->size == 0) return;
 
 	uint8_t* last = arr->data + ((arr->size - 1) * arr->element_size);
@@ -54,6 +58,7 @@ void array_pop(Array* arr, void* item) {
 }
 
 int array_remove(Array* arr, const size_t index) {
+	if (arr == NULL) return -1;
 	if (index >= arr->size) return -1;
 
 	if (index == arr->size - 1) {
@@ -75,6 +80,7 @@ int array_remove(Array* arr, const size_t index) {
  * @return 
  */
 int array_remove_list(Array* arr, const size_t* indices, const size_t len) {
+	if (arr == NULL) return -1;
 	if (len == 0) return -1;
 	size_t i = len - 1;
 	while (true) {
@@ -88,6 +94,7 @@ int array_remove_list(Array* arr, const size_t* indices, const size_t len) {
 }
 
 int array_set(Array* arr, const size_t index, const void* item) {
+	if (arr == NULL) return -1;
 	if (index >= arr->size) return -1;
 
 	memcpy(arr->data + (index * arr->element_size), item, arr->element_size);
@@ -105,6 +112,7 @@ int array_find(Array* arr, void* item, bool (* const compare)(const void *, cons
 }
 
 void array_clear(Array* arr) {
+	if (arr == NULL) return;
 	if (arr->size == 0) return;
 
 	memset(arr->data, 0, arr->size * arr->element_size);
@@ -113,10 +121,12 @@ void array_clear(Array* arr) {
 }
 
 bool array_empty(Array* arr) {
+	if (arr == NULL) return false;
 	return arr->size == 0;
 }
 
 bool array_full(Array* arr) {
+	if (arr == NULL) return false;
 	return arr->size >= arr->capacity;
 }
 

@@ -90,22 +90,38 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 		case HTTP_RQH_ORIGIN:
 			return http_process_origin(value);
 		default:
-			return g_config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
+			return HTTP_SUCCESS;
 	}
+}
+
+static bool http_header_allowed(ServerConfig* config, const char* field) {
+	const char* e1 = *((char**)array_get(config->allow_headers, 0));
+	if (config->allow_headers->size == 1 && strcmp(e1, "*") == 0) {
+		return true;
+	}
+
+	int i;
+	array_for_loop(i, config->allow_headers) {
+		const char* header = *((char**)array_get(config->allow_headers, i));
+		if (strcmp(field, header) != 0) continue;
+		return true;
+	}
+
+	return false;
 }
 
 HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 	// process field
 	// todo: full header line instead of field and value len separate
 	ServerConfig* g_config = config_get();
-	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 }; // todo: allow custom headers (longer header field?)
+	char field[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
 	
 	int res = fill_string_char(str, field, MAX_HTTP_HEADER_FIELD_LEN, ':');
 	if (res == -1) return HTTP_BAD_HEADER;
 	const char *s = *str;
 
 	int header_field = lookup_str_int(field, &http_req_header_field_lookup_table, true);
-	if (header_field == -1 && !(g_config->allow_custom_headers)) return HTTP_BAD_HEADER; // todo: better error msg
+	if (header_field == -1 && !http_header_allowed(g_config, field)) return HTTP_BAD_HEADER; // todo: better error msg
 
 	
 	s++; // skip colon
@@ -322,14 +338,6 @@ HTTPError http_request_process_target(const char **str, HTTPRequest *req) {
 	if (fill_string_char(str, value, MAX_HTTP_URL_LEN, ' ') == -1) return HTTP_REQUEST_TARGET_TOO_BIG;
 
 
-	if (method == HTTP_OPTIONS) {
-		if (value[0] == '*' && value[1] == '\0') {
-			strncpy(req->start_line->request_target, value, 1);
-			return HTTP_SUCCESS;
-		}
-		return HTTP_BAD_REQUEST_TARGET;
-	}
-
 	if (method == HTTP_CONNECT) {
 		// rt has to be domain:port format
 		char domain[MAX_DOMAIN_LEN + 1] = { 0 };
@@ -343,6 +351,13 @@ HTTPError http_request_process_target(const char **str, HTTPRequest *req) {
 		strncpy(req->start_line->request_target, value, MAX_HTTP_URL_LEN);
 		return HTTP_SUCCESS;
 	}
+
+
+	if (method == HTTP_OPTIONS && value[0] == '*' && value[1] == '\0') {
+		strncpy(req->start_line->request_target, value, 1);
+		return HTTP_SUCCESS;
+	}
+	
 
 	const char first_c = value[0];
 	if (first_c == '/') {
@@ -432,18 +447,34 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 	*req = http_request_init(arena);
 }
 
-void http_verify_origin(HTTPRequest* req) {
-	// ! ONLY ADD Access-Control-Allow-Origin if "allowed"
+char* http_verify_origin(HTTPRequest* req) {
+
+	// only add Access-Control-Allow-Origin if "allowed"
+
 	ServerConfig* config = config_get();
-	const char* e1 = (char *)array_get(config->allow_origins, 0);
-	if (config->allow_origins->size == 1 && strcmp(e1, "*")) {
+	const char* e1 = *((char **)array_get(config->allow_origins, 0));
+	if (config->allow_origins->size == 1 && strcmp(e1, "*") == 0) {
 		// any origin
 		// todo: "But that will only allow certain types of communication, excluding everything that involves credentials: Cookies, Authorization headers like those used with Bearer Tokens, etc."
-
+		return "*";
 	}
-	const char* origin = req->start_line->request_target;
 
-	// get_ip_info_addr()
+	// todo: MAX_HTTP_URL ?
+	const char req_origin[MAX_DOMAIN_LEN + 1] = { 0 };
+	korall_request_header_get(req, "Origin", req_origin, MAX_DOMAIN_LEN);
+
+	int i;
+	array_for_loop(i, config->allow_origins) {
+		const char* origin = *((char**)array_get(config->allow_origins, i));
+		if (strcmp(req_origin, origin) != 0) continue;
+		// todo: better matching
+		return origin;
+	}
+	return NULL;
+}
+
+char* http_allowed_methods() {
+	
 }
 
 // Response
@@ -471,7 +502,8 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 		case HTTP_RSH_UPGRADE:
 			return http_process_upgrade(value, NULL);
 		default:
-			return g_config->allow_custom_headers ? HTTP_SUCCESS : HTTP_BAD_HEADER_VAL;
+			// todo: apply custom header filter thing for res like in req ?
+			return HTTP_SUCCESS;
 	}
 }
 

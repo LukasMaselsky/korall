@@ -1,17 +1,19 @@
 #include "http/http_internal.h"
 #include "cJSON/cJSON.h"
 #include "server/http/server_http.h"
+#include "lookup/lookup_tables.h"
 #include <stdarg.h>
 
-static char* g_default_allow_origins[1] = {"*"};
-static Array g_default_allow_origins_arr = array_create_stack(&g_default_allow_origins, sizeof(char *), 1);
+static char* g_default_allow[1] = { "*" };
+static Array g_default_allow_arr = array_create_stack(&g_default_allow, sizeof(char *), 1, 1);
 
 static ServerConfig g_default_config = {
 	.domain = {.chars = DEFAULT_DOMAIN, .size = sizeof(DEFAULT_DOMAIN) - 1 },
 	.port = {.chars = DEFAULT_PORT, .size = sizeof(DEFAULT_PORT) - 1 },
 	.name = {.chars = DEFAULT_SERVER_NAME, .size = sizeof(DEFAULT_SERVER_NAME) - 1 },
-	.allow_origins = &g_default_allow_origins_arr,
-	.allow_custom_headers = true,
+	.allow_origins = &g_default_allow_arr,
+	.allow_headers = &g_default_allow_arr,
+	.allow_methods = &g_default_allow_arr,
 	.max_http_routes = HTTP_ROUTES_CAPACITY,
 	.max_ws_routes = WS_ROUTES_CAPACITY,
 	.on_heap = false
@@ -29,8 +31,10 @@ void config_free(ServerConfig* config) {
 	free(config->domain.chars);
 	free(config->port.chars);
 	free(config->name.chars);
-	// todo
+	// todo: could be on stack ?
 	free(config->allow_origins);
+	free(config->allow_headers);
+	free(config->allow_methods);
 }
 
 static ServerConfig* config_alloc(ServerConfig* config) {
@@ -47,8 +51,18 @@ static ServerConfig* config_alloc(ServerConfig* config) {
 	Array* arr = (Array*)array_create_heap(sizeof(char*), MAX_ALLOW_ORIGINS);
 	if (arr == NULL)
 		exit(EXIT_FAILURE);
-	
 	config->allow_origins = arr;
+
+	Array* arr2 = (Array*)array_create_heap(sizeof(char*), MAX_ALLOW_HEADERS);
+	if (arr == NULL)
+		exit(EXIT_FAILURE);
+	config->allow_headers = arr2;
+
+	Array* arr3 = (Array*)array_create_heap(sizeof(char*), MAX_ALLOW_METHODS);
+	if (arr == NULL)
+		exit(EXIT_FAILURE);
+	config->allow_headers = arr3;
+	
 
 	config->on_heap = true;
 
@@ -120,14 +134,49 @@ static int cjson_read_arr_string(cJSON* json, const char* field, void (*callback
 static void allow_origins_add(const char *str, va_list args) {
 	Array* origins_arr = va_arg(args, Array*);
 	const size_t str_len = strlen(str);
-	// MAX_HTTP_URL ?
-	if (str_len > MAX_DOMAIN_LEN) return;
+	// todo: MAX_HTTP_URL ?
+	if (str_len > MAX_DOMAIN_LEN) { 
+		log_msg(LOG_WARN, "failed to load origin from \"allow_origins\", max size is %d\n", MAX_DOMAIN_LEN);
+		return;
+	}
 	char* origin = safe_calloc(1, str_len + 1);
 	strncpy(origin, str, str_len);
 	int res = array_push(origins_arr, &origin);
 	if (res == -1) {
 		log_msg(LOG_WARN, "failed to load origin from \"allow_origins\", over capacity\n");
 	}
+}
+
+static void allow_headers_add(const char* str, va_list args) {
+	Array* arr = va_arg(args, Array*);
+	const size_t str_len = strlen(str);
+	if (str_len > MAX_HTTP_HEADER_FIELD_LEN) {
+		log_msg(LOG_WARN, "failed to load header from \"allow_headers\", max size is %d\n", MAX_HTTP_HEADER_FIELD_LEN);
+		return;
+	}
+	char* header = safe_calloc(1, str_len + 1);
+	strncpy(header, str, str_len);
+	int res = array_push(arr, &header);
+	if (res == -1) {
+		log_msg(LOG_WARN, "failed to load header from \"allow_headers\", over capacity\n");
+	}
+}
+
+static void allow_methods_add(const char* str, va_list args) {
+	Array* arr = va_arg(args, Array*);
+	const size_t str_len = strlen(str);
+	int res = lookup_str_int(str, &http_method_lookup_table, false);
+	if (res == -1) {
+		log_msg(LOG_WARN, "failed to load method from \"allow_methods\", invalid value\n");
+		return;
+	}
+	char* method = safe_calloc(1, str_len + 1);
+	strncpy(method, str, str_len);
+	res = array_push(arr, &method);
+	if (res == -1) {
+		log_msg(LOG_WARN, "failed to load method from \"allow_methods\", over capacity\n");
+	}
+
 }
 
 /**
@@ -214,11 +263,6 @@ static int config_init_inner(const char* path) {
 	};
 
 
-	// allow_custom_headers
-
-	config->allow_custom_headers = cjson_read_bool(json, default_config->allow_custom_headers, "allow_custom_headers");
-
-
 	// max_http_routes
 
 	config->max_http_routes = cjson_read_num(json, default_config->max_http_routes, "max_http_routes");
@@ -230,8 +274,22 @@ static int config_init_inner(const char* path) {
 	// allow_origins
 
 	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
-	if (ao_res == -1 || array_empty(config->allow_origins)) {
+	if (ao_res == -1 || array_empty(config->allow_origins)) { // todo: emtpy array allowed ?
 		config->allow_origins = default_config->allow_origins;
+	}
+
+	// allow_headers
+
+	int ah_res = cjson_read_arr_string(json, "allow_headers", allow_headers_add, config->allow_headers);
+	if (ah_res == -1 || array_empty(config->allow_headers)) { // todo: emtpy array allowed ?
+		config->allow_headers = default_config->allow_headers;
+	}
+
+	// allow_methods
+
+	int am_res = cjson_read_arr_string(json, "allow_methods", allow_methods_add, config->allow_methods);
+	if (am_res == -1 || array_empty(config->allow_methods)) { // todo: emtpy array allowed ?
+		config->allow_methods = default_config->allow_methods;
 	}
 
 	cJSON_Delete(json);

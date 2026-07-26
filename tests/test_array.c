@@ -4,7 +4,7 @@
 
 TEST("array_create_stack") {
 	int data[30] = { 0 };
-	Array arr = array_create_stack(data, sizeof(int), 30);
+	Array arr = array_create_stack(data, sizeof(int), 0, 30);
 	ASSERT(arr.capacity == 30);
 	ASSERT(arr.size == 0);
 	ASSERT(arr.element_size == sizeof(int));
