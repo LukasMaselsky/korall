@@ -36,7 +36,7 @@ void config_free(ServerConfig* config) {
 	free(config->domain.chars);
 	free(config->port.chars);
 	free(config->name.chars);
-	// todo: could be on stack ?
+	// ! todo: could be on stack (UNDEFINED, FIX) ?
 	free(config->allow_origins);
 	free(config->allow_headers);
 	free(config->allow_methods);
@@ -287,21 +287,21 @@ static int config_init_inner(const char* path) {
 	// allow_origins
 
 	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
-	if (ao_res == -1 || array_empty(config->allow_origins)) { // todo: emtpy array allowed ?
+	if (ao_res == -1 || array_is_empty(config->allow_origins)) {
 		config->allow_origins = default_config->allow_origins; // also hits here when its "*"
 	}
 
 	// allow_headers
 
 	int ah_res = cjson_read_arr_string(json, "allow_headers", allow_headers_add, config->allow_headers);
-	if (ah_res == -1 || array_empty(config->allow_headers)) { // todo: emtpy array allowed ?
+	if (ah_res == -1 || array_is_empty(config->allow_headers)) {
 		config->allow_headers = default_config->allow_headers;
 	}
 
 	// allow_methods
 
 	int am_res = cjson_read_arr_string(json, "allow_methods", allow_methods_add, config->allow_methods);
-	if (am_res == -1 || array_empty(config->allow_methods)) { // todo: emtpy array allowed ?
+	if (am_res == -1 || array_is_empty(config->allow_methods)) {
 		config->allow_methods = default_config->allow_methods;
 	}
 

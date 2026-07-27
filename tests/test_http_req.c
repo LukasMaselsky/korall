@@ -407,14 +407,53 @@ TEST("http_get_current_date") {
 
 TEST("http_verify_origin") {
 
+	// todo
 }
 
 TEST("http_allowed_methods") {
+	int data[100] = { 0 };
+	Array arr = array_create_stack(data, sizeof(int), 0, 30);
+	int res;
 
+	res = http_allowed_methods(NULL, NULL, 0);
+	ASSERT(res == -1);
+	res = http_allowed_methods(&arr, NULL, 0);
+	ASSERT(res == -1);
+
+	HTTPMethod m = HTTP_GET;
+	array_push(&arr, &m);
+	m = HTTP_POST;
+	array_push(&arr, &m);
+
+	res = http_allowed_methods(&arr, NULL, 0);
+	ASSERT(res == -1);
+	char temp[1000] = { 0 };
+	res = http_allowed_methods(&arr, temp, 999);
+	ASSERT(res == 0);
+	ASSERT(strcmp(temp, "GET,POST") == 0);
 }
 
 TEST("http_allowed_headers") {
+	int data[1000] = { 0 };
+	Array arr = array_create_stack(data, sizeof(char *), 0, 30);
+	int res;
 
+	res = http_allowed_headers(NULL, NULL, 0);
+	ASSERT(res == -1);
+	res = http_allowed_headers(&arr, NULL, 0);
+	ASSERT(res == -1);
+
+	char* m = "x";
+	array_push(&arr, &m);
+	m = "y";
+	array_push(&arr, &m);
+
+	res = http_allowed_headers(&arr, NULL, 0);
+	ASSERT(res == -1);
+	char temp[1000] = { 0 };
+	res = http_allowed_headers(&arr, temp, 999);
+	ASSERT(res == 0);
+	ASSERT(strcmp(temp, "x,y") == 0);
 }
 
 

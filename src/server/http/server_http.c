@@ -260,7 +260,8 @@ bool http_process_request(
 		// set response header on which methods are allowed
 
 		char stringified_methods[ALL_METHODS_LIST_STR_LEN + 1] = { 0 };
-		http_allowed_methods(g_config->allow_methods, stringified_methods, ALL_METHODS_LIST_STR_LEN); // todo: ret check
+		int am = http_allowed_methods(g_config->allow_methods, stringified_methods, ALL_METHODS_LIST_STR_LEN);
+		if (am == -1) goto http_process_request_end;
 		korall_response_header_set(res, "Access-Control-Allow-Methods", stringified_methods);
 
 		// Access-Control-Request-Headers

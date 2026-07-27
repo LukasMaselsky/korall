@@ -120,7 +120,7 @@ void array_clear(Array* arr) {
 	return;
 }
 
-bool array_empty(Array* arr) {
+bool array_is_empty(Array* arr) {
 	if (arr == NULL) return false;
 	return arr->size == 0;
 }

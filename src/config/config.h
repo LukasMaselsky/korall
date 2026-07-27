@@ -12,7 +12,7 @@
 #define SERVER_CONFIG_FILE_NAME "korall_config.json"
 #define DEFAULT_SERVER_NAME "KorallServer"
 #define MAX_ALLOW_ORIGINS 100 // todo
-#define MAX_ALLOW_METHODS HTTP_METHOD_COUNT // todo
+#define MAX_ALLOW_METHODS HTTP_METHOD_COUNT
 #define MAX_ALLOW_HEADERS 100 // todo
 #define MAX_SERVER_NAME_LEN 100 // todo 
 #define CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?

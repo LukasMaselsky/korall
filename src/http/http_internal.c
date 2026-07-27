@@ -450,7 +450,7 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 }
 
 char* http_verify_origin(Array* allow_origins, HTTPRequest* req) {
-	if (allow_origins == NULL || req == NULL) return NULL;
+	if (allow_origins == NULL || array_is_empty(allow_origins) || req == NULL) return NULL;
 	// only add Access-Control-Allow-Origin if "allowed"
 	const char* e1 = *((char **)array_get(allow_origins, 0));
 	if (allow_origins->size == 1 && strcmp(e1, "*") == 0) {
@@ -480,7 +480,7 @@ char* http_verify_origin(Array* allow_origins, HTTPRequest* req) {
  * @return 
  */
 int http_allowed_methods(Array* allow_methods, char* value, size_t value_len) {
-	if (allow_methods == NULL) return -1;
+	if (allow_methods == NULL || array_is_empty(allow_methods) || value == NULL) return -1;
 	const int e1 = *((int*)array_get(allow_methods, 0));
 	if (allow_methods->size == 1 && e1 == ANY_ALLOW_METHODS) {
 		strncpy(value, "*", value_len);
@@ -516,7 +516,7 @@ int http_allowed_methods(Array* allow_methods, char* value, size_t value_len) {
  * @return 
  */
 int http_allowed_headers(Array *allow_headers, char* value, size_t value_len) {
-	if (allow_headers == NULL) return -1;
+	if (allow_headers == NULL || array_is_empty(allow_headers) || value == NULL) return -1;
 	// stringify array
 	// todo: slow ?
 	int i;

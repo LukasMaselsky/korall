@@ -1,13 +1,18 @@
 # korall
 
-
+HTTP web server library in C.
 
 ## Table of Contents
 
+- [Features](#features)
 - [Installation](#installation)
 - [Build](#build)
 - [Examples](#examples)
 - [Tests](#tests)
+- [API](#api)
+	- [Config](#config)
+
+## Features
 
 ## Installation
 
@@ -36,4 +41,18 @@ For examples, see the ```examples/``` directory.
 
 For tests, see the ```tests/``` directory.
 
+## API
 
+### Config
+
+
+| Name            | Type               | Description                                          | Default      |
+| --------------- | ------------------ | ---------------------------------------------------- | ------------ |
+| domain          | ```String```       | Domain URL                                           | localhost    |
+| port            | ```String```       | Port number                                          | 3500         |
+| name            | ```String```       | Server name                                          | KorallServer |
+| allow_origins   | ```Array*```       | ```char**``` dynamic array of allowed origins        | \*           |
+| allow_headers   | ```Array*```       | ```char**``` dynamic array of allowed custom headers | \*           |
+| allow_methods   | ```Array*```       | ```ìnt``` dynamic array of allowed methods           | \*           |
+| max_http_routes | ```unsigned int``` | Maximum number of HTTP routes capacity               | 100          |
+| max_ws_routes   | ```unsigned int``` | Maximum number of WebSocket routes capacity          | 100          |
