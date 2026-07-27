@@ -235,13 +235,15 @@ bool http_process_request(
 
 	// check if origin is allowed (CORS)
 	
-	const char* allow_origin = http_verify_origin(req);
+	const char* allow_origin = http_verify_origin(g_config->allow_origins, req);
 	if (allow_origin != NULL) {
 		korall_response_header_set(res, "Access-Control-Allow-Origin", allow_origin);
 	}
 
 	// CORS preflight
 	if (req->start_line->method == HTTP_OPTIONS) {
+		log_msg(LOG_INFO, "CORS preflight request received\n");
+		
 		// Access-Control-Request-Method
 		char acrm[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
 		int acrm_res = korall_request_header_get(req, "Access-Control-Request-Method", acrm, MAX_HTTP_METHOD_STR_LEN);
@@ -254,10 +256,21 @@ bool http_process_request(
 			}
 			goto http_process_request_end;
 		}
-		// todo: GET,PUT..., stack char*
-		korall_response_header_set(res, "Access-Control-Allow-Methods", http_allowed_methods());
+
+		// set response header on which methods are allowed
+
+		char stringified_methods[ALL_METHODS_LIST_STR_LEN + 1] = { 0 };
+		http_allowed_methods(g_config->allow_methods, stringified_methods, ALL_METHODS_LIST_STR_LEN); // todo: ret check
+		korall_response_header_set(res, "Access-Control-Allow-Methods", stringified_methods);
 
 		// Access-Control-Request-Headers
+		char acrh[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+		int acrh_res = korall_request_header_get(req, "Access-Control-Request-Headers", acrh, MAX_HTTP_HEADER_VALUE_LEN);
+		if (acrh_res != -1) {
+			char stringified_rqh[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+			http_allowed_headers(g_config->allow_headers, stringified_rqh, MAX_HTTP_HEADER_VALUE_LEN);
+			korall_response_header_set(res, "Access-Control-Allow-Headers", stringified_rqh);
+		}
 	}
 
 	log_msg(LOG_INFO, "valid HTTP request received\n");
@@ -296,6 +309,11 @@ bool http_process_request(
 			goto http_process_request_end;
 		}
 		route->callback(req, res); // CALL CALLBACK
+	}
+	else {
+		// CORS preflight 204 response
+		int err = http_response_construct(res, HTTP_SC_204, g_config->name.chars, HTTP_MT_APP_JSON, NULL);
+		if (err == -1) goto http_process_request_end;
 	}
 
 	if (res->start_line.chars[0] == '\0') {

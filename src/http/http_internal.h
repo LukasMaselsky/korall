@@ -523,7 +523,11 @@ void http_request_free(Arena *arena);
 
 void http_request_clear(Arena *arena, HTTPRequest** req);
 
-char* http_verify_origin(HTTPRequest* req);
+char* http_verify_origin(Array* allow_origins, HTTPRequest* req);
+
+int http_allowed_methods(Array* allow_methods, char* value, size_t value_len);
+
+int http_allowed_headers(Array* allow_headers, char* value, size_t value_len);
 
 // Response
 

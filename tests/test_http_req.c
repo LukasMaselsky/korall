@@ -405,5 +405,17 @@ TEST("http_get_current_date") {
 	// todo
 }
 
+TEST("http_verify_origin") {
+
+}
+
+TEST("http_allowed_methods") {
+
+}
+
+TEST("http_allowed_headers") {
+
+}
+
 
 #endif

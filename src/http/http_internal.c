@@ -95,7 +95,9 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 }
 
 static bool http_header_allowed(ServerConfig* config, const char* field) {
-	const char* e1 = *((char**)array_get(config->allow_headers, 0));
+	const char** e1_p = (char**)array_get(config->allow_headers, 0);
+	if (e1_p == NULL) return false;
+	const char* e1 = *e1_p;
 	if (config->allow_headers->size == 1 && strcmp(e1, "*") == 0) {
 		return true;
 	}
@@ -447,13 +449,11 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 	*req = http_request_init(arena);
 }
 
-char* http_verify_origin(HTTPRequest* req) {
-
+char* http_verify_origin(Array* allow_origins, HTTPRequest* req) {
+	if (allow_origins == NULL || req == NULL) return NULL;
 	// only add Access-Control-Allow-Origin if "allowed"
-
-	ServerConfig* config = config_get();
-	const char* e1 = *((char **)array_get(config->allow_origins, 0));
-	if (config->allow_origins->size == 1 && strcmp(e1, "*") == 0) {
+	const char* e1 = *((char **)array_get(allow_origins, 0));
+	if (allow_origins->size == 1 && strcmp(e1, "*") == 0) {
 		// any origin
 		// todo: "But that will only allow certain types of communication, excluding everything that involves credentials: Cookies, Authorization headers like those used with Bearer Tokens, etc."
 		return "*";
@@ -464,8 +464,8 @@ char* http_verify_origin(HTTPRequest* req) {
 	korall_request_header_get(req, "Origin", req_origin, MAX_DOMAIN_LEN);
 
 	int i;
-	array_for_loop(i, config->allow_origins) {
-		const char* origin = *((char**)array_get(config->allow_origins, i));
+	array_for_loop(i, allow_origins) {
+		const char* origin = *((char**)array_get(allow_origins, i));
 		if (strcmp(req_origin, origin) != 0) continue;
 		// todo: better matching
 		return origin;
@@ -473,8 +473,68 @@ char* http_verify_origin(HTTPRequest* req) {
 	return NULL;
 }
 
-char* http_allowed_methods() {
-	
+/**
+ * @brief Get stringified list of allowed methods or "*"
+ * @param value 
+ * @param value_len 
+ * @return 
+ */
+int http_allowed_methods(Array* allow_methods, char* value, size_t value_len) {
+	if (allow_methods == NULL) return -1;
+	const int e1 = *((int*)array_get(allow_methods, 0));
+	if (allow_methods->size == 1 && e1 == ANY_ALLOW_METHODS) {
+		strncpy(value, "*", value_len);
+		return 0;
+	}
+
+	// stringify array
+	// todo: slow ?
+	int i;
+	size_t cur_len = 0;
+	array_for_loop(i, allow_methods) {
+		const int item = *((int*)array_get(allow_methods, i));
+		const char* method = lookup_int_str(item, &http_method_lookup_table);
+		if (method == NULL) return -1;
+		const size_t meth_len = strlen(method);
+		if (meth_len + cur_len > value_len) return -1; // exit early if not enough space
+		
+		cur_len += meth_len;
+		if (i != 0) {
+			strcat(value, ",");
+			cur_len++; // separator
+		}
+		strcat(value, method);
+	}
+	return 0;
+}
+
+
+/**
+ * @brief Get stringified list of allowed custom headers
+ * @param value 
+ * @param value_len 
+ * @return 
+ */
+int http_allowed_headers(Array *allow_headers, char* value, size_t value_len) {
+	if (allow_headers == NULL) return -1;
+	// stringify array
+	// todo: slow ?
+	int i;
+	size_t cur_len = 0;
+	array_for_loop(i, allow_headers) {
+		const char* item = *((char**)array_get(allow_headers, i));
+		if (item == NULL) return -1;
+		const size_t item_len = strlen(item);
+		if (item_len + cur_len > value_len) return -1; // exit early if not enough space
+
+		cur_len += item_len;
+		if (i != 0) {
+			strcat(value, ",");
+			cur_len++; // separator
+		}
+		strcat(value, item);
+	}
+	return 0;
 }
 
 // Response

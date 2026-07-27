@@ -16,14 +16,16 @@
 #define MAX_ALLOW_HEADERS 100 // todo
 #define MAX_SERVER_NAME_LEN 100 // todo 
 #define CONFIG_BUFFER_LEN KILOBYTE * 10 // todo: ?
+#define ANY_ALLOW_METHODS HTTP_METHOD_COUNT + 1
+#define ALL_METHODS_LIST_STR_LEN 52 // len "CONNECT,DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE"
 
 typedef struct ServerConfig {
 	String domain;
 	String port;
 	String name;
-	Array* allow_origins;
-	Array* allow_headers;
-	Array* allow_methods;
+	Array* allow_origins; // char **
+	Array* allow_headers; // char **
+	Array* allow_methods; // int
 	unsigned int max_http_routes;
 	unsigned int max_ws_routes;
 	bool on_heap;

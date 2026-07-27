@@ -7,13 +7,18 @@
 static char* g_default_allow[1] = { "*" };
 static Array g_default_allow_arr = array_create_stack(&g_default_allow, sizeof(char *), 1, 1);
 
+// made int Array to easily remove duplicates when loading
+static int g_default_allow_methods[1] = { ANY_ALLOW_METHODS }; // represents "*"
+static Array g_default_allow_methods_arr = array_create_stack(&g_default_allow_methods, sizeof(int), 1, 1);
+
+
 static ServerConfig g_default_config = {
 	.domain = {.chars = DEFAULT_DOMAIN, .size = sizeof(DEFAULT_DOMAIN) - 1 },
 	.port = {.chars = DEFAULT_PORT, .size = sizeof(DEFAULT_PORT) - 1 },
 	.name = {.chars = DEFAULT_SERVER_NAME, .size = sizeof(DEFAULT_SERVER_NAME) - 1 },
 	.allow_origins = &g_default_allow_arr,
 	.allow_headers = &g_default_allow_arr,
-	.allow_methods = &g_default_allow_arr,
+	.allow_methods = &g_default_allow_methods_arr,
 	.max_http_routes = HTTP_ROUTES_CAPACITY,
 	.max_ws_routes = WS_ROUTES_CAPACITY,
 	.on_heap = false
@@ -58,10 +63,10 @@ static ServerConfig* config_alloc(ServerConfig* config) {
 		exit(EXIT_FAILURE);
 	config->allow_headers = arr2;
 
-	Array* arr3 = (Array*)array_create_heap(sizeof(char*), MAX_ALLOW_METHODS);
+	Array* arr3 = (Array*)array_create_heap(sizeof(int), MAX_ALLOW_METHODS);
 	if (arr == NULL)
 		exit(EXIT_FAILURE);
-	config->allow_headers = arr3;
+	config->allow_methods = arr3;
 	
 
 	config->on_heap = true;
@@ -162,17 +167,25 @@ static void allow_headers_add(const char* str, va_list args) {
 	}
 }
 
+static bool comp_int(const void* a, const void* b) {
+	const int a_i = *((int*)a);
+	const int b_i = *((int*)b);
+	return a == b;
+}
+
 static void allow_methods_add(const char* str, va_list args) {
 	Array* arr = va_arg(args, Array*);
-	const size_t str_len = strlen(str);
-	int res = lookup_str_int(str, &http_method_lookup_table, false);
-	if (res == -1) {
-		log_msg(LOG_WARN, "failed to load method from \"allow_methods\", invalid value\n");
+	HTTPMethod method = lookup_str_int(str, &http_method_lookup_table, false);
+	if (method == -1) {
+		log_msg(LOG_WARN, "failed to load method from \"allow_methods\", invalid method value \"%s\"\n", str);
 		return;
 	}
-	char* method = safe_calloc(1, str_len + 1);
-	strncpy(method, str, str_len);
-	res = array_push(arr, &method);
+
+	// check if duplicate
+
+	if (array_find(arr, &method, comp_int) != -1) return; // duplicate
+
+	int res = array_push(arr, &method);
 	if (res == -1) {
 		log_msg(LOG_WARN, "failed to load method from \"allow_methods\", over capacity\n");
 	}
@@ -275,7 +288,7 @@ static int config_init_inner(const char* path) {
 
 	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
 	if (ao_res == -1 || array_empty(config->allow_origins)) { // todo: emtpy array allowed ?
-		config->allow_origins = default_config->allow_origins;
+		config->allow_origins = default_config->allow_origins; // also hits here when its "*"
 	}
 
 	// allow_headers
