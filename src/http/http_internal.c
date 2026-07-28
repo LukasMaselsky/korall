@@ -777,18 +777,22 @@ int korall_request_param_get(const HTTPRequest* req, const char* field, char *va
 	Get a request header
 */
 int korall_request_header_get(const HTTPRequest* req, const char* field, char* value, size_t value_len) {
-	// todo: write tests
 	const char* h = req->headers;
 	const char* base = h;
 	if (fill_string_str(&h, NULL, 0, field, false) == -1) return -1;
 	
-	// make sure actually field and not reading middle of a value
+	// make sure actually field and not reading middle of a value (check previously a \r\n i.e. previous header or its the first header)
 	if (!(h == base || (*(h - 2) == '\r' && *(h - 1) == '\n'))) return -1;
 
 	if (fill_string_char(&h, NULL, 0, ':') == -1) return -1;
 	h += 2; // skip : and space
 
-	return fill_string_str(&h, value, value_len, "\r\n", false);
+	// value
+	if (fill_string_str(&h, value, value_len, "\r\n", false) == 0) return 0;
+
+	// value is the last header (req->headers ends with \0 not with \r\n)
+
+	return fill_string_char(&h, value, value_len, '\0');
 }
 
 /*
