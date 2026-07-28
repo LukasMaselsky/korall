@@ -232,11 +232,20 @@ bool http_process_request(
 		goto http_process_request_end;
 	}
 
+	// Access-Control-Allow-Credentials
+
+	bool creds = false;
+	if (g_config->allow_credentials) {
+		creds = true;
+		korall_response_header_set(res, "Access-Control-Allow-Credentials", "true");
+		korall_response_header_set(res, "Vary", "Origin");
+	}
+
 
 	// check if origin is allowed (CORS)
-	
-	const char* allow_origin = http_verify_origin(g_config->allow_origins, req);
-	if (allow_origin != NULL) {
+	char allow_origin[MAX_DOMAIN_LEN + 1] = { 0 };
+	int vo_res = http_verify_origin(g_config->allow_origins, req, creds, allow_origin, MAX_DOMAIN_LEN);
+	if (vo_res != -1) {
 		korall_response_header_set(res, "Access-Control-Allow-Origin", allow_origin);
 	}
 

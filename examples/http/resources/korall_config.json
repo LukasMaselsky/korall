@@ -4,5 +4,6 @@
   "port": 3500,
   "allow_custom_headers": true,
   "allow_origins": [ "*" ],
-  "allow_methods": ["POST", "DELETE", "PUT"]
+  "allow_methods": [ "POST", "DELETE", "PUT" ],
+  "allow_credentials": true
 }

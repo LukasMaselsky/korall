@@ -31,6 +31,12 @@ TEST("korall_request_header_get") {
 	ASSERT(res == 0);
 	ASSERT(strcmp(value, "POST") == 0);
 
+	memset(value, 0, 1000);
+
+	res = korall_request_header_get(req, "Access-Control-Request-Method", NULL, 0);
+	ASSERT(res == 0);
+	ASSERT(strcmp(value, "") == 0);
+
 	http_request_free(&arena);
 }
 

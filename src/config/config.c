@@ -19,6 +19,7 @@ static ServerConfig g_default_config = {
 	.allow_origins = &g_default_allow_arr,
 	.allow_headers = &g_default_allow_arr,
 	.allow_methods = &g_default_allow_methods_arr,
+	.allow_credentials = false,
 	.max_http_routes = HTTP_ROUTES_CAPACITY,
 	.max_ws_routes = WS_ROUTES_CAPACITY,
 	.on_heap = false
@@ -283,6 +284,10 @@ static int config_init_inner(const char* path) {
 	// max_ws_routes
 	
 	config->max_ws_routes = cjson_read_num(json, default_config->max_ws_routes, "max_ws_routes");
+
+	// allow_credentials
+
+	config->allow_credentials = cjson_read_bool(json, default_config->allow_credentials, "allow_credentials");
 
 	// allow_origins
 

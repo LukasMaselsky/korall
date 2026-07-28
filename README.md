@@ -45,14 +45,14 @@ For tests, see the ```tests/``` directory.
 
 ### Config
 
-
-| Name            | Type               | Description                                          | Default      |
-| --------------- | ------------------ | ---------------------------------------------------- | ------------ |
-| domain          | ```String```       | Domain URL                                           | localhost    |
-| port            | ```String```       | Port number                                          | 3500         |
-| name            | ```String```       | Server name                                          | KorallServer |
-| allow_origins   | ```Array*```       | ```char**``` dynamic array of allowed origins        | \*           |
-| allow_headers   | ```Array*```       | ```char**``` dynamic array of allowed custom headers | \*           |
-| allow_methods   | ```Array*```       | ```ìnt``` dynamic array of allowed methods           | \*           |
-| max_http_routes | ```unsigned int``` | Maximum number of HTTP routes capacity               | 100          |
-| max_ws_routes   | ```unsigned int``` | Maximum number of WebSocket routes capacity          | 100          |
+| Name              | Type               | Description                                          | Default      |
+| ----------------- | ------------------ | ---------------------------------------------------- | ------------ |
+| domain            | ```String```       | Domain URL                                           | localhost    |
+| port              | ```String```       | Port number                                          | 3500         |
+| name              | ```String```       | Server name                                          | KorallServer |
+| allow_origins     | ```Array*```       | ```char**``` dynamic array of allowed origins        | \*           |
+| allow_headers     | ```Array*```       | ```char**``` dynamic array of allowed custom headers | \*           |
+| allow_methods     | ```Array*```       | ```ìnt``` dynamic array of allowed methods           | \*           |
+| allow_credentials | ```boolean```      | Allow credentials                                    | false        |
+| max_http_routes   | ```unsigned int``` | Maximum number of HTTP routes capacity               | 100          |
+| max_ws_routes     | ```unsigned int``` | Maximum number of WebSocket routes capacity          | 100          |

@@ -26,6 +26,7 @@ typedef struct ServerConfig {
 	Array* allow_origins; // char **
 	Array* allow_headers; // char **
 	Array* allow_methods; // int
+	bool allow_credentials;
 	unsigned int max_http_routes;
 	unsigned int max_ws_routes;
 	bool on_heap;

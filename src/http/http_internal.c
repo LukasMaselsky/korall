@@ -449,28 +449,36 @@ void http_request_clear(Arena *arena, HTTPRequest** req) {
 	*req = http_request_init(arena);
 }
 
-char* http_verify_origin(Array* allow_origins, HTTPRequest* req) {
-	if (allow_origins == NULL || array_is_empty(allow_origins) || req == NULL) return NULL;
-	// only add Access-Control-Allow-Origin if "allowed"
-	const char* e1 = *((char **)array_get(allow_origins, 0));
-	if (allow_origins->size == 1 && strcmp(e1, "*") == 0) {
-		// any origin
-		// todo: "But that will only allow certain types of communication, excluding everything that involves credentials: Cookies, Authorization headers like those used with Bearer Tokens, etc."
-		return "*";
-	}
-
+int http_verify_origin(Array* allow_origins, HTTPRequest* req, bool has_creds, char* value, size_t value_len) {
+	if (allow_origins == NULL || array_is_empty(allow_origins) || req == NULL || value == NULL) return -1;
+	
 	// todo: MAX_HTTP_URL ?
 	const char req_origin[MAX_DOMAIN_LEN + 1] = { 0 };
 	korall_request_header_get(req, "Origin", req_origin, MAX_DOMAIN_LEN);
+	
+	// only add Access-Control-Allow-Origin if "allowed"
+	const char* any = "*";
+	const char* e1 = *((char **)array_get(allow_origins, 0));
+	if (allow_origins->size == 1 && strcmp(e1, any) == 0) {
+		// any origin
+		if (has_creds) {
+			// cannot be "*" when Access-Control-Allow-Credentials: true, use request origin
+			any = req_origin;
+		}
+		strncpy(value, any, value_len);
+		return 0;
+	}
 
 	int i;
 	array_for_loop(i, allow_origins) {
 		const char* origin = *((char**)array_get(allow_origins, i));
 		if (strcmp(req_origin, origin) != 0) continue;
 		// todo: better matching
-		return origin;
+
+		strncpy(value, origin, value_len);
+		return 0;
 	}
-	return NULL;
+	return -1;
 }
 
 /**
@@ -788,6 +796,7 @@ int korall_request_header_get(const HTTPRequest* req, const char* field, char* v
 	h += 2; // skip : and space
 
 	// value
+
 	if (fill_string_str(&h, value, value_len, "\r\n", false) == 0) return 0;
 
 	// value is the last header (req->headers ends with \0 not with \r\n)
