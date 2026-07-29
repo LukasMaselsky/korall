@@ -7,13 +7,16 @@ project(${project_name} LANGUAGES C)
 add_subdirectory(deps/glfw-3.4)
 add_subdirectory(deps/glad)
 
+# 3rd party (vcpkg)
+find_package(OpenSSL CONFIG REQUIRED)
+
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_library(${project_name} STATIC ${PROJECT_SOURCES})
 
 # PUBLIC to allow examples access to it
 target_include_directories(${project_name} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/")
 target_include_directories(${project_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
-target_link_libraries(${project_name} PUBLIC glfw glad)
+target_link_libraries(${project_name} PUBLIC glfw glad OpenSSL::SSL)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests/")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/examples/http/")

@@ -16,6 +16,22 @@ HTTP web server library in C.
 
 ## Installation
 
+1. Clone repo
+
+	```sh
+	git clone --recurse-submodules https://github.com/LukasMaselsky/korall.git
+	```
+
+2. vcpkg exe installation
+
+	```sh
+	./vcpkg/bootstrap-vcpkg.bat
+	# or
+	./vcpkg/bootstrap-vcpkg.sh
+	```
+
+// todo: vcpkg linux install openssl
+
 ## Build
 
 ### CMake
