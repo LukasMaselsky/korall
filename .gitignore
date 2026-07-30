@@ -9,5 +9,7 @@ library/.vs
 CMakeSettings.json
 *.o
 *.d
+*.crt
+*.key
 
 logs.txt

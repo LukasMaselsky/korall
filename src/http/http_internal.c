@@ -137,7 +137,8 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 
 	char value[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
 	*str = s;
-	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n", false);
+	bool is_case_insensitive = false;
+	res = fill_string_str(str, value, MAX_HTTP_HEADER_VALUE_LEN, "\r\n", is_case_insensitive);
 	if (res == -1) return HTTP_BAD_HEADER_VAL;
 
 	HTTPError hv_res = http_process_request_header_value(header_field, value, req);
@@ -150,6 +151,7 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 HTTPError http_request_process_headers(const char** str, HTTPRequest* req) {
 
 	const char* base = *str;
+	bool is_case_insensitive = false;
 
 	while (true) {
 		HTTPError res = http_request_process_header(str, req);
@@ -157,7 +159,7 @@ HTTPError http_request_process_headers(const char** str, HTTPRequest* req) {
 		if ((*str)[0] == '\r' && (*str)[1] == '\n') { 
 			*str += 2;
 			// copy whole headers
-			if (fill_string_str(&base, req->headers, HTTP_REQ_HEADERS_LEN, "\r\n\r\n", false) == -1) return HTTP_ERROR;
+			if (fill_string_str(&base, req->headers, HTTP_REQ_HEADERS_LEN, "\r\n\r\n", is_case_insensitive) == -1) return HTTP_ERROR;
 			return HTTP_SUCCESS;
 		}
 		// empty newline at end of headers, required
@@ -180,8 +182,9 @@ HTTPError http_request_process_body(const char* str, HTTPRequest* req) {
 
 HTTPError http_request_process_protocol(const char** str) {
 	char prot[HTTP_PROT_LEN + 1] = { 0 };
+	bool is_case_insensitive = false;
 
-	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n", false);
+	int res = fill_string_str(str, prot, HTTP_PROT_LEN, "\r\n", is_case_insensitive);
 	if (res == -1) return HTTP_BAD_PROT;
 
 	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0) return HTTP_SUCCESS;
@@ -277,13 +280,14 @@ HTTPError http_request_process_target_relative(const char* str, HTTPRequest* req
 }
 
 HTTPError http_request_process_target_absolute(const char* str, HTTPRequest* req) {
+	bool is_case_insensitive = true;
 	const char* base = str;
 	char temp[MAX_HTTP_URL_LEN + 1] = { 0 };
 	int skip;
-	if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "http://", true) == 0) {
+	if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "http://", is_case_insensitive) == 0) {
 		skip = 7;
 	}
-	else if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "https://", true) == 0) {
+	else if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "https://", is_case_insensitive) == 0) {
 		skip = 8;
 	}
 	else {
@@ -294,7 +298,7 @@ HTTPError http_request_process_target_absolute(const char* str, HTTPRequest* req
 	str += skip;
 
 	// www.
-	if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "www.", true) == 0) {
+	if (fill_string_str(&str, temp, MAX_HTTP_URL_LEN, "www.", is_case_insensitive) == 0) {
 		skip = 4;
 		if (temp[0] != '\0') return HTTP_BAD_REQUEST_TARGET;
 		memset(temp, 0, MAX_HTTP_URL_LEN);
@@ -630,7 +634,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res) {
 	}
 	log_msg(LOG_INFO, "'%s'\n", data);
 
-	int r = socket_send(inc_sock, data, strlen(data), 0);
+	int r = socket_send_secure(inc_sock, data, strlen(data), 0, res->ssl);
 	if (r == -1) {
 		log_msg(LOG_ERR, "couldn't send data to ");
 		socket_print(inc_sock);
@@ -770,7 +774,8 @@ int korall_request_param_get(const HTTPRequest* req, const char* field, char *va
 	// find start of query params
 	if (fill_string_char(&rt, NULL, 0, '?') == -1) return -1;
 	// find field
-	if (fill_string_str(&rt, NULL, 0, field, false) == -1) return -1;
+	bool is_case_insensitive = false;
+	if (fill_string_str(&rt, NULL, 0, field, is_case_insensitive) == -1) return -1;
 	// find start of value
 	if (fill_string_char(&rt, NULL, 0, '=') == -1) return -1;
 	rt++;
@@ -787,7 +792,8 @@ int korall_request_param_get(const HTTPRequest* req, const char* field, char *va
 int korall_request_header_get(const HTTPRequest* req, const char* field, char* value, size_t value_len) {
 	const char* h = req->headers;
 	const char* base = h;
-	if (fill_string_str(&h, NULL, 0, field, false) == -1) return -1;
+	bool is_case_insensitive = false;
+	if (fill_string_str(&h, NULL, 0, field, is_case_insensitive) == -1) return -1;
 	
 	// make sure actually field and not reading middle of a value (check previously a \r\n i.e. previous header or its the first header)
 	if (!(h == base || (*(h - 2) == '\r' && *(h - 1) == '\n'))) return -1;
@@ -797,7 +803,7 @@ int korall_request_header_get(const HTTPRequest* req, const char* field, char* v
 
 	// value
 
-	if (fill_string_str(&h, value, value_len, "\r\n", false) == 0) return 0;
+	if (fill_string_str(&h, value, value_len, "\r\n", is_case_insensitive) == 0) return 0;
 
 	// value is the last header (req->headers ends with \0 not with \r\n)
 

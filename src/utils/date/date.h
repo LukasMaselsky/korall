@@ -1,5 +1,5 @@
-#ifndef DATE_H
-#define DATE_H
+#ifndef KORALL_DATE_H
+#define KORALL_DATE_H
 #include "utils/utils.h"
 
 #define MAX_VALID_YR 9999

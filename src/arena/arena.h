@@ -1,5 +1,5 @@
-#ifndef ARENA_H
-#define ARENA_H
+#ifndef KORALL_ARENA_H
+#define KORALL_ARENA_H
 
 #include <stdlib.h>
 #include "utils/utils.h"

@@ -1,5 +1,5 @@
-#ifndef HTTP_INTERNAL_H
-#define HTTP_INTERNAL_H
+#ifndef KORALL_HTTP_INTERNAL_H
+#define KORALL_HTTP_INTERNAL_H
 #include "arena/arena.h"
 #include "socket/socket.h"
 #include "utils/utils.h"
@@ -495,6 +495,7 @@ struct HTTPResponseInternal {
 	size_t header_size;
 	char* headers_base;
 	String body;
+	SSL* ssl;
 };
 
 HTTPError http_request_parse(const char* data, HTTPRequest* req);

@@ -13,6 +13,7 @@ static Array g_default_allow_methods_arr = array_create_stack(&g_default_allow_m
 
 
 static ServerConfig g_default_config = {
+	.resource_path = NULL,
 	.domain = {.chars = DEFAULT_DOMAIN, .size = sizeof(DEFAULT_DOMAIN) - 1 },
 	.port = {.chars = DEFAULT_PORT, .size = sizeof(DEFAULT_PORT) - 1 },
 	.name = {.chars = DEFAULT_SERVER_NAME, .size = sizeof(DEFAULT_SERVER_NAME) - 1 },
@@ -211,17 +212,10 @@ static int config_init_inner(const char* path) {
 		return -1;
 	}
 	else {
-		size_t path_len = strlen(path);
-		if (path_len > MAX_FILE_PATH) {
+		if (str_concat(path, config_file_name, file_path, MAX_FILE_PATH) != 0) {
 			log_msg(LOG_WARN, "File path too long, using default config.");
 			return -1;
-		};
-		strcpy(file_path, path);
-		if (strlen(config_file_name) + path_len > MAX_FILE_PATH) {
-			log_msg(LOG_WARN, "File path too long, using default config.");
-			return -1;
-		};
-		strcat(file_path, config_file_name);
+		}
 	}
 
 	FILE* fp = fopen(file_path, "r");
@@ -253,6 +247,10 @@ static int config_init_inner(const char* path) {
 	// access the JSON data
 
 	// go through all ServerConfig
+
+	// resource path
+
+	config->resource_path = path;
 
 	// server name
 
@@ -324,6 +322,7 @@ ServerConfig* config_init(const char* path) {
 	int res = config_init_inner(path);
 	if (res == -1) {
 		g_config = g_default_config;
+		g_config.resource_path = path;
 	}
 	return &g_config;
 }

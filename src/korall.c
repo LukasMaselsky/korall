@@ -7,6 +7,7 @@
 #include "config/config.h"
 #include "gui/gui.h"
 #include "server/http/server_http.h"
+#include "http/tls/tls.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
@@ -15,9 +16,7 @@ static HTTPRoutes g_http_routes = { 0 };
 static WebsocketRoutes g_ws_routes = { 0 };
 
 static void http_routes_free(HTTPRoutes* routes) {
-	if (routes == NULL || routes->routes == NULL) {
-		return;
-	}
+	if (routes == NULL || routes->routes == NULL) return;
 	free(routes->routes);
 }
 
@@ -120,6 +119,17 @@ void korall_init(const char* config_path, const FILE* log_file) {
 
 void korall_run() {
 
+	ServerConfig* g_config = config_get();
+
+	// ssl
+
+	openssl_init();
+
+	SSL_CTX* ssl_ctx = openssl_create_server_ctx(g_config->resource_path);
+	if (ssl_ctx == NULL) {
+		log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
+	}
+
 	// sockets
 	
 	int res = socket_init();
@@ -143,13 +153,15 @@ void korall_run() {
 		.thread_num = 0,
 		.thread_arr = &thread_arr,
 		.lock = &lock,
+		.ssl = NULL,
 	};
 
 	SOCKET sock;
 
 	while (true) {
-		
-		sock = process_incoming_connection(server_sock);
+		// todo: ensure 1 thread per connection (if doing http://localhost:3500 req then this happens when TLS fails)
+		SSL* ssl;
+		sock = process_incoming_connection(server_sock, ssl_ctx, &ssl);
 		if (sock == INVALID_SOCKET) continue;
 		
 		sync_threads(&thread_arr, &lock);
@@ -169,8 +181,9 @@ void korall_run() {
 		memcpy(t_args, &args, sizeof(*t_args));
 		t_args->sock = sock;
 		t_args->thread_num = thread_arr.size;
+		t_args->ssl = ssl;
 
-		create_thread(&thread_arr, t_args);
+		create_data_process_thread(&thread_arr, t_args);
 	}
 
 	socket_close(server_sock);
@@ -179,10 +192,13 @@ void korall_run() {
 
 	socket_quit();
 
-	// free config and routes
+	// cleanup
 
+	if (ssl_ctx != NULL) {
+		SSL_CTX_free(ssl_ctx);
+	}
+	openssl_cleanup();
 	routes_free(&g_http_routes, &g_ws_routes);
-	ServerConfig* g_config = config_get();
 	config_free(g_config);
 
 	return;

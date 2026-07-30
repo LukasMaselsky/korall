@@ -1,5 +1,5 @@
-#ifndef ARRAY_H
-#define ARRAY_H
+#ifndef KORALL_ARRAY_H
+#define KORALL_ARRAY_H
 
 #include "utils/utils.h"
 

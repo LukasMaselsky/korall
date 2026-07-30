@@ -162,15 +162,20 @@ static int fill_str(const char **str, const char* s, const char *end, char* arr,
     return 0;
 }
 
-/*
-    Fills char array with substring based on matching
-*/
-int fill_string_char(const char **str, char *arr, size_t arr_len, const char match) {
-    const char* s = *str;
+/**
+ * @brief Finds first match of "match" char in "in_str" and copies substring of in_str[0] : in_str[match_index] to out_str
+ * @param str 
+ * @param arr 
+ * @param arr_len 
+ * @param match 
+ * @return 
+ */
+int fill_string_char(const char **int_str, char *out_str, size_t out_str_len, const char match) {
+    const char* s = *int_str;
     const char* end = strchr(s, match);
     if (end == NULL) return -1;
 
-    return fill_str(str, s, end, arr, arr_len);
+    return fill_str(int_str, s, end, out_str, out_str_len);
 }
 
 #ifndef _WIN32
@@ -182,8 +187,17 @@ static char* strlwr (char* s) {
 }
 #endif
 
-int fill_string_str(const char** str, char* arr, size_t arr_len, const char *match, bool case_insensitive) {
-    char* s = *str;
+/**
+ * @brief Finds first match of "match" string in "in_str" and copies substring of in_str[0] : in_str[match_index] to out_str
+ * @param in_str 
+ * @param out_str may be NULL (discarded)
+ * @param out_str_len 
+ * @param match 
+ * @param case_insensitive 
+ * @return -1 if match not found or out_str buffer too small, 0 if found
+ */
+int fill_string_str(const char** in_str, char* out_str, size_t out_str_len, const char *match, bool case_insensitive) {
+    char* s = *in_str;
     char* t = match;
     if (case_insensitive) {
         s = strlwr(s);
@@ -192,5 +206,13 @@ int fill_string_str(const char** str, char* arr, size_t arr_len, const char *mat
     const char* end = strstr(s, t);
     if (end == NULL) return -1;
 
-    return fill_str(str, s, end, arr, arr_len);
+    return fill_str(in_str, s, end, out_str, out_str_len);
+}
+
+int str_concat(const char* s1, const char* s2, char *out, size_t out_len) {
+    if (s1 == NULL || s2 == NULL || out == NULL) return -1;
+
+    if (strlen(s1) + strlen(s2) > out_len) return -1;
+    snprintf(out, out_len, "%s%s", s1, s2);
+    return 0;
 }

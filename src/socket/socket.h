@@ -1,5 +1,5 @@
-#ifndef SOCKETS_H
-#define SOCKETS_H
+#ifndef KORALL_SOCKET_H
+#define KORALL_SOCKET_H
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <signal.h>
 #include "korall/socket_definition.h"
+#include "http/tls/tls.h"
 
 
 // https://stackoverflow.com/questions/28027937/cross-platform-sockets
@@ -109,7 +110,11 @@ SOCKET socket_accept(SOCKET sockfd, struct sockaddr_storage* incoming, socklen_t
 
 int socket_send(SOCKET sockfd, const void* msg, int len, int flags);
 
+int socket_send_secure(SOCKET sockfd, const void* msg, int len, int flags, SSL* ssl);
+
 int socket_receive(SOCKET sockfd, void* buf, int len, int flags);
+
+int socket_receive_secure(SOCKET sockfd, void* buf, int len, int flags, SSL* ssl);
 
 int socket_send_unconnected(SOCKET sockfd, const void* msg, int len, unsigned int flags,
     const struct sockaddr* to);

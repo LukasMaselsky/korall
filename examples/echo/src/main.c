@@ -14,6 +14,7 @@ static KORALL_WS_ROUTE(echo) {
 	res_frame.length = frame->length;
 	res_frame.mask = false;
 	res_frame.socket = frame->socket;
+	res_frame.ssl = frame->ssl;
 	korall_ws_frame_send(&res_frame);
 }
 

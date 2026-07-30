@@ -196,7 +196,7 @@ int korall_ws_frame_send(const WebsocketFrame* frame) {
 
 	log_msg(LOG_INFO, "sending frame\n");
 
-	int r = socket_send(frame->socket, data, strlen((const char *)data), 0);
+	int r = socket_send_secure(frame->socket, data, strlen((const char *)data), 0, frame->ssl);
 	if (r == -1) {
 		log_msg(LOG_ERR, "failed to send data to ");
 		socket_print(frame->socket);

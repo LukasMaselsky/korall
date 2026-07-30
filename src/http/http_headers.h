@@ -1,5 +1,5 @@
-#ifndef HTTP_HEADERS_H
-#define HTTP_HEADERS_H
+#ifndef KORALL_HTTP_HEADERS_H
+#define KORALL_HTTP_HEADERS_H
 #include "http_internal.h"
 
 HTTPError http_domain_port(const char* value, char* domain, char* port, bool* with_port);

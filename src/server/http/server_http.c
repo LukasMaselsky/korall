@@ -82,7 +82,8 @@ bool http_domain_port_match_server(const HTTPRequest* req) {
 bool websocket_process_data(
 	const SOCKET inc_sock,
 	const char* data,
-	const WebsocketRoute* route
+	const WebsocketRoute* route,
+	const SSL* ssl
 ) {
 	bool close = false;
 
@@ -105,6 +106,7 @@ bool websocket_process_data(
 		goto websocket_process_data_end;
 	}
 	in_wsf->socket = inc_sock;
+	in_wsf->ssl = ssl;
 
 	if (!(in_wsf->finished)) goto websocket_process_data_end; // todo: add continuous support
 
@@ -194,7 +196,8 @@ bool http_process_request(
 	const HTTPRoutes* routes,
 	const WebsocketRoutes* ws_routes,
 	bool* is_websocket,
-	WebsocketRoute** websocket_route
+	WebsocketRoute** websocket_route,
+	const SSL* ssl
 ) {
 	ServerConfig* g_config = config_get();
 	bool should_close = false;
@@ -203,6 +206,7 @@ bool http_process_request(
 
 	HTTPRequest* req = http_request_init(&req_arena);
 	HTTPResponse* res = http_response_init(&res_arena);
+	res->ssl = ssl;
 
 	// first validate format
 	HTTPError parse_res = http_request_parse(data, req);
@@ -419,11 +423,13 @@ SOCKET init_listen_socket() {
 }
 
 /**
- * @brief
+ * @brief 
  * @param sock - server_sock
- * @return
+ * @param ssl_ctx 
+ * @param ssl_p 
+ * @return 
  */
-SOCKET process_incoming_connection(SOCKET sock) {
+SOCKET process_incoming_connection(SOCKET sock, SSL_CTX* ssl_ctx, SSL** ssl_p) {
 	SOCKET incoming;
 	struct sockaddr_storage incoming_addr;
 	socklen_t incoming_addr_len = sizeof(incoming_addr);
@@ -438,6 +444,29 @@ SOCKET process_incoming_connection(SOCKET sock) {
 
 	get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver, sizeof(ipver));
 	log_msg(LOG_INFO, "got connection from %s (%s)\n", ip, ipver);
+
+	// tls handshake
+
+	SSL* ssl = SSL_new(ssl_ctx);
+	*ssl_p = ssl;
+	if (ssl == NULL) {
+		ERR_print_errors_fp(stderr);
+		return incoming;
+	}
+
+	SSL_set_fd(ssl, incoming);
+
+	if (SSL_accept(ssl) <= 0) {
+		log_msg(LOG_ERR, "TLS handshake failed\n");
+		ERR_print_errors_fp(stderr);
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		*ssl_p = NULL;
+		return incoming;
+	}
+
+	log_msg(LOG_INFO, "TLS handshake successful\n");
+
 	return incoming;
 }
 
@@ -470,16 +499,18 @@ void process_incoming_data(void* arg) {
 	const size_t thread_num = p_args->thread_num;
 	pthread_mutex_t* lock = p_args->lock;
 	Array* thread_arr = p_args->thread_arr;
+	SSL* ssl = p_args->ssl;
 
 	// todo: change to heap for larger buffer
-	char buffer[READ_BUFFER_LEN];    // buffer for client data
+	char buffer[READ_BUFFER_LEN] = { 0 };    // buffer for client data
+	size_t buffer_len = READ_BUFFER_LEN;
 
 	bool is_websocket = false;
 	WebsocketRoute* ws_route = NULL;
 	bool close = false;
 
 	while (true) {
-		int bytes_read = socket_receive(inc_sock, buffer, READ_BUFFER_LEN - 1, 0);
+		int bytes_read = socket_receive_secure(inc_sock, buffer, buffer_len - 1, 0, ssl);
 		if (bytes_read <= 0) {
 			if (bytes_read == 0) {
 				log_msg(LOG_INFO, "socket ");
@@ -504,13 +535,13 @@ void process_incoming_data(void* arg) {
 
 
 		if (is_websocket && ws_route != NULL) {
-			close = websocket_process_data(inc_sock, buffer, ws_route);
+			close = websocket_process_data(inc_sock, buffer, ws_route, ssl);
 		}
 		else {
-			close = http_process_request(inc_sock, buffer, http_routes, ws_routes, &is_websocket, &ws_route);
+			close = http_process_request(inc_sock, buffer, http_routes, ws_routes, &is_websocket, &ws_route, ssl);
 		}
 		if (close) goto process_incoming_data_end;
-		memset(buffer, 0, READ_BUFFER_LEN);
+		memset(buffer, 0, buffer_len);
 	}
 process_incoming_data_end:
 
@@ -571,7 +602,7 @@ void sync_threads(Array* thread_arr, pthread_mutex_t* lock) {
  * @param t_args
  * @return
  */
-void create_thread(Array* thread_arr, ProcessDataArgs* t_args) {
+void create_data_process_thread(Array* thread_arr, ProcessDataArgs* t_args) {
 
 	pthread_mutex_t* lock = t_args->lock;
 	THREAD_T thread;

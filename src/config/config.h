@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef KORALL_CONFIG_H
+#define KORALL_CONFIG_H
 
 #include "utils/utils.h"
 #include "cJSON/cJSON.h"
@@ -20,6 +20,7 @@
 #define ALL_METHODS_LIST_STR_LEN 52 // len "CONNECT,DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE"
 
 typedef struct ServerConfig {
+	const char* resource_path;
 	String domain;
 	String port;
 	String name;

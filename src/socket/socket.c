@@ -1,5 +1,6 @@
 #include "utils/utils.h"
 #include "socket/socket.h"
+#include "http/tls/tls.h"
 
 /*
     Needed for Windows
@@ -130,6 +131,14 @@ int socket_send(SOCKET sockfd, const void* msg, int len, int flags) {
     return send(sockfd, msg, len, flags);
 }
 
+int socket_send_secure(SOCKET sockfd, const void* msg, int len, int flags, SSL* ssl) {
+    if (ssl == NULL) {
+        return socket_send(sockfd, msg, len, flags);
+    }
+
+    return SSL_write(ssl, msg, len);
+}
+
 /*
     -1 = error
     0 = remote side closed connection
@@ -137,6 +146,13 @@ int socket_send(SOCKET sockfd, const void* msg, int len, int flags) {
 */
 int socket_receive(SOCKET sockfd, void* buf, int len, int flags) {
     return recv(sockfd, buf, len, flags);
+}
+
+int socket_receive_secure(SOCKET sockfd, void* buf, int len, int flags, SSL* ssl) {
+    if (ssl == NULL) {
+        return socket_receive(sockfd, buf, len, flags);
+    }
+    return SSL_read(ssl, buf, len);
 }
 
 int socket_send_unconnected(SOCKET sockfd, const void* msg, int len, unsigned int flags,

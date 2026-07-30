@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "socket_definition.h"
+#include <openssl/ssl.h>
 
 typedef enum {
 	WS_OP_CON = 0,
@@ -38,6 +39,7 @@ typedef struct {
 	WebsocketCloseCode close_code;
 	uint8_t* data;
 	SOCKET socket;
+	SSL* ssl;
 	bool mask;
 	bool finished;
 } WebsocketFrame;
