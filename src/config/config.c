@@ -21,6 +21,7 @@ static ServerConfig g_default_config = {
 	.allow_headers = &g_default_allow_arr,
 	.allow_methods = &g_default_allow_methods_arr,
 	.allow_credentials = false,
+	.secure = true,
 	.max_http_routes = HTTP_ROUTES_CAPACITY,
 	.max_ws_routes = WS_ROUTES_CAPACITY,
 	.on_heap = false
@@ -307,6 +308,10 @@ static int config_init_inner(const char* path) {
 	if (am_res == -1 || array_is_empty(config->allow_methods)) {
 		config->allow_methods = default_config->allow_methods;
 	}
+
+	// secure
+
+	config->secure = cjson_read_bool(json, default_config->secure, "secure");
 
 	cJSON_Delete(json);
 	return 0;

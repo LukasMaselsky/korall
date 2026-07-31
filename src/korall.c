@@ -122,12 +122,17 @@ void korall_run() {
 	ServerConfig* g_config = config_get();
 
 	// ssl
+	SSL_CTX* ssl_ctx = NULL;
+	if (g_config->secure) {
+		openssl_init();
 
-	openssl_init();
-
-	SSL_CTX* ssl_ctx = openssl_create_server_ctx(g_config->resource_path);
-	if (ssl_ctx == NULL) {
-		log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
+		ssl_ctx = openssl_create_server_ctx(g_config->resource_path);
+		if (ssl_ctx == NULL) {
+			log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
+		}
+		else {
+			log_msg(LOG_INFO, "created server SSL_CTX\n");
+		}
 	}
 
 	// sockets
@@ -160,7 +165,7 @@ void korall_run() {
 
 	while (true) {
 		// todo: ensure 1 thread per connection (if doing http://localhost:3500 req then this happens when TLS fails)
-		SSL* ssl;
+		SSL* ssl = NULL;
 		sock = process_incoming_connection(server_sock, ssl_ctx, &ssl);
 		if (sock == INVALID_SOCKET) continue;
 		

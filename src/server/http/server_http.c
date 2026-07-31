@@ -447,6 +447,8 @@ SOCKET process_incoming_connection(SOCKET sock, SSL_CTX* ssl_ctx, SSL** ssl_p) {
 
 	// tls handshake
 
+	if (ssl_ctx == NULL) return incoming;
+	
 	SSL* ssl = SSL_new(ssl_ctx);
 	*ssl_p = ssl;
 	if (ssl == NULL) {
@@ -462,10 +464,12 @@ SOCKET process_incoming_connection(SOCKET sock, SSL_CTX* ssl_ctx, SSL** ssl_p) {
 		SSL_shutdown(ssl);
 		SSL_free(ssl);
 		*ssl_p = NULL;
+		// todo: close socket ?
 		return incoming;
 	}
 
 	log_msg(LOG_INFO, "TLS handshake successful\n");
+	
 
 	return incoming;
 }
