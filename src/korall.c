@@ -136,7 +136,9 @@ void korall_run() {
 	}
 
 	SOCKET server_sock = init_listen_socket();
-	
+	if (server_sock == INVALID_SOCKET) {
+		exit(EXIT_FAILURE);
+	}
 
 	ThreadState threads[MAX_THREADS] = { 0 };
 	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);

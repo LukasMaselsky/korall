@@ -72,6 +72,73 @@ bool http_domain_port_match_server(const HTTPRequest* req) {
 	return true;
 }
 
+static int websocket_process_data_inner(
+	WebsocketFrame* in_wsf,
+	WebsocketFrame* out_wsf,
+	const SOCKET inc_sock,
+	const char* data,
+	const WebsocketRoute* route,
+	const SSL* ssl,
+	bool *close
+) {
+	if (websocket_frame_decode((uint8_t*)data, in_wsf) == -1) {
+		log_msg(LOG_ERR, "invalid websocket message received, syntax\n");
+		return -1;
+	}
+	in_wsf->socket = inc_sock;
+	in_wsf->ssl = ssl;
+
+	if (!(in_wsf->finished)) return 0; // todo: add continuous support
+
+	if (in_wsf->opcode == WS_OP_PONG) return 0; // ignore pong
+
+	// send pong when you get ping
+	if (in_wsf->opcode == WS_OP_PING) {
+		if (websocket_frame_construct_pong(out_wsf, inc_sock, false, 0) == -1) {
+			log_msg(LOG_ERR, "failed to construct pong message\n");
+			return -1;
+		}
+
+		if (korall_ws_frame_send(out_wsf) == -1) {
+			log_msg(LOG_ERR, "failed to send pong message\n");
+			return -1;
+		}
+		return 0;
+	}
+
+	// if close frame, remove from both sets and close socket connection
+
+	if (in_wsf->opcode == WS_OP_CLOSE) {
+
+		// todo: close codes
+		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0) == -1) {
+			log_msg(LOG_ERR, "failed to construct close message\n");
+			return -1;
+		}
+
+		if (korall_ws_frame_send(out_wsf) == -1) {
+			log_msg(LOG_ERR, "failed to send close message\n");
+			return -1;
+		}
+
+		if (socket_close(inc_sock) == -1) {
+			log_msg(LOG_ERR, "failed to close socket ");
+			socket_print(inc_sock);
+			printf("\n");
+		};
+
+		*close = true;
+
+		return 0;
+	}
+
+	// CALLBACK
+
+	route->callback(in_wsf);
+
+	return 0;
+}
+
 /**
  * @brief
  * @param inc_sock
@@ -100,62 +167,16 @@ bool websocket_process_data(
 	WebsocketFrame* out_wsf;
 	out_wsf = (WebsocketFrame*)arena_alloc(&out_arena, sizeof(*out_wsf));
 
+	websocket_process_data_inner(
+		in_wsf,
+		out_wsf,
+		inc_sock,
+		data,
+		route,
+		ssl,
+		&close
+	);
 
-	if (websocket_frame_decode((uint8_t*)data, in_wsf) == -1) {
-		log_msg(LOG_ERR, "invalid websocket message received, syntax\n");
-		goto websocket_process_data_end;
-	}
-	in_wsf->socket = inc_sock;
-	in_wsf->ssl = ssl;
-
-	if (!(in_wsf->finished)) goto websocket_process_data_end; // todo: add continuous support
-
-	if (in_wsf->opcode == WS_OP_PONG) goto websocket_process_data_end; // ignore pong
-
-	// send pong when you get ping
-	if (in_wsf->opcode == WS_OP_PING) {
-		if (websocket_frame_construct_pong(out_wsf, inc_sock, false, 0) == -1) {
-			log_msg(LOG_ERR, "failed to construct pong message\n");
-			goto websocket_process_data_end;
-		}
-
-		if (korall_ws_frame_send(out_wsf) == -1) {
-			log_msg(LOG_ERR, "failed to send pong message\n");
-		}
-		goto websocket_process_data_end;
-	}
-
-	// if close frame, remove from both sets and close socket connection
-
-	if (in_wsf->opcode == WS_OP_CLOSE) {
-
-		// todo: close codes
-		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0) == -1) {
-			log_msg(LOG_ERR, "failed to construct close message\n");
-			goto websocket_process_data_end;
-		}
-
-		if (korall_ws_frame_send(out_wsf) == -1) {
-			log_msg(LOG_ERR, "failed to send close message\n");
-			goto websocket_process_data_end;
-		}
-
-		if (socket_close(inc_sock) == -1) {
-			log_msg(LOG_ERR, "failed to close socket ");
-			socket_print(inc_sock);
-			printf("\n");
-		};
-
-		close = true;
-
-		goto websocket_process_data_end;
-	}
-
-	// CALLBACK
-
-	route->callback(in_wsf);
-
-websocket_process_data_end:
 	arena_free(&inc_arena);
 	arena_free(&out_arena);
 	return close;
@@ -172,12 +193,184 @@ void route_not_found(HTTPResponse* res, SOCKET inc_sock) {
 	if (err == -1) return;
 	if (http_response_send(inc_sock, res) == -1) {
 		log_msg(LOG_ERR, "failed to send response\n");
-	};
+	}
 	return;
 }
 
-bool req_is_ws_upgrade(const HTTPRequest* req) {
+static bool req_is_ws_upgrade(const HTTPRequest* req) {
 	return req->ws->has_key && req->ws->has_connection && req->ws->has_upgrade && req->ws->has_version;
+}
+
+static int ws_upgrade(
+	const HTTPRequest *req, 
+	HTTPResponse *res, 
+	const ServerConfig* config, 
+	const SOCKET inc_sock,
+	const WebsocketRoutes* ws_routes,
+	bool* is_websocket,
+	WebsocketRoute** websocket_route
+) {
+	// check if WS route exists
+
+	WebsocketRoute* wsr = ws_route_select(req, ws_routes);
+	if (wsr == NULL) {
+		route_not_found(res, inc_sock);
+		return -1;
+	}
+
+	// send 101
+	int err = http_response_ws_construct(res, req->ws->accept, config->name.chars);
+	if (err == -1) return -1;
+	if (http_response_send(inc_sock, res) == -1) {
+		log_msg(LOG_ERR, "failed to send response\n");
+	}
+	else {
+		*is_websocket = true;
+		*websocket_route = wsr;
+	}
+}
+
+static int http_process_request_options(
+	const HTTPRequest* req,
+	HTTPResponse* res,
+	const ServerConfig* config,
+	const SOCKET inc_sock
+) {
+	log_msg(LOG_INFO, "OPTIONS request received\n");
+
+	// Access-Control-Request-Method
+	char acrm[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
+	int acrm_res = korall_request_header_get(req, "Access-Control-Request-Method", acrm, MAX_HTTP_METHOD_STR_LEN);
+	if (acrm_res == -1) {
+		log_msg(LOG_ERR, "invalid HTTP request received, host\n");
+		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "OPTIONS request must contain Access-Control-Request-Method header."));
+		if (err == -1) return -1;
+		if (http_response_send(inc_sock, res) == -1) {
+			log_msg(LOG_ERR, "failed to send response\n");
+		}
+		return -1;
+	}
+
+	// set response header on which methods are allowed
+
+	char stringified_methods[ALL_METHODS_LIST_STR_LEN + 1] = { 0 };
+	int am = http_allowed_methods(config->allow_methods, stringified_methods, ALL_METHODS_LIST_STR_LEN);
+	if (am == -1) return -1;
+	korall_response_header_set(res, "Access-Control-Allow-Methods", stringified_methods);
+
+	// Access-Control-Request-Headers
+	char acrh[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+	int acrh_res = korall_request_header_get(req, "Access-Control-Request-Headers", acrh, MAX_HTTP_HEADER_VALUE_LEN);
+	if (acrh_res != -1) {
+		char stringified_rqh[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+		http_allowed_headers(config->allow_headers, stringified_rqh, MAX_HTTP_HEADER_VALUE_LEN);
+		korall_response_header_set(res, "Access-Control-Allow-Headers", stringified_rqh);
+	}
+}
+
+static int http_process_request_inner(
+	const HTTPRequest* req,
+	HTTPResponse* res,
+	const ServerConfig* config,
+	const SOCKET inc_sock,
+	const char* data,
+	const HTTPRoutes* routes,
+	const WebsocketRoutes* ws_routes,
+	bool* is_websocket,
+	WebsocketRoute** websocket_route,
+	bool* should_close
+) {
+	// first validate format
+	HTTPError parse_res = http_request_parse(data, req);
+	if (parse_res != HTTP_SUCCESS) {
+		log_msg(LOG_ERR, "invalid HTTP request received, syntax\n");
+
+		HTTPStatusCode sc;
+		HTTPMediaType mt;
+		const char* message = http_error_response_info(parse_res, &sc, &mt);
+
+		int err = http_response_construct(res, sc, config->name.chars, mt, message);
+		if (err == -1) return -1;
+		if (http_response_send(inc_sock, res) == -1) {
+			log_msg(LOG_ERR, "failed to send response\n");
+		}
+		return -1;
+	}
+
+	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
+	if (!http_domain_port_match_server(req)) {
+		log_msg(LOG_ERR, "invalid HTTP request received, host\n");
+		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
+		if (err == -1) return -1;
+		if (http_response_send(inc_sock, res) == -1) {
+			log_msg(LOG_ERR, "failed to send response\n");
+		}
+		return -1;
+	}
+
+	// Access-Control-Allow-Credentials
+
+	bool creds = false;
+	if (config->allow_credentials) {
+		creds = true;
+		korall_response_header_set(res, "Access-Control-Allow-Credentials", "true");
+		korall_response_header_set(res, "Vary", "Origin");
+	}
+
+
+	// check if origin is allowed (CORS)
+	char allow_origin[MAX_DOMAIN_LEN + 1] = { 0 };
+	int vo_res = http_verify_origin(config->allow_origins, req, creds, allow_origin, MAX_DOMAIN_LEN);
+	if (vo_res != -1) {
+		korall_response_header_set(res, "Access-Control-Allow-Origin", allow_origin);
+	}
+
+	// OPTIONS request
+	if (req->start_line->method == HTTP_OPTIONS) {
+		if (http_process_request_options(req, res, config, inc_sock) == -1) return -1;
+	}
+
+	log_msg(LOG_INFO, "valid HTTP request received\n");
+
+	if (req_is_ws_upgrade(req)) {
+		return ws_upgrade(req, res, config, inc_sock, ws_routes, is_websocket, websocket_route);
+	}
+
+	log_msg(LOG_INFO, "sending HTTP response\n");
+
+	if (req->start_line->method != HTTP_OPTIONS) {
+		const HTTPRoute* route = http_route_select(req, routes);
+		if (route == NULL) {
+			// send 404 if no matching route
+			route_not_found(res, inc_sock);
+			return -1;
+		}
+		route->callback(req, res); // CALL CALLBACK
+	}
+	else {
+		// CORS preflight 204 response
+		int err = http_response_construct(res, HTTP_SC_204, config->name.chars, HTTP_MT_APP_JSON, NULL);
+		if (err == -1) return -1;
+	}
+
+	if (res->start_line.chars[0] == '\0') {
+		log_msg(LOG_ERR, "failed to send response, no start line set\n");
+		return -1;
+	}
+
+	if (http_response_send(inc_sock, res) == -1) {
+		log_msg(LOG_ERR, "failed to send responses\n");
+	}
+
+	// check if Connection: close
+
+	char con[20] = { 0 }; // todo: no num
+	if (korall_request_header_get(req, "Connection", con, 20) == -1) return -1;
+
+	if (strcmp_ci(con, "close") == 0) {
+		*should_close = true;
+	}
+	return 0;
 }
 
 /**
@@ -208,148 +401,20 @@ bool http_process_request(
 	HTTPResponse* res = http_response_init(&res_arena);
 	res->ssl = ssl;
 
-	// first validate format
-	HTTPError parse_res = http_request_parse(data, req);
-	if (parse_res != HTTP_SUCCESS) {
-		log_msg(LOG_ERR, "invalid HTTP request received, syntax\n");
+	
+	http_process_request_inner(
+		req, 
+		res, 
+		g_config, 
+		inc_sock, 
+		data, 
+		routes, 
+		ws_routes, 
+		is_websocket, 
+		websocket_route, 
+		&should_close
+	);
 
-		HTTPStatusCode sc;
-		HTTPMediaType mt;
-		const char* message = http_error_response_info(parse_res, &sc, &mt);
-
-		int err = http_response_construct(res, sc, g_config->name.chars, mt, message);
-		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res) == -1) {
-			log_msg(LOG_ERR, "failed to send response\n");
-		}
-		goto http_process_request_end;
-	}
-
-	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
-	if (!http_domain_port_match_server(req)) {
-		log_msg(LOG_ERR, "invalid HTTP request received, host\n");
-		int err = http_response_construct(res, HTTP_SC_400, g_config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
-		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res) == -1) {
-			log_msg(LOG_ERR, "failed to send response\n");
-		}
-		goto http_process_request_end;
-	}
-
-	// Access-Control-Allow-Credentials
-
-	bool creds = false;
-	if (g_config->allow_credentials) {
-		creds = true;
-		korall_response_header_set(res, "Access-Control-Allow-Credentials", "true");
-		korall_response_header_set(res, "Vary", "Origin");
-	}
-
-
-	// check if origin is allowed (CORS)
-	char allow_origin[MAX_DOMAIN_LEN + 1] = { 0 };
-	int vo_res = http_verify_origin(g_config->allow_origins, req, creds, allow_origin, MAX_DOMAIN_LEN);
-	if (vo_res != -1) {
-		korall_response_header_set(res, "Access-Control-Allow-Origin", allow_origin);
-	}
-
-	// CORS preflight
-	if (req->start_line->method == HTTP_OPTIONS) {
-		log_msg(LOG_INFO, "CORS preflight request received\n");
-		
-		// Access-Control-Request-Method
-		char acrm[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
-		int acrm_res = korall_request_header_get(req, "Access-Control-Request-Method", acrm, MAX_HTTP_METHOD_STR_LEN);
-		if (acrm_res == -1) {
-			log_msg(LOG_ERR, "invalid HTTP request received, host\n");
-			int err = http_response_construct(res, HTTP_SC_400, g_config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "OPTIONS request must contain Access-Control-Request-Method header."));
-			if (err == -1) goto http_process_request_end;
-			if (http_response_send(inc_sock, res) == -1) {
-				log_msg(LOG_ERR, "failed to send response\n");
-			}
-			goto http_process_request_end;
-		}
-
-		// set response header on which methods are allowed
-
-		char stringified_methods[ALL_METHODS_LIST_STR_LEN + 1] = { 0 };
-		int am = http_allowed_methods(g_config->allow_methods, stringified_methods, ALL_METHODS_LIST_STR_LEN);
-		if (am == -1) goto http_process_request_end;
-		korall_response_header_set(res, "Access-Control-Allow-Methods", stringified_methods);
-
-		// Access-Control-Request-Headers
-		char acrh[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
-		int acrh_res = korall_request_header_get(req, "Access-Control-Request-Headers", acrh, MAX_HTTP_HEADER_VALUE_LEN);
-		if (acrh_res != -1) {
-			char stringified_rqh[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
-			http_allowed_headers(g_config->allow_headers, stringified_rqh, MAX_HTTP_HEADER_VALUE_LEN);
-			korall_response_header_set(res, "Access-Control-Allow-Headers", stringified_rqh);
-		}
-	}
-
-	log_msg(LOG_INFO, "valid HTTP request received\n");
-
-	if (req_is_ws_upgrade(req)) {
-
-		// check if WS route exists
-
-		WebsocketRoute* wsr = ws_route_select(req, ws_routes);
-		if (wsr == NULL) {
-			route_not_found(res, inc_sock);
-			goto http_process_request_end;
-		}
-
-		// send 101
-		int err = http_response_ws_construct(res, req->ws->accept, g_config->name.chars);
-		if (err == -1) goto http_process_request_end;
-		if (http_response_send(inc_sock, res) == -1) {
-			log_msg(LOG_ERR, "failed to send response\n");
-		}
-		else {
-			*is_websocket = true;
-			*websocket_route = wsr;
-		}
-
-		goto http_process_request_end;
-	}
-
-	log_msg(LOG_INFO, "sending HTTP response\n");
-
-	if (req->start_line->method != HTTP_OPTIONS) {
-		const HTTPRoute* route = http_route_select(req, routes);
-		if (route == NULL) {
-			// send 404 if no matching route
-			route_not_found(res, inc_sock);
-			goto http_process_request_end;
-		}
-		route->callback(req, res); // CALL CALLBACK
-	}
-	else {
-		// CORS preflight 204 response
-		int err = http_response_construct(res, HTTP_SC_204, g_config->name.chars, HTTP_MT_APP_JSON, NULL);
-		if (err == -1) goto http_process_request_end;
-	}
-
-	if (res->start_line.chars[0] == '\0') {
-		log_msg(LOG_ERR, "failed to send response, no start line set\n");
-		goto http_process_request_end;
-	}
-
-	if (http_response_send(inc_sock, res) == -1) {
-		log_msg(LOG_ERR, "failed to send responses\n");
-	}
-
-	// check if Connection: close
-
-	char con[20] = { 0 };
-	int get_res = korall_request_header_get(req, "Connection", con, 20);
-	if (get_res == -1) goto http_process_request_end;
-
-	if (strcmp_ci(con, "close") == 0) {
-		should_close = true;
-	}
-
-http_process_request_end:
 	http_response_free(&res_arena);
 	http_request_free(&req_arena);
 	return should_close;
@@ -357,7 +422,7 @@ http_process_request_end:
 
 /**
  * @brief Initialise a socket for listening
- * @return open socket
+ * @return open socket or INVALID_SOCKET on error
  */
 SOCKET init_listen_socket() {
 	ServerConfig* g_config = config_get();
@@ -368,10 +433,10 @@ SOCKET init_listen_socket() {
 	const char* node = g_config->domain.chars;
 	const char* service = g_config->port.chars;
 	res = get_addr_info(node, service, &serverinfo);
-
+	
 	if (res != 0) {
 		log_msg(LOG_ERR, "invalid \"domain\" header\n");
-		exit(EXIT_FAILURE);
+		return INVALID_SOCKET;
 	}
 
 	// loop through all the results and bind to the first we can
@@ -385,7 +450,7 @@ SOCKET init_listen_socket() {
 		res = socket_reuse_port(sock);
 		if (res == -1) {
 			log_msg(LOG_ERR, "setsockopt failed\n");
-			exit(EXIT_FAILURE);
+			return INVALID_SOCKET;
 		}
 
 		res = socket_bind(sock, addrinfo);
@@ -404,7 +469,7 @@ SOCKET init_listen_socket() {
 
 	if (addrinfo == NULL) {
 		log_msg(LOG_ERR, "failed to freeaddrinfo");
-		exit(EXIT_FAILURE);
+		return INVALID_SOCKET;
 	}
 
 	char ip[IPV6_ADDRSTRLEN];
@@ -416,7 +481,7 @@ SOCKET init_listen_socket() {
 	res = socket_listen(sock);
 	if (res == -1) {
 		log_msg(LOG_ERR, "socket listen failed\n");
-		exit(EXIT_FAILURE);
+		return INVALID_SOCKET;
 	}
 
 	return sock;
@@ -472,22 +537,6 @@ SOCKET process_incoming_connection(SOCKET sock, SSL_CTX* ssl_ctx, SSL** ssl_p) {
 	
 
 	return incoming;
-}
-
-void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_len, fd_set* main, SOCKET fd_max) {
-	// send data received to every other connection except incoming and server
-	for (SOCKET fd = 0; fd <= fd_max; fd++) {
-		if (!FD_ISSET(fd, main)) continue;
-
-		if (fd == server_sock || fd == inc_sock) continue;
-
-		int res = socket_send(fd, data, data_len, 0);
-		if (res == -1) {
-			log_msg(LOG_ERR, "couldn't send data to ");
-			socket_print(fd);
-			printf("\n");
-		}
-	}
 }
 
 /**

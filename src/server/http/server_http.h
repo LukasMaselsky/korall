@@ -69,8 +69,6 @@ bool websocket_process_data(
 
 void route_not_found(HTTPResponse* res, SOCKET inc_sock);
 
-bool req_is_ws_upgrade(const HTTPRequest* req);
-
 bool http_process_request(
 	const SOCKET inc_sock,
 	const char* data,
@@ -84,8 +82,6 @@ bool http_process_request(
 SOCKET init_listen_socket();
 
 SOCKET process_incoming_connection(SOCKET sock, SSL_CTX* ssl_ctx, SSL** ssl_p);
-
-void broadcast(SOCKET inc_sock, SOCKET server_sock, const char* data, int data_len, fd_set* main, SOCKET fd_max);
 
 void process_incoming_data(void* arg);
 
