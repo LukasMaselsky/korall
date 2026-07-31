@@ -5,15 +5,16 @@
 
 SSL_CTX* openssl_create_server_ctx(const char* path) {
     if (path == NULL) {
-        log_msg(LOG_WARN, "path to ssl resources cannot be NULL\n");
+        log_msg(LOG_WARN, "path to SSL resources cannot be NULL\n");
         return NULL;
     }
     const SSL_METHOD* method;
     SSL_CTX* ctx;
     method = TLS_server_method();
     ctx = SSL_CTX_new(method);
-    if (!ctx) {
-        ERR_print_errors_fp(stderr);
+    if (ctx == NULL) {
+        log_msg(LOG_WARN, "could not create SSL_CTX\n");
+        //ERR_print_errors_fp(stderr);
         return NULL;
     }
 
@@ -33,18 +34,20 @@ SSL_CTX* openssl_create_server_ctx(const char* path) {
 
     /* Load certificate and private key created earlier */
     if (SSL_CTX_use_certificate_file(ctx, cert_path, SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
+        //ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
+        log_msg(LOG_WARN, "couldn't load %s\n", cert_path);
         return NULL;
     }
     if (SSL_CTX_use_PrivateKey_file(ctx, key_path, SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
+        //ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
+        log_msg(LOG_WARN, "couldn't load %s\n", key_path);
         return NULL;
     }
     if (!SSL_CTX_check_private_key(ctx)) {
-        fprintf(stderr, "Private key does not match the certificate public key\n");
         SSL_CTX_free(ctx);
+        log_msg(LOG_WARN, "private key does not match the certificate public key\n");
         return NULL;
     }
     /* Basic security hardening: disable legacy protocols */

@@ -103,16 +103,8 @@ void korall_ws_routes_add(const char* path, void (* const callback)(const Websoc
 
 void korall_init(const char* config_path, const FILE* log_file) {
 	
-	// logging
-
-	logging_init(log_file);
-	
-	// config
-
-	ServerConfig* g_config = config_init(config_path);
-
-	// routes
-
+	logging_init(log_file);	
+	config_init(config_path);
 	routes_init();
 
 }

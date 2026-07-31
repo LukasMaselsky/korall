@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 	log_file = fopen("./resources/log_file.txt", "a");
 
 	// with Make
-	korall_init("./resources/" log_file);
+	korall_init("./resources/", log_file);
 
 	#endif
 
