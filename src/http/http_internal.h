@@ -34,6 +34,7 @@
 #define MAX_HTTP_USER_AGENT (4 * KILOBYTE)
 #define MAX_REASON_PHRASE_LEN 34
 #define MAX_CONTENT_ENCODING_CHAR_LEN 8
+#define MAX_DELTA_ALGORITHM_CHAR_LEN 6
 
 // request
 
@@ -389,6 +390,13 @@ typedef enum {
 	HTTP_CONENC_COUNT,
 } HTTPContentEncoding;
 
+typedef enum {
+	HTTP_DELT_ALG_VCDIFF,
+	HTTP_DELT_ALG_DIFFE,
+	HTTP_DELT_ALG_GZIP,
+	HTTP_DELT_ALG_COUNT
+} HTTPDeltaAlgorithm;
+
 // response
 
 typedef enum {
@@ -413,6 +421,7 @@ typedef enum {
 
 typedef enum {
 	// todo
+	HTTP_BAD_A_IM = -36,
 	HTTP_BAD_ACCEPT_LANG = -35,
 	HTTP_BAD_CONTENT_ENC = -34,
 	HTTP_BAD_WS_KEY_CALC = -33,

@@ -390,6 +390,12 @@ const LookupEntry http_content_encoding_lookup_table_entries[HTTP_CONTENT_ENCODI
 	{ HTTP_CONENC_DCZ, "dcz" },
 };
 
+const LookupEntry http_a_im_lookup_table_entries[HTTP_A_IM_TABLE_COUNT] = {
+	{ HTTP_DELT_ALG_VCDIFF, "vcdiff" },
+	{ HTTP_DELT_ALG_DIFFE, "diffe" },
+	{ HTTP_DELT_ALG_GZIP, "gzip" },
+};
+
 /*****************************************************************************/
 
 const LookupTable http_method_lookup_table = {
@@ -475,4 +481,9 @@ const LookupTable ws_close_code_lookup_table = {
 const LookupTable http_content_encoding_lookup_table = {
 	.entries = http_content_encoding_lookup_table_entries,
 	.size = HTTP_CONTENT_ENCODING_TABLE_COUNT
+};
+
+const LookupTable http_a_im_lookup_table = {
+	.entries = http_a_im_lookup_table_entries,
+	.size = HTTP_A_IM_TABLE_COUNT
 };

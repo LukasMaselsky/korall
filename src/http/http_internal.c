@@ -691,6 +691,8 @@ const char* http_error_response_info(HTTPError error_code, HTTPStatusCode* sc, H
 	*mt = HTTP_MT_APP_JSON;
 
 	switch (error_code) {
+		case HTTP_BAD_A_IM:
+			return ERROR_MESSAGE("Bad request", "Invalid A-IM header.");
 		case HTTP_BAD_ACCEPT_LANG:
 			return ERROR_MESSAGE("Bad request", "Invalid Accept-Language header.");
 		case HTTP_BAD_CONTENT_ENC:

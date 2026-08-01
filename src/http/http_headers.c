@@ -76,12 +76,14 @@ HTTPError http_domain_port(const char* value, char* domain, char* port, bool *wi
 static int http_process_weighted_list(
 	const char* value, 
 	const LookupTable *table,
-	char *field_arr, 
-	const int field_arr_len
+	const int max_item_len
 ) {
+	if (max_item_len > MAX_HTTP_HEADER_VALUE_LEN) return -1;
+	char field_arr[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
 
 	int i = 0;
 	for (char c = *value; ; c = *(++value)) {
+		if (i > max_item_len) return -1;
 		if (!(c == ',' || c == ';' || c == '\0')) {
 			field_arr[i] = c;
 			i++;
@@ -118,7 +120,7 @@ static int http_process_weighted_list(
 			value++;
 		} while (*value == ' '); // skip spaces
 		i = 0;
-		memset(field_arr, 0, field_arr_len);
+		memset(field_arr, 0, MAX_HTTP_HEADER_VALUE_LEN);
 		field_arr[i] = *value;
 		i++;
 	}
@@ -128,11 +130,14 @@ static int http_process_weighted_list(
 static int http_process_list(
 	const char* value,
 	const LookupTable* table,
-	char* field_arr,
-	const int field_arr_len
+	const int max_item_len
 ) {
+	if (max_item_len > MAX_HTTP_HEADER_VALUE_LEN) return -1;
+	char field_arr[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+
 	int i = 0;
 	for (char c = *value; ; c = *(++value)) {
+		if (i > max_item_len) return -1;
 		if (!(c == ',' || c == '\0')) {
 			field_arr[i] = c;
 			i++;
@@ -148,16 +153,21 @@ static int http_process_list(
 			value++;
 		} while (*value == ' '); // skip spaces
 		i = 0;
-		memset(field_arr, 0, field_arr_len);
+		memset(field_arr, 0, MAX_HTTP_HEADER_VALUE_LEN);
 		field_arr[i] = *value;
 		i++;
 	}
 	return 0;
 }
 
+HTTPError http_process_a_im(const char* value) {
+	int res = http_process_weighted_list(value, &http_a_im_lookup_table, MAX_DELTA_ALGORITHM_CHAR_LEN);
+	if (res == -1) return HTTP_BAD_A_IM;
+	return HTTP_SUCCESS;
+}
+
 HTTPError http_process_content_encoding(const char* value) {
-	char temp[MAX_CONTENT_ENCODING_CHAR_LEN + 1] = { 0 };
-	int res = http_process_weighted_list(value, &http_content_encoding_lookup_table, temp, MAX_CONTENT_ENCODING_CHAR_LEN + 1);
+	int res = http_process_weighted_list(value, &http_content_encoding_lookup_table, MAX_CONTENT_ENCODING_CHAR_LEN);
 	if (res == -1) return HTTP_BAD_CONTENT_ENC;
 	return HTTP_SUCCESS;
 }
@@ -314,15 +324,13 @@ HTTPError http_process_host(const char* value, HTTPRequest* req) {
 }
 
 HTTPError http_process_accept(const char* value) {
-	char temp[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
-	int res = http_process_weighted_list(value, &http_media_type_lookup_table, temp, MAX_MEDIA_TYPE_LEN + 1);
+	int res = http_process_weighted_list(value, &http_media_type_lookup_table, MAX_MEDIA_TYPE_LEN);
 	if (res == -1) return HTTP_BAD_ACCEPT;
 	return HTTP_SUCCESS;
 }
 
 HTTPError http_process_accept_encoding(const char* value) {
-	char temp[MAX_ACCEPT_ENCODING_CHAR_LEN + 1] = { 0 };
-	int res = http_process_weighted_list(value, &http_accept_encoding_lookup_table, temp, MAX_ACCEPT_ENCODING_CHAR_LEN + 1);
+	int res = http_process_weighted_list(value, &http_accept_encoding_lookup_table, MAX_ACCEPT_ENCODING_CHAR_LEN);
 	if (res == -1) return HTTP_BAD_ACCEPT_ENC;
 	return HTTP_SUCCESS;
 }
@@ -398,15 +406,13 @@ HTTPError http_process_expect(const char* value) {
 }
 
 HTTPError http_process_te(const char* value) {
-	char temp[MAX_TE_LEN + 1] = { 0 };
-	int res = http_process_weighted_list(value, &http_te_lookup_table, temp, MAX_TE_LEN + 1);
+	int res = http_process_weighted_list(value, &http_te_lookup_table, MAX_TE_LEN);
 	if (res == -1) return HTTP_BAD_TE;
 	return HTTP_SUCCESS;
 }
 
 HTTPError http_process_transfer_encoding(const char* value) {
-	char temp[MAX_TRANSFER_ENCODING_LEN + 1] = { 0 };
-	int res = http_process_list(value, &http_transfer_encoding_lookup_table, temp, MAX_TRANSFER_ENCODING_LEN + 1);
+	int res = http_process_list(value, &http_transfer_encoding_lookup_table, MAX_TRANSFER_ENCODING_LEN);
 	if (res == -1) return HTTP_BAD_TRANSFER_ENCODING;
 	return HTTP_SUCCESS;
 }

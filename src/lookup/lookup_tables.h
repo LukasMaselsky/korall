@@ -20,6 +20,7 @@
 #define HTTP_REQ_UPGRADE_TABLE_COUNT HTTP_UPG_COUNT
 #define WS_CLOSE_CODE_TABLE_COUNT WS_CC_COUNT
 #define HTTP_CONTENT_ENCODING_TABLE_COUNT HTTP_CONENC_COUNT
+#define HTTP_A_IM_TABLE_COUNT HTTP_DELT_ALG_COUNT
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
@@ -54,5 +55,6 @@ extern const LookupTable month_lookup_table;
 extern const LookupTable http_req_upgrade_lookup_table;
 extern const LookupTable ws_close_code_lookup_table;
 extern const LookupTable http_content_encoding_lookup_table;
+extern const LookupTable http_a_im_lookup_table;
 
 #endif
