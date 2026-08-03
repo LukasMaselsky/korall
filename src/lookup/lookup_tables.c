@@ -394,6 +394,10 @@ const LookupEntry http_a_im_lookup_table_entries[HTTP_A_IM_TABLE_COUNT] = {
 	{ HTTP_DELT_ALG_VCDIFF, "vcdiff" },
 	{ HTTP_DELT_ALG_DIFFE, "diffe" },
 	{ HTTP_DELT_ALG_GZIP, "gzip" },
+	{ HTTP_DELT_ALG_GDIFF, "gdiff" },
+	{ HTTP_DELT_ALG_DEFLATE, "deflate" },
+	{ HTTP_DELT_ALG_RANGE, "range" },
+	{ HTTP_DELT_ALG_IDENTITY, "identity" },
 };
 
 /*****************************************************************************/

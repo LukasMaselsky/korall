@@ -54,6 +54,100 @@ static routes_free(HTTPRoutes* http, WebsocketRoutes* ws) {
 	ws_routes_free(ws);
 }
 
+static SSL_CTX* ssl_ctx_init(ServerConfig* config) {
+	SSL_CTX* ssl_ctx = NULL;
+	if (config->secure) {
+		openssl_init();
+
+		ssl_ctx = openssl_create_server_ctx(config->resource_path);
+		if (ssl_ctx == NULL) {
+			log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
+		}
+		else {
+			log_msg(LOG_INFO, "created server SSL_CTX\n");
+		}
+	}
+	return ssl_ctx;
+}
+
+static SOCKET server_socket_init() {
+	int res = socket_init();
+	if (res != 0) {
+		log_msg(LOG_ERR, "socket initialisation failed, exiting\n");
+		exit(EXIT_FAILURE);
+	}
+
+	SOCKET server_sock = init_listen_socket();
+	if (server_sock == INVALID_SOCKET) {
+		exit(EXIT_FAILURE);
+	}
+	return server_sock;
+}
+
+static void cleanup(SOCKET server_sock, SSL_CTX* ssl_ctx, ServerConfig* config) {
+	socket_close(server_sock);
+
+	log_msg(LOG_INFO, "closed socket\n");
+
+	socket_quit();
+
+	// cleanup
+
+	if (ssl_ctx != NULL) {
+		SSL_CTX_free(ssl_ctx);
+	}
+	openssl_cleanup();
+	routes_free(&g_http_routes, &g_ws_routes);
+	config_free(config);
+}
+
+static void server_run(SOCKET server_sock, SSL_CTX* ssl_ctx) {
+	ThreadState threads[MAX_THREADS] = { 0 };
+	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
+
+	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+	ProcessDataArgs args = {
+		.sock = 0,
+		.http_routes = &g_http_routes,
+		.ws_routes = &g_ws_routes,
+		.thread_num = 0,
+		.thread_arr = &thread_arr,
+		.lock = &lock,
+		.ssl = NULL,
+	};
+
+	SOCKET sock;
+
+	while (true) {
+		// todo: ensure 1 thread per connection (if doing http://localhost:3500 req then this happens when TLS fails)
+		SSL* ssl = NULL;
+		sock = process_incoming_connection(server_sock, ssl_ctx, &ssl);
+		if (sock == INVALID_SOCKET) continue;
+
+		sync_threads(&thread_arr, &lock);
+
+		// spawn 1 thread for each connection
+
+		// ! no mutex needed here since threads don't change array size
+
+		if (array_full(&thread_arr)) {
+			log_msg(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
+			continue;
+		}
+
+		// make copy of args
+
+		ProcessDataArgs* t_args = safe_calloc(1, sizeof(ProcessDataArgs));
+		memcpy(t_args, &args, sizeof(*t_args));
+		t_args->sock = sock;
+		t_args->thread_num = thread_arr.size;
+		t_args->ssl = ssl;
+
+		create_data_process_thread(&thread_arr, t_args);
+	}
+}
+
 // 
 
 void korall_http_routes_add(const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
@@ -113,92 +207,13 @@ void korall_run() {
 
 	ServerConfig* g_config = config_get();
 
-	// ssl
-	SSL_CTX* ssl_ctx = NULL;
-	if (g_config->secure) {
-		openssl_init();
+	SSL_CTX* ssl_ctx = ssl_ctx_init(g_config);
 
-		ssl_ctx = openssl_create_server_ctx(g_config->resource_path);
-		if (ssl_ctx == NULL) {
-			log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
-		}
-		else {
-			log_msg(LOG_INFO, "created server SSL_CTX\n");
-		}
-	}
+	SOCKET server_sock = server_socket_init();
 
-	// sockets
-	
-	int res = socket_init();
-	if (res != 0) {
-		log_msg(LOG_ERR, "socket initialisation failed, exiting\n");
-		exit(EXIT_FAILURE);
-	}
+	server_run(server_sock, ssl_ctx);
 
-	SOCKET server_sock = init_listen_socket();
-	if (server_sock == INVALID_SOCKET) {
-		exit(EXIT_FAILURE);
-	}
-
-	ThreadState threads[MAX_THREADS] = { 0 };
-	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
-	
-	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
-	ProcessDataArgs args = {
-		.sock = 0,
-		.http_routes = &g_http_routes,
-		.ws_routes = &g_ws_routes,
-		.thread_num = 0,
-		.thread_arr = &thread_arr,
-		.lock = &lock,
-		.ssl = NULL,
-	};
-
-	SOCKET sock;
-
-	while (true) {
-		// todo: ensure 1 thread per connection (if doing http://localhost:3500 req then this happens when TLS fails)
-		SSL* ssl = NULL;
-		sock = process_incoming_connection(server_sock, ssl_ctx, &ssl);
-		if (sock == INVALID_SOCKET) continue;
-		
-		sync_threads(&thread_arr, &lock);
-	
-		// spawn 1 thread for each connection
-
-		// ! no mutex needed here since threads don't change array size
-		
-		if (array_full(&thread_arr)) { 
-			log_msg(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
-			continue;
-		}
-		
-		// make copy of args
-
-		ProcessDataArgs* t_args = safe_calloc(1, sizeof(ProcessDataArgs));
-		memcpy(t_args, &args, sizeof(*t_args));
-		t_args->sock = sock;
-		t_args->thread_num = thread_arr.size;
-		t_args->ssl = ssl;
-
-		create_data_process_thread(&thread_arr, t_args);
-	}
-
-	socket_close(server_sock);
-
-	log_msg(LOG_INFO, "closed socket\n");
-
-	socket_quit();
-
-	// cleanup
-
-	if (ssl_ctx != NULL) {
-		SSL_CTX_free(ssl_ctx);
-	}
-	openssl_cleanup();
-	routes_free(&g_http_routes, &g_ws_routes);
-	config_free(g_config);
+	cleanup(server_sock, ssl_ctx, g_config);
 
 	return;
 }
