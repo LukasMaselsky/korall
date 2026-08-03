@@ -116,9 +116,8 @@ static int http_process_weighted_list(
 
 		if (*value == '\0') return 0;
 
-		do {
-			value++;
-		} while (*value == ' '); // skip spaces
+		value++;
+		value = str_skip_spaces(value);
 		i = 0;
 		memset(field_arr, 0, MAX_HTTP_HEADER_VALUE_LEN);
 		field_arr[i] = *value;
@@ -149,9 +148,8 @@ static int http_process_list(
 
 		if (*value == '\0') return 0;
 
-		do {
-			value++;
-		} while (*value == ' '); // skip spaces
+		value++;
+		value = str_skip_spaces(value);
 		i = 0;
 		memset(field_arr, 0, MAX_HTTP_HEADER_VALUE_LEN);
 		field_arr[i] = *value;
@@ -200,9 +198,9 @@ HTTPError http_process_content_type(const char* value) {
 	if (colon == -1) return HTTP_SUCCESS; // no boundary/charset
 
 	// skip spaces
+
 	value++;
-	while (*value == ' ')
-		value++;
+	value = str_skip_spaces(value);
 
 	if (mt == HTTP_MT_MTP || mt == HTTP_MT_MTP_FORM_DATA) {
 		// boundary
@@ -354,8 +352,7 @@ HTTPError http_process_access_control_request_headers(const char* value) {
 		if ((field = lookup_str_int(val, &http_req_header_field_lookup_table, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
 		if (value[0] == '\0') return HTTP_SUCCESS;
 		value++; // skip ,
-		while (value[0] == ' ')
-			value++;
+		value = str_skip_spaces(value);
 		memset(val, 0, MAX_HTTP_HEADER_FIELD_LEN);
 	};
 
@@ -388,8 +385,7 @@ HTTPError http_process_cache_control_req(const char* value) {
 				
 		if (value[0] == '\0') return HTTP_SUCCESS;
 		value++; // skip ,
-		while (value[0] == ' ')
-			value++;
+		value = str_skip_spaces(value);
 		memset(val, 0, len + 1);
 	};
 
@@ -543,20 +539,20 @@ HTTPError http_process_cache_control_res(const char* value) {
 		if (value[0] == '=') {
 			if (!HTTP_RES_CC_HAS_VAL(name)) return HTTP_BAD_CACHE_CONTROL;
 			value++; // skip =
-			char sec[24 + 1] = { 0 }; // todo: change 24
-			size_t sec_len = 24;
+			char sec[MAX_HTTP_CC_SEC_CHAR_LEN + 1] = { 0 };
+			size_t sec_len = MAX_HTTP_CC_SEC_CHAR_LEN;
 
 			if (!(fill_string_char(&value, sec, sec_len, ',') != -1 || fill_string_char(&value, sec, sec_len, '\0') != -1)) return HTTP_BAD_CACHE_CONTROL;
 
 			int sec_num;
 			str_to_int_errno res = str_to_int(&sec_num, sec, 10);
 			if (res != STR_TO_INT_SUCCESS) return HTTP_BAD_CACHE_CONTROL;
+			if (sec_num > MAX_HTTP_CC_SEC) return HTTP_BAD_CACHE_CONTROL; // todo: better error msg
 		}
 
 		if (value[0] == '\0') return HTTP_SUCCESS;
 		value++; // skip ,
-		while (value[0] == ' ')
-			value++;
+		value = str_skip_spaces(value);
 		memset(val, 0, len + 1);
 	};
 

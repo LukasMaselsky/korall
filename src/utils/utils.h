@@ -110,4 +110,6 @@ int fill_string_str(const char** str, char* arr, size_t arr_len, const char *mat
 
 int str_concat(const char* s1, const char* s2, char* out, size_t out_len);
 
+char* str_skip_spaces(const char* value);
+
 #endif

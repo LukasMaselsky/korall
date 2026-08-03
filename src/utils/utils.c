@@ -216,3 +216,9 @@ int str_concat(const char* s1, const char* s2, char *out, size_t out_len) {
     snprintf(out, out_len, "%s%s", s1, s2);
     return 0;
 }
+
+char* str_skip_spaces(const char* value) {
+    while (value[0] == ' ')
+        value++;
+    return value;
+}

@@ -664,26 +664,12 @@ void create_data_process_thread(Array* thread_arr, ProcessDataArgs* t_args) {
 	pthread_mutex_lock(lock);
 #endif
 
-#ifdef _WIN32
-	uintptr_t btx = _beginthreadex(NULL, 0, process_incoming_data, (void*)t_args, 0, NULL);
-	if (btx == 0) {
-		log_msg(LOG_ERR, "failed to create thread, could not process connection\n");
-		goto create_thread_end;
+	if (thread_create(&thread, process_incoming_data, (void*)t_args) != -1) {
+		ThreadState ts = { .running = true, .thread = thread };
+		log_msg(LOG_INFO, "created thread\n");
+		array_push(thread_arr, (void*)(&ts));
 	}
-	thread = (THREAD_T)btx;
-#else
-	int res = pthread_create(&thread, NULL, process_incoming_data, (void*)t_args);
-	if (res != 0) {
-		log_msg(LOG_ERR, "failed to create thread, could not process connection\n");
-		goto create_thread_end;
-	}
-#endif
 
-	ThreadState ts = { .running = true, .thread = thread };
-	log_msg(LOG_INFO, "created thread\n");
-	array_push(thread_arr, (void*)(&ts));
-
-create_thread_end:
 #ifndef _WIN32
 	pthread_mutex_unlock(lock);
 #endif

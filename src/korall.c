@@ -15,6 +15,8 @@
 static HTTPRoutes g_http_routes = { 0 };
 static WebsocketRoutes g_ws_routes = { 0 };
 
+// todo: switch to Array ?
+
 static void http_routes_free(HTTPRoutes* routes) {
 	if (routes == NULL || routes->routes == NULL) return;
 	free(routes->routes);

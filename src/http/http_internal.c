@@ -130,8 +130,7 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req) {
 	// process value
 
 	// skip through whitespace
-	while (*s == ' ')
-		s++;
+	s = str_skip_spaces(s);
 
 	if (*s == '\0' || *s == '\n') return HTTP_BAD_HEADER_VAL; // empty field e.g. "Host:    ";
 
@@ -381,9 +380,8 @@ HTTPError http_request_process_target(const char **str, HTTPRequest *req) {
 HTTPError http_request_process_method(const char **str, HTTPRequest *req) {
 
 	char method[MAX_HTTP_METHOD_STR_LEN + 1] = { 0 };
-	int len = MAX_HTTP_METHOD_STR_LEN;
 
-	int res = fill_string_char(str, method, len, ' ');
+	int res = fill_string_char(str, method, MAX_HTTP_METHOD_STR_LEN, ' ');
 	if (res == -1) return HTTP_BAD_METHOD;
 
 	int method_int = lookup_str_int(method, &http_method_lookup_table, false);

@@ -5,6 +5,7 @@
 
 #ifdef _WIN32
 	#include <WinSock2.h>
+	#include <process.h>
 	typedef HANDLE THREAD_T;
 	typedef int pthread_mutex_t; // type not important
 	#define PTHREAD_MUTEX_INITIALIZER 0 // not important
@@ -19,5 +20,7 @@ typedef struct {
 	THREAD_T thread;
 	bool running;
 } ThreadState;
+
+int thread_create(THREAD_T* thread, void (* const func)(void*), void* arg);
 
 #endif

@@ -1,7 +1,7 @@
 #include "lookup_tables.h"
 
 int lookup_str_int(const char* key, const LookupTable* table, const bool case_insensitive) {
-	if (key[0] == '\0') return -1;
+	if (key == NULL || key[0] == '\0' || table == NULL || table->entries == NULL) return -1;
 	for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
 		if (case_insensitive) {
 			if (strcmp_ci(entry->string, key) == 0)
@@ -19,6 +19,7 @@ int lookup_str_int(const char* key, const LookupTable* table, const bool case_in
 }
 
 const char* lookup_int_str(const int key, const LookupTable* table) {
+	if (table == NULL || table->entries == NULL) return NULL;
 	for (const LookupEntry* entry = table->entries; entry != table->entries + table->size; entry++) {
 		if (entry->integer == key)
 			return entry->string;
@@ -55,7 +56,7 @@ const LookupEntry http_req_header_field_lookup_table_entries[HTTP_REQ_HEADER_FIE
 	{ HTTP_RQH_CONTENT_LENGTH, "Content-Length" },
 	{ HTTP_RQH_CONTENT_MD5, "Content-MD5" },
 	{ HTTP_RQH_CONTENT_TYPE, "Content-Type" },
-	// { HTTP_RQH_COOKIE, "Cookie" },
+	{ HTTP_RQH_COOKIE, "Cookie" },
 	{ HTTP_RQH_DATE, "Date" },
 	{ HTTP_RQH_EXPECT, "Expect" },
 	{ HTTP_RQH_FORWARDED, "Forwarded" },

@@ -22,6 +22,8 @@
 #define MAX_HTTP_BODY_DIGIT_LEN 7 // 7 digits
 #define MAX_HTTP_HEADER_FIELD_LEN 32 // todo: allow custom headers (longer header field?)
 #define MAX_HTTP_HEADER_VALUE_LEN 4096 // todo: cookie? // https://stackoverflow.com/questions/640938/what-is-the-maximum-size-of-a-web-browsers-cookies-key
+#define MAX_HTTP_USER_AGENT (4 * KILOBYTE)
+
 #define MAX_MEDIA_TYPE_LEN 73
 #define MAX_HTTP_BOUNDARY_LEN 70
 #define MAX_ACCEPT_ENCODING_CHAR_LEN 8
@@ -31,10 +33,11 @@
 #define MAX_HTTP_CHARSET_LEN 12
 #define MAX_HTTP_REQ_CC_LEN 14
 #define MAX_HTTP_RES_CC_LEN 21
-#define MAX_HTTP_USER_AGENT (4 * KILOBYTE)
 #define MAX_REASON_PHRASE_LEN 34
 #define MAX_CONTENT_ENCODING_CHAR_LEN 8
 #define MAX_DELTA_ALGORITHM_CHAR_LEN 8
+#define MAX_HTTP_CC_SEC_CHAR_LEN 8
+#define MAX_HTTP_CC_SEC 31536000 // https://stackoverflow.com/a/25201898
 
 // request
 
@@ -86,7 +89,7 @@ typedef enum {
 	HTTP_RQH_CONTENT_LENGTH,
 	HTTP_RQH_CONTENT_MD5,
 	HTTP_RQH_CONTENT_TYPE,
-	// HTTP_RQH_COOKIE,
+	HTTP_RQH_COOKIE,
 	HTTP_RQH_DATE,
 	HTTP_RQH_EXPECT,
 	HTTP_RQH_FORWARDED,
