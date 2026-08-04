@@ -5,6 +5,16 @@
 #include "utils/utils.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "thread/thread.h"
+#include "msg_queue/msg_queue.h"
+
+#ifdef _WIN32
+#define GUI_MSG_QUEUE_NAME NULL
+#else
+#define GUI_MSG_QUEUE_NAME "/gui_queue"
+#endif
+
+void gui_run(THREAD_T* thread, unsigned int* thread_id);
 
 int func();
 

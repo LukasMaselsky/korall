@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 	#if USING_CMAKE
 
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_init(RESOURCES_PATH, NULL);
+	korall_init(RESOURCES_PATH, stdout);
 
 	#else
 

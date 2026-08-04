@@ -40,6 +40,7 @@ void config_free(ServerConfig* config) {
 	free(config->port.chars);
 	free(config->name.chars);
 	// ! todo: could be on stack (UNDEFINED, FIX) ?
+	// ! todo: FIX
 	free(config->allow_origins);
 	free(config->allow_headers);
 	free(config->allow_methods);

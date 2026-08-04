@@ -4,14 +4,11 @@
 static FILE* g_log_file = NULL;
 
 void logging_init(FILE* file) {
-    if (file != NULL) {
-        g_log_file = file;
-        return;
-    } 
-    g_log_file = stdout;
+    g_log_file = file;
 }
 
 void log_msg(LogLevel log_level, const char* const format, ...) {
+    if (g_log_file == NULL) return;
     time_t timer;
     char buffer[26];
     struct tm* tm_info;

@@ -21,6 +21,6 @@ typedef struct {
 	bool running;
 } ThreadState;
 
-int thread_create(THREAD_T* thread, void (* const func)(void*), void* arg);
+int thread_create(THREAD_T* thread, void (* const func)(void*), void* arg, unsigned int* thread_id);
 
 #endif

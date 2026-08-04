@@ -103,7 +103,7 @@ static void cleanup(SOCKET server_sock, SSL_CTX* ssl_ctx, ServerConfig* config) 
 	config_free(config);
 }
 
-static void server_run(SOCKET server_sock, SSL_CTX* ssl_ctx) {
+static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX* ssl_ctx) {
 	ThreadState threads[MAX_THREADS] = { 0 };
 	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
 
@@ -117,6 +117,7 @@ static void server_run(SOCKET server_sock, SSL_CTX* ssl_ctx) {
 		.thread_arr = &thread_arr,
 		.lock = &lock,
 		.ssl = NULL,
+		.gui_thread_id = gui_thread_id
 	};
 
 	SOCKET sock;
@@ -197,6 +198,12 @@ void korall_ws_routes_add(const char* path, void (* const callback)(const Websoc
 	routes->route_count = count + 1;
 }
 
+/**
+ * @brief 
+ * 
+ * @param config_path 
+ * @param log_file can be stdout
+ */
 void korall_init(const char* config_path, const FILE* log_file) {
 	
 	logging_init(log_file);	
@@ -213,7 +220,11 @@ void korall_run() {
 
 	SOCKET server_sock = server_socket_init();
 
-	server_run(server_sock, ssl_ctx);
+	THREAD_T gui_thread;
+	unsigned int gui_thread_id = 0;
+	gui_run(&gui_thread, &gui_thread_id);
+
+	server_run(gui_thread_id, server_sock, ssl_ctx);
 
 	cleanup(server_sock, ssl_ctx, g_config);
 

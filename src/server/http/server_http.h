@@ -50,6 +50,7 @@ typedef struct {
 	HTTPRoutes* http_routes;
 	WebsocketRoutes* ws_routes;
 	SSL* ssl;
+	unsigned long gui_thread_id;
 } ProcessDataArgs;
 
 //

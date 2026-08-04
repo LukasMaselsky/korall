@@ -553,6 +553,7 @@ void process_incoming_data(void* arg) {
 	pthread_mutex_t* lock = p_args->lock;
 	Array* thread_arr = p_args->thread_arr;
 	SSL* ssl = p_args->ssl;
+	unsigned long gui_thread_id = p_args->gui_thread_id;
 
 	// todo: change to heap for larger buffer
 	char buffer[READ_BUFFER_LEN] = { 0 };    // buffer for client data
@@ -577,7 +578,7 @@ void process_incoming_data(void* arg) {
 			}
 
 			socket_close(inc_sock);
-			goto process_incoming_data_end;
+			break;
 		}
 
 		buffer[bytes_read] = '\0';
@@ -587,16 +588,19 @@ void process_incoming_data(void* arg) {
 		log_msg(LOG_INFO, "'%s'\n", buffer);
 
 
+		// todo: TEMP
+		msg_queue_post(0, gui_thread_id, buffer, bytes_read + 1);
+		// 
+
 		if (is_websocket && ws_route != NULL) {
 			close = websocket_process_data(inc_sock, buffer, ws_route, ssl);
 		}
 		else {
 			close = http_process_request(inc_sock, buffer, http_routes, ws_routes, &is_websocket, &ws_route, ssl);
 		}
-		if (close) goto process_incoming_data_end;
+		if (close) break;
 		memset(buffer, 0, buffer_len);
 	}
-process_incoming_data_end:
 
 #ifndef _WIN32
 	pthread_mutex_lock(lock);
@@ -664,7 +668,7 @@ void create_data_process_thread(Array* thread_arr, ProcessDataArgs* t_args) {
 	pthread_mutex_lock(lock);
 #endif
 
-	if (thread_create(&thread, process_incoming_data, (void*)t_args) != -1) {
+	if (thread_create(&thread, process_incoming_data, (void*)t_args, NULL) != -1) {
 		ThreadState ts = { .running = true, .thread = thread };
 		log_msg(LOG_INFO, "created thread\n");
 		array_push(thread_arr, (void*)(&ts));
