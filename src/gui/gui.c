@@ -1,13 +1,10 @@
 #include "gui.h"
 
-static void handle_queue_msg(void *arg) {
-	const char* msg = (const char*)arg;
-	log_msg(LOG_INFO, "%s\n", msg);
-}
-
 static void gui_main() {
 	while (true) {
-		msg_queue_read(GUI_MSG_QUEUE_NAME, handle_queue_msg);
+		Message msg = { 0 };
+		if (msg_queue_read(GUI_MSG_QUEUE_NAME, &msg) == -1) continue;
+
 
 		// log_msg(LOG_INFO, "main opengl stuff done here\n");
 	}

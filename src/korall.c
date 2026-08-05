@@ -8,85 +8,50 @@
 #include "gui/gui.h"
 #include "server/http/server_http.h"
 #include "http/tls/tls.h"
+#include "http/routes/http_routes.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
 
-static HTTPRoutes g_http_routes = { 0 };
-static WebsocketRoutes g_ws_routes = { 0 };
-
-// todo: switch to Array ?
-
-static void http_routes_free(HTTPRoutes* routes) {
-	if (routes == NULL || routes->routes == NULL) return;
-	free(routes->routes);
-}
-
-static void http_routes_init(ServerConfig* config) {
-	size_t capacity = sizeof(HTTPRoute) * config->max_http_routes;
-	HTTPRoutes* routes = &g_http_routes;
-	routes->routes = (HTTPRoute*)safe_calloc(capacity, sizeof(HTTPRoute));
-	routes->capacity = capacity;
-	routes->route_count = 0;
-}
-
-static void ws_routes_free(WebsocketRoutes* routes) {
-	if (routes == NULL || routes->routes == NULL) {
-		return;
-	}
-	free(routes->routes);
-}
-
-static void ws_routes_init(ServerConfig* config) {
-	size_t capacity = sizeof(WebsocketRoute) * config->max_ws_routes;
-	WebsocketRoutes* routes = &g_ws_routes;
-	routes->routes = (WebsocketRoute*)safe_calloc(capacity, sizeof(WebsocketRoute));
-	routes->capacity = capacity;
-	routes->route_count = 0;
-}
-
-static routes_init() {
-	ServerConfig* g_config = config_get();
-	http_routes_init(g_config);
-	ws_routes_init(g_config);
-}
-
-static routes_free(HTTPRoutes* http, WebsocketRoutes* ws) {
-	http_routes_free(http);
-	ws_routes_free(ws);
-}
-
-static SSL_CTX* ssl_ctx_init(ServerConfig* config) {
-	SSL_CTX* ssl_ctx = NULL;
-	if (config->secure) {
+static SSL_CTX *ssl_ctx_init(ServerConfig *config)
+{
+	SSL_CTX *ssl_ctx = NULL;
+	if (config->secure)
+	{
 		openssl_init();
 
 		ssl_ctx = openssl_create_server_ctx(config->resource_path);
-		if (ssl_ctx == NULL) {
+		if (ssl_ctx == NULL)
+		{
 			log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
 		}
-		else {
+		else
+		{
 			log_msg(LOG_INFO, "created server SSL_CTX\n");
 		}
 	}
 	return ssl_ctx;
 }
 
-static SOCKET server_socket_init() {
+static SOCKET server_socket_init()
+{
 	int res = socket_init();
-	if (res != 0) {
+	if (res != 0)
+	{
 		log_msg(LOG_ERR, "socket initialisation failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
 	SOCKET server_sock = init_listen_socket();
-	if (server_sock == INVALID_SOCKET) {
+	if (server_sock == INVALID_SOCKET)
+	{
 		exit(EXIT_FAILURE);
 	}
 	return server_sock;
 }
 
-static void cleanup(SOCKET server_sock, SSL_CTX* ssl_ctx, ServerConfig* config) {
+static void cleanup(SOCKET server_sock, SSL_CTX *ssl_ctx, ServerConfig *config)
+{
 	socket_close(server_sock);
 
 	log_msg(LOG_INFO, "closed socket\n");
@@ -95,38 +60,45 @@ static void cleanup(SOCKET server_sock, SSL_CTX* ssl_ctx, ServerConfig* config) 
 
 	// cleanup
 
-	if (ssl_ctx != NULL) {
+	if (ssl_ctx != NULL)
+	{
 		SSL_CTX_free(ssl_ctx);
 	}
 	openssl_cleanup();
-	routes_free(&g_http_routes, &g_ws_routes);
+	Array *routes = http_routes_get();
+	Array *ws_routes = ws_routes_get();
+	routes_free(routes, ws_routes);
 	config_free(config);
 }
 
-static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX* ssl_ctx) {
-	ThreadState threads[MAX_THREADS] = { 0 };
+static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX *ssl_ctx)
+{
+	ThreadState threads[MAX_THREADS] = {0};
 	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
 
 	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+	Array *http_routes = http_routes_get();
+	Array *ws_routes = ws_routes_get();
 
 	ProcessDataArgs args = {
 		.sock = 0,
-		.http_routes = &g_http_routes,
-		.ws_routes = &g_ws_routes,
+		.http_routes = http_routes,
+		.ws_routes = ws_routes,
 		.thread_num = 0,
 		.thread_arr = &thread_arr,
 		.lock = &lock,
 		.ssl = NULL,
-		.gui_thread_id = gui_thread_id
-	};
+		.gui_thread_id = gui_thread_id};
 
 	SOCKET sock;
 
-	while (true) {
+	while (true)
+	{
 		// todo: ensure 1 thread per connection (if doing http://localhost:3500 req then this happens when TLS fails)
-		SSL* ssl = NULL;
+		SSL *ssl = NULL;
 		sock = process_incoming_connection(server_sock, ssl_ctx, &ssl);
-		if (sock == INVALID_SOCKET) continue;
+		if (sock == INVALID_SOCKET)
+			continue;
 
 		sync_threads(&thread_arr, &lock);
 
@@ -134,14 +106,15 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX*
 
 		// ! no mutex needed here since threads don't change array size
 
-		if (array_full(&thread_arr)) {
+		if (array_full(&thread_arr))
+		{
 			log_msg(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
 			continue;
 		}
 
 		// make copy of args
 
-		ProcessDataArgs* t_args = safe_calloc(1, sizeof(ProcessDataArgs));
+		ProcessDataArgs *t_args = safe_calloc(1, sizeof(ProcessDataArgs));
 		memcpy(t_args, &args, sizeof(*t_args));
 		t_args->sock = sock;
 		t_args->thread_num = thread_arr.size;
@@ -151,72 +124,71 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX*
 	}
 }
 
-// 
+//
 
-void korall_http_routes_add(const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*)) {
-	HTTPRoutes* routes = &g_http_routes;
-	if (path == NULL) {
+void korall_http_routes_add(const char *path, const HTTPMethod method, void (*const callback)(const HTTPRequest *, HTTPResponse *))
+{
+	Array *routes = http_routes_get();
+	if (path == NULL)
+	{
 		log_msg(LOG_ERR, "failed to add route, path cannot be NULL\n");
 		return;
 	}
-	if (callback == NULL) {
+	if (callback == NULL)
+	{
 		log_msg(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
-	if (lookup_int_str(method, &http_method_lookup_table) == NULL) {
+	if (lookup_int_str(method, &http_method_lookup_table) == NULL)
+	{
 		log_msg(LOG_ERR, "failed to add route, method is not valid\n");
 		return;
 	}
-	size_t count = routes->route_count;
-	if (count >= routes->capacity) {
+	const HTTPRoute route = {.path = path, .method = method, .callback = callback};
+	if (array_push(routes, &route) == -1) {
 		log_msg(LOG_ERR, "failed to add route, maximum route count exceeded\n");
-		return;
 	}
-	HTTPRoute route = { .path = path, .method = method, .callback = callback };
-	memcpy(routes->routes + count, &route, sizeof(route));
-	routes->route_count = count + 1;
 }
 
-void korall_ws_routes_add(const char* path, void (* const callback)(const WebsocketFrame*)) {
-	WebsocketRoutes* routes = &g_ws_routes;
-	if (path == NULL) {
+void korall_ws_routes_add(const char *path, void (*const callback)(const WebsocketFrame *))
+{
+	Array *routes = ws_routes_get();
+	if (path == NULL)
+	{
 		log_msg(LOG_ERR, "failed to add route, path cannot be NULL\n");
 		return;
 	}
-	if (callback == NULL) {
+	if (callback == NULL)
+	{
 		log_msg(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
-
-	size_t count = routes->route_count;
-	if (count >= routes->capacity) {
+	const WebsocketRoute route = {.path = path, .callback = callback};
+	if (array_push(routes, &route) == -1) {
 		log_msg(LOG_ERR, "failed to add route, maximum route count exceeded\n");
-		return;
 	}
-	WebsocketRoute route = { .path = path, .callback = callback };
-	memcpy(routes->routes + count, &route, sizeof(route));
-	routes->route_count = count + 1;
 }
 
 /**
- * @brief 
- * 
- * @param config_path 
+ * @brief
+ *
+ * @param config_path
  * @param log_file can be stdout
  */
-void korall_init(const char* config_path, const FILE* log_file) {
-	
-	logging_init(log_file);	
-	config_init(config_path);
-	routes_init();
+void korall_init(const char *config_path, const FILE *log_file)
+{
 
+	logging_init(log_file);
+	ServerConfig *config = config_init(config_path);
+	routes_init(config);
 }
 
-void korall_run() {
+void korall_run()
+{
 
-	ServerConfig* g_config = config_get();
+	ServerConfig *g_config = config_get();
 
-	SSL_CTX* ssl_ctx = ssl_ctx_init(g_config);
+	SSL_CTX *ssl_ctx = ssl_ctx_init(g_config);
 
 	SOCKET server_sock = server_socket_init();
 

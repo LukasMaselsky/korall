@@ -1,5 +1,5 @@
-#ifndef HTTP__H
-#define HTTP__H
+#ifndef KORALL_HTTP__H
+#define KORALL_HTTP__H
 
 typedef enum {
 	HTTP_METHOD_UNUSED = -1,

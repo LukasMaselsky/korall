@@ -9,14 +9,6 @@
 #define KORALL_HTTP_ROUTE(name) void name(const HTTPRequest* req, HTTPResponse* res)
 #define KORALL_WS_ROUTE(name) void name(const WebsocketFrame* frame)
 
-typedef struct HTTPRoutePrivate HTTPRoute;
-
-typedef struct HTTPRoutesPrivate HTTPRoutes;
-
-typedef struct WebsocketRoutePrivate WebsocketRoute;
-
-typedef struct WebsocketRoutesPrivate WebsocketRoutes;
-
 void korall_init(const char* config_path, const FILE* log_file);
 
 void korall_run();

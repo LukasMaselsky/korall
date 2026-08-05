@@ -1,10 +1,10 @@
-#ifndef WEBSOCKET_H
-#define WEBSOCKET_H
+#ifndef KORALL_WEBSOCKET_H
+#define KORALL_WEBSOCKET_H
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "socket_definition.h"
 #include <openssl/ssl.h>
+#include "korall/socket.h"
 
 typedef enum {
 	WS_OP_CON = 0,

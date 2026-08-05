@@ -34,6 +34,13 @@ HTTP web server library in C.
 	# or
 	./vcpkg/bootstrap-vcpkg.sh
 	```
+3. CMake
+
+	```sh
+	mkdir out
+	cd out
+	cmake ..
+	```
 
 ## Build
 

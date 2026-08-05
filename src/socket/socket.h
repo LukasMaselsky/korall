@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
-#include "korall/socket_definition.h"
+#include "korall/socket.h"
 #include "http/tls/tls.h"
 
 

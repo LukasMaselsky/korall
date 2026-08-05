@@ -4,6 +4,7 @@
 #include "utils/utils.h"
 #include "korall/websocket.h"
 #include "korall/korall.h"
+#include "http/routes/http_routes.h"
 
 #define WS_HEADER_SIZE ((3 * 32) + 16)
 #define WS_FRAME_PAYLOAD_SIZE (1 * MEGABYTE) // change ?
