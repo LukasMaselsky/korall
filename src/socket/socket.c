@@ -77,11 +77,7 @@ int socket_close(SOCKET sock)
 }
 
 void socket_print(SOCKET sock) {
-#ifdef _WIN32
-    printf("%llu", sock);
-#else
-    printf("%d", sock);
-#endif
+    printf("%llu", (unsigned long long)sock);
 }
 
 SOCKET socket_create(struct addrinfo* res) {

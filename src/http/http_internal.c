@@ -902,7 +902,7 @@ int korall_response_body_set(HTTPResponse* res, const char* body) {
 
 	// content length
 	char cl[MAX_HTTP_BODY_DIGIT_LEN + 1] = { 0 };
-	sprintf(cl, "%" PRIu64, body_len);
+	sprintf(cl, "%llu", (unsigned long long)body_len);
 	if (korall_response_header_set(res, "Content-Length", cl) == -1) return -1;
 	
 	// body
