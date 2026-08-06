@@ -1,40 +1,45 @@
 #include "gui.h"
 
-static void gui_main() {
-	while (true) {
-		Message msg = { 0 };
-		if (msg_queue_read(GUI_MSG_QUEUE_NAME, &msg) == -1) continue;
+static void gui_main()
+{
+	while (true)
+	{
+		Message msg = {0};
+		if (msg_queue_read(GUI_MSG_QUEUE_NAME, &msg) == -1)
+			continue;
 
-
-		// log_msg(LOG_INFO, "main opengl stuff done here\n");
+		// KORALL_LOG(LOG_INFO, "main opengl stuff done here\n");
 	}
 }
 
 /**
- * @brief 
+ * @brief
  * @param thread [out] opaque type, could be struct
  * @param thread_id [out] id of created thread
  */
-void gui_run(THREAD_T* thread, unsigned int *thread_id) {
-	if (thread_create(thread, gui_main, NULL, thread_id) == -1) {
-		log_msg(LOG_ERR, "could not create GUI, exiting\n");
+void gui_run(THREAD_T *thread, unsigned int *thread_id)
+{
+	if (thread_create(thread, gui_main, NULL, thread_id) == -1)
+	{
+		KORALL_LOG(LOG_ERR, "could not create GUI, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 }
 
-static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 }
 
-int func() {
+int func()
+{
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-	GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+	GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
 	if (window == NULL)
 	{
 		printf("Failed to create GLFW window\n");

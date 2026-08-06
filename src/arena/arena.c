@@ -1,8 +1,10 @@
 #include "arena.h"
 
-uintptr_t align_forward(uintptr_t ptr, size_t alignment) {
+uintptr_t align_forward(uintptr_t ptr, size_t alignment)
+{
     uintptr_t p, a, modulo;
-    if (!is_power_of_two(alignment)) {
+    if (!is_power_of_two(alignment))
+    {
         return 0;
     }
 
@@ -10,26 +12,30 @@ uintptr_t align_forward(uintptr_t ptr, size_t alignment) {
     a = (uintptr_t)alignment;
     modulo = p & (a - 1);
 
-    if (modulo) {
+    if (modulo)
+    {
         p += a - modulo;
     }
 
     return p;
 }
 
-Arena arena_init(size_t capacity) {
-    void* buf = safe_calloc(1, capacity);
-    Arena arena = { .base = buf, .capacity = capacity, .cur = buf, .size = 0 };
+Arena arena_init(size_t capacity)
+{
+    void *buf = safe_calloc(1, capacity);
+    Arena arena = {.base = buf, .capacity = capacity, .cur = buf, .size = 0};
     return arena;
 }
 
-void arena_clear(Arena* arena) {
+void arena_clear(Arena *arena)
+{
     memset(arena->base, 0, arena->capacity);
     arena->size = 0;
     arena->cur = arena->base;
 }
 
-void arena_free(Arena* arena) {
+void arena_free(Arena *arena)
+{
     free(arena->base);
     arena->base = NULL;
     arena->capacity = 0;
@@ -37,16 +43,19 @@ void arena_free(Arena* arena) {
     arena->cur = NULL;
 }
 
-uintptr_t arena_alloc(Arena *arena, size_t size) {
-    if (size == 0) return 0;
-   
+uintptr_t arena_alloc(Arena *arena, size_t size)
+{
+    if (size == 0)
+        return 0;
+
     size_t alignment = ALIGNMENT;
     uintptr_t cur = (uintptr_t)arena->cur;
     uintptr_t new_cur = align_forward(cur, alignment);
     unsigned int ali_size = new_cur - (uintptr_t)arena->base;
 
-    if (ali_size + size > arena->capacity) {
-        log_msg(LOG_ERR, "failed to allocate %zu bytes in arena, over capacity, exiting\n", size);
+    if (ali_size + size > arena->capacity)
+    {
+        KORALL_LOG(LOG_ERR, "failed to allocate %zu bytes in arena, over capacity, exiting\n", size);
         exit(EXIT_FAILURE);
     }
 

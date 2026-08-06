@@ -23,11 +23,11 @@ static SSL_CTX *ssl_ctx_init(ServerConfig *config)
 		ssl_ctx = openssl_create_server_ctx(config->resource_path);
 		if (ssl_ctx == NULL)
 		{
-			log_msg(LOG_ERR, "failed to create server SSL_CTX\n");
+			KORALL_LOG(LOG_ERR, "failed to create server SSL_CTX\n");
 		}
 		else
 		{
-			log_msg(LOG_INFO, "created server SSL_CTX\n");
+			KORALL_LOG(LOG_INFO, "created server SSL_CTX\n");
 		}
 	}
 	return ssl_ctx;
@@ -38,7 +38,7 @@ static SOCKET server_socket_init()
 	int res = socket_init();
 	if (res != 0)
 	{
-		log_msg(LOG_ERR, "socket initialisation failed, exiting\n");
+		KORALL_LOG(LOG_ERR, "socket initialisation failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -54,7 +54,7 @@ static void cleanup(SOCKET server_sock, SSL_CTX *ssl_ctx, ServerConfig *config)
 {
 	socket_close(server_sock);
 
-	log_msg(LOG_INFO, "closed socket\n");
+	KORALL_LOG(LOG_INFO, "closed socket\n");
 
 	socket_quit();
 
@@ -108,7 +108,7 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX 
 
 		if (array_full(&thread_arr))
 		{
-			log_msg(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
+			KORALL_LOG(LOG_ERR, "not enough threads (max %d), could not process connection\n", MAX_THREADS);
 			continue;
 		}
 
@@ -131,22 +131,23 @@ void korall_http_routes_add(const char *path, const HTTPMethod method, void (*co
 	Array *routes = http_routes_get();
 	if (path == NULL)
 	{
-		log_msg(LOG_ERR, "failed to add route, path cannot be NULL\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, path cannot be NULL\n");
 		return;
 	}
 	if (callback == NULL)
 	{
-		log_msg(LOG_ERR, "failed to add route, callback cannot be NULL\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
 	if (lookup_int_str(method, &http_method_lookup_table) == NULL)
 	{
-		log_msg(LOG_ERR, "failed to add route, method is not valid\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, method is not valid\n");
 		return;
 	}
 	const HTTPRoute route = {.path = path, .method = method, .callback = callback};
-	if (array_push(routes, &route) == -1) {
-		log_msg(LOG_ERR, "failed to add route, maximum route count exceeded\n");
+	if (array_push(routes, &route) == -1)
+	{
+		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count exceeded\n");
 	}
 }
 
@@ -155,17 +156,18 @@ void korall_ws_routes_add(const char *path, void (*const callback)(const Websock
 	Array *routes = ws_routes_get();
 	if (path == NULL)
 	{
-		log_msg(LOG_ERR, "failed to add route, path cannot be NULL\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, path cannot be NULL\n");
 		return;
 	}
 	if (callback == NULL)
 	{
-		log_msg(LOG_ERR, "failed to add route, callback cannot be NULL\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
 	const WebsocketRoute route = {.path = path, .callback = callback};
-	if (array_push(routes, &route) == -1) {
-		log_msg(LOG_ERR, "failed to add route, maximum route count exceeded\n");
+	if (array_push(routes, &route) == -1)
+	{
+		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count exceeded\n");
 	}
 }
 

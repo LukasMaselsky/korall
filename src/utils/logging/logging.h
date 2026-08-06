@@ -6,6 +6,15 @@
 #include <time.h>
 #include <stdarg.h>
 
+#ifndef KORALL_BUILD_TYPE_DISTRIBUTION
+#define KORALL_LOG(log_level, format, ...) log_msg(log_level, format, ##__VA_ARGS__)
+#define KORALL_LOG_DEBUG(format, ...) fprintf(stderr, "%s : %d : %s(): " format, __FILE__, __LINE__, __func__, ##__VA_ARGS__);
+#else
+#define KORALL_LOG(log_level, format, ...)
+#define KORALL_LOG_DEBUG(format, ...)
+#endif
+
+
 typedef enum {
     LOG_DEBUG,
     LOG_ERR,

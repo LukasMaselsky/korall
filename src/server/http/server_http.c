@@ -26,8 +26,9 @@ HTTPRoute *http_route_select(HTTPRequest *req, const Array *routes)
 	const HTTPMethod method = req->start_line->method;
 
 	int i;
-	array_for_loop(i, routes) {
-		const HTTPRoute* route = (const HTTPRoute*)array_get(routes, i);
+	array_for_loop(i, routes)
+	{
+		const HTTPRoute *route = (const HTTPRoute *)array_get(routes, i);
 		if (route->method != method)
 			continue;
 
@@ -52,8 +53,9 @@ WebsocketRoute *ws_route_select(HTTPRequest *req, const Array *routes)
 	}
 
 	int i;
-	array_for_loop(i, routes) {
-		const WebsocketRoute* route = (const WebsocketRoute*)array_get(routes, i);
+	array_for_loop(i, routes)
+	{
+		const WebsocketRoute *route = (const WebsocketRoute *)array_get(routes, i);
 		if (strcmp(route->path, path) != 0)
 			continue;
 
@@ -97,11 +99,11 @@ static int websocket_process_data_inner(
 	const char *data,
 	const WebsocketRoute *route,
 	const SSL *ssl,
-	bool *close
-) {
+	bool *close)
+{
 	if (websocket_frame_decode((uint8_t *)data, in_wsf) == -1)
 	{
-		log_msg(LOG_ERR, "invalid websocket message received, syntax\n");
+		KORALL_LOG(LOG_ERR, "invalid websocket message received, syntax\n");
 		return -1;
 	}
 	in_wsf->socket = inc_sock;
@@ -118,13 +120,13 @@ static int websocket_process_data_inner(
 	{
 		if (websocket_frame_construct_pong(out_wsf, inc_sock, false, 0) == -1)
 		{
-			log_msg(LOG_ERR, "failed to construct pong message\n");
+			KORALL_LOG(LOG_ERR, "failed to construct pong message\n");
 			return -1;
 		}
 
 		if (korall_ws_frame_send(out_wsf) == -1)
 		{
-			log_msg(LOG_ERR, "failed to send pong message\n");
+			KORALL_LOG(LOG_ERR, "failed to send pong message\n");
 			return -1;
 		}
 		return 0;
@@ -138,19 +140,19 @@ static int websocket_process_data_inner(
 		// todo: close codes
 		if (websocket_frame_construct_close(out_wsf, inc_sock, WS_CC_1000, false, 0) == -1)
 		{
-			log_msg(LOG_ERR, "failed to construct close message\n");
+			KORALL_LOG(LOG_ERR, "failed to construct close message\n");
 			return -1;
 		}
 
 		if (korall_ws_frame_send(out_wsf) == -1)
 		{
-			log_msg(LOG_ERR, "failed to send close message\n");
+			KORALL_LOG(LOG_ERR, "failed to send close message\n");
 			return -1;
 		}
 
 		if (socket_close(inc_sock) == -1)
 		{
-			log_msg(LOG_ERR, "failed to close socket ");
+			KORALL_LOG(LOG_ERR, "failed to close socket ");
 			socket_print(inc_sock);
 			printf("\n");
 		};
@@ -215,14 +217,14 @@ bool websocket_process_data(
  */
 void route_not_found(HTTPResponse *res, SOCKET inc_sock)
 {
-	log_msg(LOG_ERR, "route not found\n");
+	KORALL_LOG(LOG_ERR, "route not found\n");
 	ServerConfig *g_config = config_get();
 	int err = http_response_construct(res, HTTP_SC_404, g_config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 	if (err == -1)
 		return;
 	if (http_response_send(inc_sock, res) == -1)
 	{
-		log_msg(LOG_ERR, "failed to send response\n");
+		KORALL_LOG(LOG_ERR, "failed to send response\n");
 	}
 	return;
 }
@@ -256,7 +258,7 @@ static int ws_upgrade(
 		return -1;
 	if (http_response_send(inc_sock, res) == -1)
 	{
-		log_msg(LOG_ERR, "failed to send response\n");
+		KORALL_LOG(LOG_ERR, "failed to send response\n");
 	}
 	else
 	{
@@ -271,20 +273,20 @@ static int http_process_request_options(
 	const ServerConfig *config,
 	const SOCKET inc_sock)
 {
-	log_msg(LOG_INFO, "OPTIONS request received\n");
+	KORALL_LOG(LOG_INFO, "OPTIONS request received\n");
 
 	// Access-Control-Request-Method
 	char acrm[MAX_HTTP_METHOD_STR_LEN + 1] = {0};
 	int acrm_res = korall_request_header_get(req, "Access-Control-Request-Method", acrm, MAX_HTTP_METHOD_STR_LEN);
 	if (acrm_res == -1)
 	{
-		log_msg(LOG_ERR, "invalid HTTP request received, host\n");
+		KORALL_LOG(LOG_ERR, "invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "OPTIONS request must contain Access-Control-Request-Method header."));
 		if (err == -1)
 			return -1;
 		if (http_response_send(inc_sock, res) == -1)
 		{
-			log_msg(LOG_ERR, "failed to send response\n");
+			KORALL_LOG(LOG_ERR, "failed to send response\n");
 		}
 		return -1;
 	}
@@ -324,7 +326,7 @@ static int http_process_request_inner(
 	HTTPError parse_res = http_request_parse(data, req);
 	if (parse_res != HTTP_SUCCESS)
 	{
-		log_msg(LOG_ERR, "invalid HTTP request received, syntax\n");
+		KORALL_LOG(LOG_ERR, "invalid HTTP request received, syntax\n");
 
 		HTTPStatusCode sc;
 		HTTPMediaType mt;
@@ -335,7 +337,7 @@ static int http_process_request_inner(
 			return -1;
 		if (http_response_send(inc_sock, res) == -1)
 		{
-			log_msg(LOG_ERR, "failed to send response\n");
+			KORALL_LOG(LOG_ERR, "failed to send response\n");
 		}
 		return -1;
 	}
@@ -343,13 +345,13 @@ static int http_process_request_inner(
 	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
 	if (!http_domain_port_match_server(req))
 	{
-		log_msg(LOG_ERR, "invalid HTTP request received, host\n");
+		KORALL_LOG(LOG_ERR, "invalid HTTP request received, host\n");
 		int err = http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 		if (err == -1)
 			return -1;
 		if (http_response_send(inc_sock, res) == -1)
 		{
-			log_msg(LOG_ERR, "failed to send response\n");
+			KORALL_LOG(LOG_ERR, "failed to send response\n");
 		}
 		return -1;
 	}
@@ -379,14 +381,14 @@ static int http_process_request_inner(
 			return -1;
 	}
 
-	log_msg(LOG_INFO, "valid HTTP request received\n");
+	KORALL_LOG(LOG_INFO, "valid HTTP request received\n");
 
 	if (req_is_ws_upgrade(req))
 	{
 		return ws_upgrade(req, res, config, inc_sock, ws_routes, is_websocket, websocket_route);
 	}
 
-	log_msg(LOG_INFO, "sending HTTP response\n");
+	KORALL_LOG(LOG_INFO, "sending HTTP response\n");
 
 	if (req->start_line->method != HTTP_OPTIONS)
 	{
@@ -409,13 +411,13 @@ static int http_process_request_inner(
 
 	if (res->start_line.chars[0] == '\0')
 	{
-		log_msg(LOG_ERR, "failed to send response, no start line set\n");
+		KORALL_LOG(LOG_ERR, "failed to send response, no start line set\n");
 		return -1;
 	}
 
 	if (http_response_send(inc_sock, res) == -1)
 	{
-		log_msg(LOG_ERR, "failed to send responses\n");
+		KORALL_LOG(LOG_ERR, "failed to send responses\n");
 	}
 
 	// check if Connection: close
@@ -493,7 +495,7 @@ SOCKET init_listen_socket()
 
 	if (res != 0)
 	{
-		log_msg(LOG_ERR, "invalid \"domain\" header\n");
+		KORALL_LOG(LOG_ERR, "invalid \"domain\" header\n");
 		return INVALID_SOCKET;
 	}
 
@@ -503,14 +505,14 @@ SOCKET init_listen_socket()
 		sock = socket_create(addrinfo);
 		if (sock == -1)
 		{
-			log_msg(LOG_ERR, "socket creation failed\n");
+			KORALL_LOG(LOG_ERR, "socket creation failed\n");
 			continue;
 		}
 
 		res = socket_reuse_port(sock);
 		if (res == -1)
 		{
-			log_msg(LOG_ERR, "setsockopt failed\n");
+			KORALL_LOG(LOG_ERR, "setsockopt failed\n");
 			return INVALID_SOCKET;
 		}
 
@@ -518,7 +520,7 @@ SOCKET init_listen_socket()
 		if (res == -1)
 		{
 			socket_close(sock);
-			log_msg(LOG_ERR, "socket bind failed\n");
+			KORALL_LOG(LOG_ERR, "socket bind failed\n");
 			continue;
 		}
 
@@ -529,20 +531,20 @@ SOCKET init_listen_socket()
 
 	if (addrinfo == NULL)
 	{
-		log_msg(LOG_ERR, "failed to freeaddrinfo");
+		KORALL_LOG(LOG_ERR, "failed to freeaddrinfo");
 		return INVALID_SOCKET;
 	}
 
 	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
 	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
-	log_msg(LOG_INFO, "started \"%s\"\n", g_config->name.chars);
-	log_msg(LOG_INFO, "opened socket on %s PORT %s (%s)\n", ip, service, ipver);
+	KORALL_LOG(LOG_INFO, "started \"%s\"\n", g_config->name.chars);
+	KORALL_LOG(LOG_INFO, "opened socket on %s PORT %s (%s)\n", ip, service, ipver);
 
 	res = socket_listen(sock);
 	if (res == -1)
 	{
-		log_msg(LOG_ERR, "socket listen failed\n");
+		KORALL_LOG(LOG_ERR, "socket listen failed\n");
 		return INVALID_SOCKET;
 	}
 
@@ -567,12 +569,12 @@ SOCKET process_incoming_connection(SOCKET sock, SSL_CTX *ssl_ctx, SSL **ssl_p)
 	incoming = socket_accept(sock, &incoming_addr, &incoming_addr_len);
 	if (incoming == INVALID_SOCKET)
 	{
-		log_msg(LOG_ERR, "failed to accept connection\n");
+		KORALL_LOG(LOG_ERR, "failed to accept connection\n");
 		return incoming;
 	}
 
 	get_ip_info_storage(&incoming_addr, ip, sizeof(ip), ipver, sizeof(ipver));
-	log_msg(LOG_INFO, "got connection from %s (%s)\n", ip, ipver);
+	KORALL_LOG(LOG_INFO, "got connection from %s (%s)\n", ip, ipver);
 
 	// tls handshake
 
@@ -591,7 +593,7 @@ SOCKET process_incoming_connection(SOCKET sock, SSL_CTX *ssl_ctx, SSL **ssl_p)
 
 	if (SSL_accept(ssl) <= 0)
 	{
-		log_msg(LOG_ERR, "TLS handshake failed\n");
+		KORALL_LOG(LOG_ERR, "TLS handshake failed\n");
 		ERR_print_errors_fp(stderr);
 		SSL_shutdown(ssl);
 		SSL_free(ssl);
@@ -600,7 +602,7 @@ SOCKET process_incoming_connection(SOCKET sock, SSL_CTX *ssl_ctx, SSL **ssl_p)
 		return incoming;
 	}
 
-	log_msg(LOG_INFO, "TLS handshake successful\n");
+	KORALL_LOG(LOG_INFO, "TLS handshake successful\n");
 
 	return incoming;
 }
@@ -637,13 +639,13 @@ void process_incoming_data(void *arg)
 		{
 			if (bytes_read == 0)
 			{
-				log_msg(LOG_INFO, "socket ");
+				KORALL_LOG(LOG_INFO, "socket ");
 				socket_print(inc_sock);
 				printf(" closed connection\n");
 			}
 			else
 			{
-				log_msg(LOG_ERR, "couldn't read from ");
+				KORALL_LOG(LOG_ERR, "couldn't read from ");
 				socket_print(inc_sock);
 				printf("\n");
 			}
@@ -653,10 +655,10 @@ void process_incoming_data(void *arg)
 		}
 
 		buffer[bytes_read] = '\0';
-		log_msg(LOG_INFO, "received data from ");
+		KORALL_LOG(LOG_INFO, "received data from ");
 		socket_print(inc_sock);
 		printf("\n");
-		log_msg(LOG_INFO, "'%s'\n", buffer);
+		KORALL_LOG(LOG_INFO, "'%s'\n", buffer);
 
 		// todo: TEMP
 		// msg_queue_post(0, gui_thread_id, buffer, bytes_read + 1);
@@ -749,7 +751,7 @@ void create_data_process_thread(Array *thread_arr, ProcessDataArgs *t_args)
 	if (thread_create(&thread, process_incoming_data, (void *)t_args, NULL) != -1)
 	{
 		ThreadState ts = {.running = true, .thread = thread};
-		log_msg(LOG_INFO, "created thread\n");
+		KORALL_LOG(LOG_INFO, "created thread\n");
 		array_push(thread_arr, (void *)(&ts));
 	}
 

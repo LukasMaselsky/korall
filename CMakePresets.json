@@ -18,6 +18,36 @@
       }
     },
     {
+      "name": "base-debug",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "base-release",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "base-x64",
+      "hidden": true,
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "base-x86",
+      "hidden": true,
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
       "name": "base-windows",
       "hidden": true,
       "inherits": "base",
@@ -44,58 +74,32 @@
     {
       "name": "x64-debug",
       "displayName": "x64 Debug",
-      "inherits": "base-windows",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
+      "inherits": [ "base-windows", "base-debug", "base-x64" ]
     },
     {
       "name": "x64-release",
       "displayName": "x64 Release",
-      "inherits": "x64-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
+      "inherits": [ "base-windows", "base-release", "base-x64" ]
     },
     {
       "name": "x86-debug",
       "displayName": "x86 Debug",
-      "inherits": "base-windows",
-      "architecture": {
-        "value": "x86",
-        "strategy": "external"
-      },
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
+      "inherits": [ "base-windows", "base-debug", "base-x86" ]
     },
     {
       "name": "x86-release",
       "displayName": "x86 Release",
-      "inherits": "x86-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
+      "inherits": [ "base-windows", "base-release", "base-x86" ]
     },
     {
       "name": "linux-debug",
       "displayName": "Linux Debug",
-      "inherits": "base-linux",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
+      "inherits": [ "base-linux", "base-debug" ]
     },
     {
       "name": "linux-release",
       "displayName": "Linux Release",
-      "inherits": "base-linux",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
+      "inherits": [ "base-linux", "base-release" ]
     }
   ],
   "buildPresets": [

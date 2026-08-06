@@ -3,9 +3,11 @@
 #include <strings.h>
 #endif
 
-void memcpy_reverse(uint8_t *dest, const uint8_t *src, size_t size) {
-    
-    for (size_t i = 0; i < size; i++) {
+void memcpy_reverse(uint8_t *dest, const uint8_t *src, size_t size)
+{
+
+    for (size_t i = 0; i < size; i++)
+    {
         dest[i] = src[size - i - 1];
     }
 }
@@ -23,10 +25,10 @@ static size_t b64_encoded_size(size_t inlen)
     return ret;
 }
 
-char* b64_encode(const unsigned char* in, size_t len)
+char *b64_encode(const unsigned char *in, size_t len)
 {
     const char b64chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    char* out;
+    char *out;
     size_t elen;
     size_t i;
     size_t j;
@@ -39,30 +41,34 @@ char* b64_encode(const unsigned char* in, size_t len)
     out = safe_calloc(elen + 1, 1);
     out[elen] = '\0';
 
-    for (i = 0, j = 0; i < len; i += 3, j += 4) {
+    for (i = 0, j = 0; i < len; i += 3, j += 4)
+    {
         v = in[i];
         v = i + 1 < len ? v << 8 | in[i + 1] : v << 8;
         v = i + 2 < len ? v << 8 | in[i + 2] : v << 8;
 
         out[j] = b64chars[(v >> 18) & 0x3F];
         out[j + 1] = b64chars[(v >> 12) & 0x3F];
-        if (i + 1 < len) {
+        if (i + 1 < len)
+        {
             out[j + 2] = b64chars[(v >> 6) & 0x3F];
         }
-        else {
+        else
+        {
             out[j + 2] = '=';
         }
-        if (i + 2 < len) {
+        if (i + 2 < len)
+        {
             out[j + 3] = b64chars[v & 0x3F];
         }
-        else {
+        else
+        {
             out[j + 3] = '=';
         }
     }
 
     return out;
 }
-
 
 /* Convert string s to int out.
  *
@@ -83,8 +89,9 @@ char* b64_encode(const unsigned char* in, size_t len)
  *
  * @return Indicates if the operation succeeded, or why it failed.
  */
-str_to_int_errno str_to_int(int* out, const char* s, int base) {
-    char* end;
+str_to_int_errno str_to_int(int *out, const char *s, int base)
+{
+    char *end;
     if (s[0] == '\0' || isspace((unsigned char)s[0]))
         return STR_TO_INT_INCONVERTIBLE;
     errno = 0;
@@ -100,29 +107,37 @@ str_to_int_errno str_to_int(int* out, const char* s, int base) {
     return STR_TO_INT_SUCCESS;
 }
 
-void int_to_str(const int value, char* str) {
+void int_to_str(const int value, char *str)
+{
     sprintf(str, "%d", value);
 }
 
-bool is_hex_digit(const char c) {
-    if (c <= 'f' && c >= 'a') return true;
-    if (c <= 'F' && c >= 'A') return true;
-    if (c <= '9' && c >= '0') return true;
+bool is_hex_digit(const char c)
+{
+    if (c <= 'f' && c >= 'a')
+        return true;
+    if (c <= 'F' && c >= 'A')
+        return true;
+    if (c <= '9' && c >= '0')
+        return true;
     return false;
 }
 
-bool is_digit(const char c) {
+bool is_digit(const char c)
+{
     return c >= '0' && c <= '9';
 }
 
-
-bool is_digits_only(const char* str) {
+bool is_digits_only(const char *str)
+{
     // strspn returns the length of the initial segment of str consisting only of characters in 0123456789
-    if (str[0] == '\0') return false;
+    if (str[0] == '\0')
+        return false;
     return strspn(str, "0123456789") == strlen(str);
 }
 
-int strcmp_ci(const char* str1, const char* str2) {
+int strcmp_ci(const char *str1, const char *str2)
+{
 #ifdef _WIN32
     return stricmp(str1, str2);
 #else
@@ -130,31 +145,37 @@ int strcmp_ci(const char* str1, const char* str2) {
 #endif
 }
 
-void* safe_calloc(size_t count, size_t size) {
-    void* p = calloc(count, size);
-    if (p == NULL) {
-        log_msg(LOG_ERR, "failed to allocate %zu bytes, exiting\n", size);
+void *safe_calloc(size_t count, size_t size)
+{
+    void *p = calloc(count, size);
+    if (p == NULL)
+    {
+        KORALL_LOG(LOG_ERR, "failed to allocate %zu bytes, exiting\n", size);
         exit(EXIT_FAILURE);
     }
     return p;
 }
 
-void get_current_time_gmt(struct tm **t) {
+void get_current_time_gmt(struct tm **t)
+{
     time_t raw_time;
     time(&raw_time);
     *t = gmtime(&raw_time);
     return;
 }
 
-bool starts_with(const char* pre, const char* str)
+bool starts_with(const char *pre, const char *str)
 {
     return strncmp(pre, str, strlen(pre)) == 0;
 }
 
-static int fill_str(const char **str, const char* s, const char *end, char* arr, size_t arr_len) {
-    if (arr != NULL) {
+static int fill_str(const char **str, const char *s, const char *end, char *arr, size_t arr_len)
+{
+    if (arr != NULL)
+    {
         const size_t sub_len = end - s;
-        if (sub_len > arr_len) return -1;
+        if (sub_len > arr_len)
+            return -1;
         memcpy(arr, s, sub_len);
         arr[sub_len] = '\0';
     }
@@ -164,22 +185,25 @@ static int fill_str(const char **str, const char* s, const char *end, char* arr,
 
 /**
  * @brief Finds first match of "match" char in "in_str" and copies substring of in_str[0] : in_str[match_index] to out_str
- * @param str 
- * @param arr 
- * @param arr_len 
- * @param match 
- * @return 
+ * @param str
+ * @param arr
+ * @param arr_len
+ * @param match
+ * @return
  */
-int fill_string_char(const char **int_str, char *out_str, size_t out_str_len, const char match) {
-    const char* s = *int_str;
-    const char* end = strchr(s, match);
-    if (end == NULL) return -1;
+int fill_string_char(const char **int_str, char *out_str, size_t out_str_len, const char match)
+{
+    const char *s = *int_str;
+    const char *end = strchr(s, match);
+    if (end == NULL)
+        return -1;
 
     return fill_str(int_str, s, end, out_str, out_str_len);
 }
 
 #ifndef _WIN32
-static char* strlwr (char* s) {
+static char *strlwr(char *s)
+{
     for (size_t i = 0; i < strlen(s); ++i)
         if (s[i] >= 'A' && s[i] <= 'Z')
             s[i] += 'a' - 'A';
@@ -189,35 +213,42 @@ static char* strlwr (char* s) {
 
 /**
  * @brief Finds first match of "match" string in "in_str" and copies substring of in_str[0] : in_str[match_index] to out_str
- * @param in_str 
+ * @param in_str
  * @param out_str may be NULL (discarded)
- * @param out_str_len 
- * @param match 
- * @param case_insensitive 
+ * @param out_str_len
+ * @param match
+ * @param case_insensitive
  * @return -1 if match not found or out_str buffer too small, 0 if found
  */
-int fill_string_str(const char** in_str, char* out_str, size_t out_str_len, const char *match, bool case_insensitive) {
-    char* s = *in_str;
-    char* t = match;
-    if (case_insensitive) {
+int fill_string_str(const char **in_str, char *out_str, size_t out_str_len, const char *match, bool case_insensitive)
+{
+    char *s = *in_str;
+    char *t = match;
+    if (case_insensitive)
+    {
         s = strlwr(s);
         t = strlwr(t);
     }
-    const char* end = strstr(s, t);
-    if (end == NULL) return -1;
+    const char *end = strstr(s, t);
+    if (end == NULL)
+        return -1;
 
     return fill_str(in_str, s, end, out_str, out_str_len);
 }
 
-int str_concat(const char* s1, const char* s2, char *out, size_t out_len) {
-    if (s1 == NULL || s2 == NULL || out == NULL) return -1;
+int str_concat(const char *s1, const char *s2, char *out, size_t out_len)
+{
+    if (s1 == NULL || s2 == NULL || out == NULL)
+        return -1;
 
-    if (strlen(s1) + strlen(s2) > out_len) return -1;
+    if (strlen(s1) + strlen(s2) > out_len)
+        return -1;
     snprintf(out, out_len, "%s%s", s1, s2);
     return 0;
 }
 
-char* str_skip_spaces(const char* value) {
+char *str_skip_spaces(const char *value)
+{
     while (value[0] == ' ')
         value++;
     return value;
