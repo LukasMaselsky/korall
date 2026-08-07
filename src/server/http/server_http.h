@@ -10,6 +10,7 @@
 #include "http/routes/http_routes.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include "msg_queue/msg_queue.h"
 
 #define READ_BUFFER_LEN KILOBYTE
 #define RESPONSE_BUFFER_LEN KILOBYTE
@@ -31,30 +32,36 @@ typedef struct
 	unsigned long gui_thread_id;
 } ProcessDataArgs;
 
+typedef struct {
+	const SOCKET socket;
+	const char* data;
+	const SSL* ssl;
+} IncomingRequestInfo;
+
 //
 
 HTTPRoute *http_route_select(HTTPRequest *req, const Array *routes);
 
 WebsocketRoute *ws_route_select(HTTPRequest *req, const Array *routes);
 
-bool http_domain_port_match_server(const HTTPRequest *req);
+bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig* config);
 
 bool websocket_process_data(
-	const SOCKET inc_sock,
-	const char *data,
+	const IncomingRequestInfo* req_info,
 	const WebsocketRoute *route,
-	const SSL *ssl);
+	const MessageQueueWriteInfo *mqi
+);
 
-void route_not_found(HTTPResponse *res, SOCKET inc_sock);
+int route_not_found(HTTPResponse *res, const ServerConfig *config);
 
 bool http_process_request(
-	const SOCKET inc_sock,
-	const char *data,
+	const IncomingRequestInfo* req_info,
 	const Array *routes,
 	const Array *ws_routes,
 	bool *is_websocket,
 	WebsocketRoute **websocket_route,
-	const SSL *ssl);
+	const MessageQueueWriteInfo* mqi
+);
 
 SOCKET init_listen_socket();
 

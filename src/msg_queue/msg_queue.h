@@ -11,6 +11,7 @@
 #else
 typedef int mqd_t; // doesn't matter, not used
 #endif
+#define INVALID_MQD ((mqd_t)-1)
 
 typedef enum {
 	MSG_Q_READ,
@@ -30,12 +31,19 @@ typedef struct {
 	const MessageType type;
 } Message;
 
+typedef struct {
+	mqd_t mq;
+	const unsigned long thread_id;
+} MessageQueueWriteInfo;
+
 
 int msg_queue_open(const char* queue_name, MessageQueueMode mode);
 
-int msg_queue_close(const char* queue_name, mqd_t mq);
+void msg_queue_close(mqd_t mq);
 
-int msg_queue_post(mqd_t mqdes, unsigned long thread_id, Message* msg);
+void msg_queue_unlink(const char* queue_name);
+
+int msg_queue_post(mqd_t mqdes, const unsigned long thread_id, Message* msg);
 
 int msg_queue_read(mqd_t mqdes, Message* out);
 

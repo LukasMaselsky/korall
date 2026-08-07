@@ -7,7 +7,7 @@
 #include "websocket.h"
 
 #define KORALL_HTTP_ROUTE(name) void name(const HTTPRequest* req, HTTPResponse* res)
-#define KORALL_WS_ROUTE(name) void name(const WebsocketFrame* frame)
+#define KORALL_WS_ROUTE(name) void name(const WebsocketFrame* req, WebsocketFrame* res)
 
 void korall_init(const char* config_path, const FILE* log_file);
 

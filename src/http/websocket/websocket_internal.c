@@ -101,7 +101,7 @@ size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 	uint8_t opcode = (uint8_t)(frame->opcode);
 
 	data[0] = fin | opcode;
-
+	
 	uint8_t mask = (uint8_t)(frame->mask << 7);
 	uint8_t pl;
 	uint8_t *p;
@@ -150,7 +150,6 @@ size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 
 int websocket_frame_construct(
 	WebsocketFrame *wsf,
-	SOCKET socket,
 	bool finished,
 	WebsocketOpcode opcode,
 	WebsocketCloseCode close_code,
@@ -164,7 +163,6 @@ int websocket_frame_construct(
 		return -1;
 	};
 
-	wsf->socket = socket;
 	wsf->length = data == NULL ? 0 : sizeof(data);
 	if (close_code != WS_CC_UNUSED)
 	{
@@ -182,31 +180,27 @@ int websocket_frame_construct(
 
 int websocket_frame_construct_pong(
 	WebsocketFrame *wsf,
-	SOCKET socket,
 	bool mask,
 	uint32_t masking_key)
 {
-	return websocket_frame_construct(wsf, socket, true, WS_OP_PONG, WS_CC_UNUSED, mask, masking_key, NULL);
+	return websocket_frame_construct(wsf, true, WS_OP_PONG, WS_CC_UNUSED, mask, masking_key, NULL);
 }
 
 int websocket_frame_construct_close(
 	WebsocketFrame *wsf,
-	SOCKET socket,
 	WebsocketCloseCode close_code,
 	bool mask,
 	uint32_t masking_key)
 {
-	return websocket_frame_construct(wsf, socket, true, WS_OP_CLOSE, close_code, mask, masking_key, NULL);
+	return websocket_frame_construct(wsf, true, WS_OP_CLOSE, close_code, mask, masking_key, NULL);
 }
-
-// PUBLIC FUNCTIONS
 
 /**
  * @brief encodes and sends websocket frame
  * @param frame
  * @return
  */
-int korall_ws_frame_send(const WebsocketFrame *frame)
+int websocket_frame_send(const SOCKET socket, const WebsocketFrame *frame)
 {
 
 	Arena data_arena = arena_init(WS_FULL_ARENA_SIZE);
@@ -216,11 +210,11 @@ int korall_ws_frame_send(const WebsocketFrame *frame)
 
 	KORALL_LOG(LOG_INFO, "sending frame\n");
 
-	int r = socket_send_secure(frame->socket, data, strlen((const char *)data), 0, frame->ssl);
+	int r = socket_send_secure(socket, data, strlen((const char *)data), 0, frame->ssl);
 	if (r == -1)
 	{
 		KORALL_LOG(LOG_ERR, "failed to send data to ");
-		socket_print(frame->socket);
+		socket_print(socket);
 		printf("\n");
 	}
 	arena_free(&data_arena);

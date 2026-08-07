@@ -2,5 +2,6 @@
   "name": "EchoServer",
   "domain": "localhost",
   "port": 3500,
-  "allow_custom_headers": true
+  "allow_custom_headers": true,
+  "secure": false
 }

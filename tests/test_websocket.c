@@ -60,9 +60,18 @@ TEST("websocket_frame_encode") {
 
 	uint8_t data4[400] = { 0 };
 	WebsocketFrame frame4 = { 0 };
-	websocket_frame_construct_close(&frame4, 0, WS_CC_1000, false, 0);
+	websocket_frame_construct_close(&frame4, WS_CC_1000, false, 0);
 	size = websocket_frame_encode(&frame4, data4);
 	//websocket_frame_print(data4, size);
+
+	uint8_t data5[400] = { 0 };
+	WebsocketFrame frame5 = { .finished = true, .opcode = WS_OP_TEXT, .mask = false, .length = 3, .data = "hey", .close_code = WS_CC_UNUSED };
+	size = websocket_frame_encode(&frame5, data5);
+	ASSERT(data5[0] == 0x81);
+	ASSERT(data5[1] == 0x03);
+	ASSERT(data5[2] == 0x68);
+	ASSERT(data5[3] == 0x65);
+	ASSERT(data5[4] == 0x79);
 }
 
 

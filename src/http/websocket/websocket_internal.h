@@ -28,7 +28,6 @@ int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf);
 
 int websocket_frame_construct(
 	WebsocketFrame* wsf,
-	SOCKET socket,
 	bool finished,
 	WebsocketOpcode opcode,
 	WebsocketCloseCode close_code,
@@ -39,7 +38,6 @@ int websocket_frame_construct(
 
 int websocket_frame_construct_close(
 	WebsocketFrame* wsf,
-	SOCKET socket,
 	WebsocketCloseCode close_code,
 	bool mask,
 	uint32_t masking_key
@@ -47,10 +45,11 @@ int websocket_frame_construct_close(
 
 int websocket_frame_construct_pong(
 	WebsocketFrame* wsf,
-	SOCKET socket,
 	bool mask,
 	uint32_t masking_key
 );
+
+int websocket_frame_send(const SOCKET socket, const WebsocketFrame* frame);
 
 size_t websocket_frame_encode(
 	const WebsocketFrame* frame,

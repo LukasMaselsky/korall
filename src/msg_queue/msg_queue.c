@@ -1,29 +1,35 @@
 #include "msg_queue.h"
 
-int msg_queue_open(const char *queue_name, MessageQueueMode mode)
+mqd_t msg_queue_open(const char *queue_name, MessageQueueMode mode)
 {
 #ifndef _WIN32
 	int oflag = mode == MSG_Q_READ ? (O_CREAT | O_RDONLY) : (O_WRONLY);
 
 	mqd_t mq = mq_open(queue_name, oflag, 0666, NULL);
-	if (mq == (mqd_t)-1)
+	if (mq == INVALID_MQD)
 	{
 		KORALL_LOG(LOG_ERR, "mq_open failed\n");
-		return -1;
+		return INVALID_MQD
 	}
-	return 0;
+	return mq;
 #endif
 }
 
-int msg_queue_close(const char *queue_name, mqd_t mq)
-{
+void msg_queue_close(mqd_t mq) {
 #ifndef _WIN32
-	mq_close(mq);
-	mq_unlink(QUEUE_NAME);
+	if (mq != INVALID_MQD) {
+		mq_close(mq);
+	}
 #endif
 }
 
-int msg_queue_post(mqd_t mqdes, unsigned long thread_id, Message *msg)
+void msg_queue_unlink(const char* queue_name) {
+#ifndef _WIN32
+	mq_unlink(queue_name);
+#endif
+}
+
+int msg_queue_post(mqd_t mqdes, const unsigned long thread_id, Message *msg)
 {
 
 	size_t msg_len = sizeof(Message);
@@ -57,7 +63,7 @@ int msg_queue_post(mqd_t mqdes, unsigned long thread_id, Message *msg)
 		return -1;
 	}
 #endif
-	KORALL_LOG(LOG_INFO, "message posted to queue\n");
+	// KORALL_LOG(LOG_INFO, "message posted to queue\n");
 	return 0;
 }
 
@@ -73,7 +79,7 @@ int msg_queue_read(mqd_t mqdes, Message *out)
 	}
 
 #else
-	if (mqdes == (mqd_t)-1)
+	if (mqdes == INVALID_MQD)
 	{
 		KORALL_LOG(LOG_ERR, "mqdes cannot be invalid\n");
 		return -1;

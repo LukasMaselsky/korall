@@ -6,16 +6,15 @@
 #define USING_CMAKE true
 
 static KORALL_WS_ROUTE(echo) {
-	WebsocketFrame res_frame = { 0 };
-	res_frame.data = frame->data;
-	res_frame.opcode = WS_OP_TEXT;
-	res_frame.finished = true;
-	res_frame.close_code = WS_CC_UNUSED;
-	res_frame.length = frame->length;
-	res_frame.mask = false;
-	res_frame.socket = frame->socket;
-	res_frame.ssl = frame->ssl;
-	korall_ws_frame_send(&res_frame);
+	
+	res->data = req->data;
+	res->opcode = WS_OP_TEXT;
+	res->finished = true;
+	res->close_code = WS_CC_UNUSED;
+	res->length = req->length;
+	res->mask = false;
+	res->ssl = req->ssl;
+	
 }
 
 int main(int argc, char* argv[]) {
@@ -28,7 +27,7 @@ int main(int argc, char* argv[]) {
 	log_file = fopen(RESOURCES_PATH "log_file.txt", "a");
 
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_init(RESOURCES_PATH, log_file);
+	korall_init(RESOURCES_PATH, stdout);
 	
 	#else
 

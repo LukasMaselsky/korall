@@ -534,11 +534,6 @@ HTTPRequest *http_request_init(Arena *arena)
 	return req;
 }
 
-void http_request_free(Arena *arena)
-{
-	arena_free(arena);
-}
-
 void http_request_clear(Arena *arena, HTTPRequest **req)
 {
 	arena_clear(arena);
@@ -793,11 +788,6 @@ HTTPResponse *http_response_init(Arena *arena)
 	res->body.chars = body;
 	res->body.size = HTTP_RES_BODY_LEN;
 	return res;
-}
-
-void http_response_free(Arena *arena)
-{
-	arena_free(arena);
 }
 
 void http_response_clear(Arena *arena, HTTPResponse **res)

@@ -2,14 +2,23 @@
 
 static void gui_main()
 {
+	const char* queue_name = GUI_MSG_QUEUE_NAME;
+
+	mqd_t mq = msg_queue_open(queue_name, MSG_Q_READ);
+	if (mq == INVALID_MQD) return;
+
 	while (true)
 	{
 		Message msg = {0};
-		if (msg_queue_read(GUI_MSG_QUEUE_NAME, &msg) == -1)
+		if (msg_queue_read(queue_name, &msg) == -1)
 			continue;
+
 
 		// KORALL_LOG(LOG_INFO, "main opengl stuff done here\n");
 	}
+
+	msg_queue_close(mq);
+	msg_queue_unlink(queue_name);
 }
 
 /**

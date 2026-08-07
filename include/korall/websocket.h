@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <openssl/ssl.h>
-#include "korall/socket.h"
 
 typedef enum {
 	WS_OP_CON = 0,
@@ -38,12 +37,9 @@ typedef struct {
 	WebsocketOpcode opcode;
 	WebsocketCloseCode close_code;
 	uint8_t* data;
-	SOCKET socket;
 	SSL* ssl;
 	bool mask;
 	bool finished;
 } WebsocketFrame;
-
-int korall_ws_frame_send(const WebsocketFrame* frame);
 
 #endif

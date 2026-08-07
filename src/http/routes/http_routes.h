@@ -10,7 +10,7 @@
 typedef struct
 {
 	const char *path;
-	void (*const callback)(const WebsocketFrame *);
+	void (*const callback)(const WebsocketFrame *, WebsocketFrame*);
 } WebsocketRoute;
 
 typedef struct

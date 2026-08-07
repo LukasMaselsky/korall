@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
-#include "korall/socket.h"
 #include "http/tls/tls.h"
 
 
@@ -56,6 +55,7 @@ typedef struct {
 #include <sys/wait.h>
 
 #define INVALID_SOCKET (-1)
+typedef int SOCKET
 
 #endif
 
