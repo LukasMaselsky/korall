@@ -22,7 +22,7 @@ typedef struct {
 #define BITS_LAST(k,n) ((k) & ((1<<(n))-1))
 #define BITS_MID(k,m,n) BITS_LAST((k)>>(m),((n)-(m)))
 
-void websocket_frame_print(uint8_t* frame, size_t frame_length);
+void websocket_frame_print_hex(uint8_t* frame, size_t frame_length);
 
 int websocket_frame_decode(uint8_t* frame, WebsocketFrame* wsf);
 
@@ -33,7 +33,8 @@ int websocket_frame_construct(
 	WebsocketCloseCode close_code,
 	bool mask,
 	uint32_t masking_key,
-	uint8_t* data
+	uint8_t* data,
+	size_t data_len
 );
 
 int websocket_frame_construct_close(

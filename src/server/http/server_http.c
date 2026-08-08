@@ -142,6 +142,10 @@ bool websocket_process_data(
 	const MessageQueueWriteInfo *mqi
 )
 {
+	KORALL_LOG(LOG_INFO, "'");
+	websocket_frame_print_hex((uint8_t*)req_info->data, req_info->data_byte_len);
+	KORALL_LOG(LOG_PLAIN, "'\n");
+
 	bool should_close = false;
 
 	Arena inc_arena = arena_init(WS_ARENA_SIZE);
@@ -415,6 +419,8 @@ bool http_process_request(
 	const MessageQueueWriteInfo *mqi
 )
 {
+	KORALL_LOG(LOG_INFO, "'%s'\n", req_info->data);
+
 	bool should_close = false;
 	ServerConfig *config = config_get();
 	Arena req_arena = arena_init(HTTP_REQ_ARENA_SIZE);
@@ -659,14 +665,14 @@ void process_incoming_data(void *arg)
 			if (bytes_read == 0)
 			{
 				KORALL_LOG(LOG_INFO, "socket ");
-				socket_print(inc_sock);
-				printf(" closed connection\n");
+				socket_log(inc_sock);
+				KORALL_LOG(LOG_PLAIN, " closed connection\n");
 			}
 			else
 			{
 				KORALL_LOG(LOG_ERR, "couldn't read from ");
-				socket_print(inc_sock);
-				printf("\n");
+				socket_log(inc_sock);
+				KORALL_LOG(LOG_PLAIN, "\n");
 			}
 
 			socket_close(inc_sock);
@@ -675,11 +681,11 @@ void process_incoming_data(void *arg)
 
 		buffer[bytes_read] = '\0';
 		KORALL_LOG(LOG_INFO, "received data from ");
-		socket_print(inc_sock); // todo: move to inside http/ws to print ws in hex
-		printf("\n");
-		KORALL_LOG(LOG_INFO, "'%s'\n", buffer);
+		socket_log(inc_sock);
+		KORALL_LOG(LOG_PLAIN, "\n");
+		
 
-		IncomingRequestInfo req_info = { .socket = inc_sock, .data = buffer, .ssl = ssl };
+		IncomingRequestInfo req_info = { .socket = inc_sock, .data = buffer, .data_byte_len = bytes_read, .ssl = ssl };
 
 		if (is_websocket && ws_route != NULL)
 		{

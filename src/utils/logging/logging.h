@@ -20,6 +20,7 @@ typedef enum {
     LOG_ERR,
     LOG_WARN,
     LOG_INFO,
+    LOG_PLAIN,
 } LogLevel;
 
 void logging_init(FILE* file);

@@ -35,6 +35,7 @@ typedef struct
 typedef struct {
 	const SOCKET socket;
 	const char* data;
+	size_t data_byte_len;
 	const SSL* ssl;
 } IncomingRequestInfo;
 

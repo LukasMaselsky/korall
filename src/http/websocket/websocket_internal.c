@@ -3,13 +3,13 @@
 #include "socket/socket.h"
 #include "arena/arena.h"
 
-void websocket_frame_print(uint8_t *frame, size_t frame_length)
+void websocket_frame_print_hex(uint8_t *frame, size_t frame_length)
 {
 	for (size_t i = 0; i < frame_length; i++)
 	{
-		printf("%02x ", frame[i]);
+		if (i > 0) KORALL_LOG(LOG_PLAIN, " ");
+		KORALL_LOG(LOG_PLAIN, "%02x", frame[i]);
 	}
-	printf("\n");
 }
 
 /**
@@ -91,7 +91,7 @@ int websocket_frame_decode(uint8_t *frame, WebsocketFrame *wsf)
  * @brief converts WebsocketFrame struct to raw frame
  * @param frame
  * @param data
- * @return byte length of data
+ * @return byte length of full encoded frame
  */
 size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 {
@@ -141,21 +141,24 @@ size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 
 	if (frame->length != 0 && frame->data != NULL)
 	{
-		memcpy(p, frame->data, sizeof(frame->data));
-		p += sizeof(frame->data);
+
+		memcpy(p, frame->data, frame->length);
+		p += frame->length;
 	}
 	size_t l = p - data;
 	return l;
 }
 
 int websocket_frame_construct(
-	WebsocketFrame *wsf,
+	WebsocketFrame* wsf,
 	bool finished,
 	WebsocketOpcode opcode,
 	WebsocketCloseCode close_code,
 	bool mask,
 	uint32_t masking_key,
-	uint8_t *data)
+	uint8_t* data,
+	size_t data_len
+)
 {
 	if (data != NULL && sizeof(data) > UINT64_MAX)
 	{
@@ -183,7 +186,7 @@ int websocket_frame_construct_pong(
 	bool mask,
 	uint32_t masking_key)
 {
-	return websocket_frame_construct(wsf, true, WS_OP_PONG, WS_CC_UNUSED, mask, masking_key, NULL);
+	return websocket_frame_construct(wsf, true, WS_OP_PONG, WS_CC_UNUSED, mask, masking_key, NULL, 0);
 }
 
 int websocket_frame_construct_close(
@@ -192,7 +195,7 @@ int websocket_frame_construct_close(
 	bool mask,
 	uint32_t masking_key)
 {
-	return websocket_frame_construct(wsf, true, WS_OP_CLOSE, close_code, mask, masking_key, NULL);
+	return websocket_frame_construct(wsf, true, WS_OP_CLOSE, close_code, mask, masking_key, NULL, 0);
 }
 
 /**
@@ -206,16 +209,20 @@ int websocket_frame_send(const SOCKET socket, const WebsocketFrame *frame)
 	Arena data_arena = arena_init(WS_FULL_ARENA_SIZE);
 	uint8_t *data = (uint8_t *)arena_alloc(&data_arena, WS_FULL_ARENA_SIZE);
 
-	websocket_frame_encode(frame, data);
+	size_t data_len = websocket_frame_encode(frame, data);
 
-	KORALL_LOG(LOG_INFO, "sending frame\n");
+
+	KORALL_LOG(LOG_INFO, "'");
+	websocket_frame_print_hex(data, data_len);
+	KORALL_LOG(LOG_PLAIN, "'\n");
+	
 
 	int r = socket_send_secure(socket, data, strlen((const char *)data), 0, frame->ssl);
 	if (r == -1)
 	{
 		KORALL_LOG(LOG_ERR, "failed to send data to ");
-		socket_print(socket);
-		printf("\n");
+		socket_log(socket);
+		KORALL_LOG(LOG_PLAIN, "\n");
 	}
 	arena_free(&data_arena);
 

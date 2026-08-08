@@ -16,8 +16,10 @@ void log_msg(LogLevel log_level, const char* const format, ...) {
     timer = time(NULL);
     tm_info = localtime(&timer);
 
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-    fprintf(g_log_file, "[%s] ", buffer);
+    if (log_level != LOG_PLAIN) {
+        strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+        fprintf(g_log_file, "[%s] ", buffer);
+    }
 
     va_list argp;
     va_start(argp, format);
@@ -29,8 +31,10 @@ void log_msg(LogLevel log_level, const char* const format, ...) {
         fprintf(g_log_file, TEXT_COLOR(ANSI_COLOR_YELLOW, "[WARNING] "));
         break;
     case LOG_INFO:
-    default:
         fprintf(g_log_file, "[INFO] ");
+        break;
+    case LOG_PLAIN:
+    default:
         break;
     }
 

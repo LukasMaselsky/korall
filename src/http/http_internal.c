@@ -759,8 +759,8 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res)
 	if (r == -1)
 	{
 		KORALL_LOG(LOG_ERR, "couldn't send data to ");
-		socket_print(inc_sock);
-		printf("\n");
+		socket_log(inc_sock);
+		KORALL_LOG(LOG_PLAIN, "\n");
 	}
 	arena_free(&res_full_arena);
 	return 0;

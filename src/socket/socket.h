@@ -96,6 +96,8 @@ int socket_close(SOCKET sock);
 
 void socket_print(SOCKET sock);
 
+void socket_log(SOCKET sock);
+
 SOCKET socket_create(struct addrinfo* res);
 
 int socket_bind(SOCKET sockfd, struct addrinfo* res);
