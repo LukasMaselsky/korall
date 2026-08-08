@@ -16,6 +16,4 @@
 
 void gui_run(THREAD_T* thread, unsigned int* thread_id);
 
-int func();
-
 #endif
