@@ -275,34 +275,54 @@ TEST("http_request_process_target_absolute")
 
 TEST("http_process_protocol")
 {
+	Arena arena = arena_init(HTTP_REQ_ARENA_SIZE);
+	HTTPRequest* req = http_request_init(&arena);
 	const char *str = "HTTP/1.1";
 	int res;
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
 
 	str = " HTTP/1.1";
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
 
 	str = "HTTP/1.";
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
 
 	str = "HTTP/1.1\r\n";
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_SUCCESS);
+	http_request_clear(&arena, &req);
+
+	str = "HTTP/1.0\r\n";
+	res = http_request_process_protocol(&str, req);
+	ASSERT(res == HTTP_SUCCESS);
+	http_request_clear(&arena, &req);
+
+	str = "HTTP/1.0";
+	res = http_request_process_protocol(&str, req);
+	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
 
 	str = "HTTP/1.11\r\n";
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
 
 	str = "";
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
 
 	str = " ";
-	res = http_request_process_protocol(&str);
+	res = http_request_process_protocol(&str, req);
 	ASSERT(res == HTTP_BAD_PROT);
+	http_request_clear(&arena, &req);
+
 }
 
 TEST("http_process_method")

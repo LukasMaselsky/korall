@@ -97,7 +97,7 @@ int websocket_frame_decode(uint8_t *frame, WebsocketFrame *wsf)
 size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 {
 	if (frame == NULL)
-		return 0;
+		return 0;	
 	uint8_t fin = (uint8_t)(frame->finished << 7);
 	uint8_t opcode = (uint8_t)(frame->opcode);
 
@@ -141,9 +141,14 @@ size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 	}
 
 	if (frame->length != 0 && frame->data != NULL)
-	{
-
-		memcpy(p, frame->data, frame->length);
+	{ 
+		// todo: for testing, remove ?
+		size_t len = frame->length;
+		size_t str_len = strlen((const char*)frame->data);
+		if (str_len != len) {
+			len = str_len;
+		}
+		memcpy(p, frame->data, len);
 		p += frame->length;
 	}
 	size_t l = p - data;
