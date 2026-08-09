@@ -1,6 +1,6 @@
 #include "korall/korall.h"
 #include "socket/socket.h"
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "arena/arena.h"
 #include "lookup/lookup_tables.h"
 #include "cJSON/cJSON.h"
@@ -114,7 +114,7 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX 
 
 		// make copy of args
 
-		ProcessDataArgs *t_args = safe_calloc(1, sizeof(ProcessDataArgs));
+		ProcessDataArgs *t_args = exit_calloc(1, sizeof(ProcessDataArgs));
 		memcpy(t_args, &args, sizeof(*t_args));
 		t_args->sock = sock;
 		t_args->thread_num = thread_arr.size;
@@ -126,7 +126,7 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX 
 
 //
 
-void korall_http_routes_add(const char *path, const HTTPMethod method, void (*const callback)(const HTTPRequest *, HTTPResponse *))
+void korall_http_routes_add(const char *path, const char *method, void (*const callback)(const HTTPRequest *, HTTPResponse *))
 {
 	Array *routes = http_routes_get();
 	if (path == NULL)
@@ -139,12 +139,13 @@ void korall_http_routes_add(const char *path, const HTTPMethod method, void (*co
 		KORALL_LOG(LOG_ERR, "failed to add route, callback cannot be NULL\n");
 		return;
 	}
-	if (lookup_int_str(method, &http_method_lookup_table) == NULL)
+	HTTPMethod meth_int = lookup_str_int(method, &http_method_lookup_table, true);
+	if (meth_int == -1)
 	{
 		KORALL_LOG(LOG_ERR, "failed to add route, method is not valid\n");
 		return;
 	}
-	const HTTPRoute route = {.path = path, .method = method, .callback = callback};
+	const HTTPRoute route = {.path = path, .method = meth_int, .callback = callback};
 	if (array_push(routes, &route) == -1)
 	{
 		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count exceeded\n");

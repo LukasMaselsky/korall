@@ -1,4 +1,4 @@
-#include "http/websocket/websocket_internal.h"
+#include "http/websocket/websocket.h"
 #include "utils/utils.h"
 #include "socket/socket.h"
 #include "arena/arena.h"
@@ -7,7 +7,8 @@ void websocket_frame_print_hex(uint8_t *frame, size_t frame_length)
 {
 	for (size_t i = 0; i < frame_length; i++)
 	{
-		if (i > 0) KORALL_LOG(LOG_PLAIN, " ");
+		if (i > 0)
+			KORALL_LOG(LOG_PLAIN, " ");
 		KORALL_LOG(LOG_PLAIN, "%02x", frame[i]);
 	}
 }
@@ -101,7 +102,7 @@ size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 	uint8_t opcode = (uint8_t)(frame->opcode);
 
 	data[0] = fin | opcode;
-	
+
 	uint8_t mask = (uint8_t)(frame->mask << 7);
 	uint8_t pl;
 	uint8_t *p;
@@ -150,15 +151,14 @@ size_t websocket_frame_encode(const WebsocketFrame *frame, uint8_t *data)
 }
 
 int websocket_frame_construct(
-	WebsocketFrame* wsf,
+	WebsocketFrame *wsf,
 	bool finished,
 	WebsocketOpcode opcode,
 	WebsocketCloseCode close_code,
 	bool mask,
 	uint32_t masking_key,
-	uint8_t* data,
-	size_t data_len
-)
+	uint8_t *data,
+	size_t data_len)
 {
 	if (data != NULL && sizeof(data) > UINT64_MAX)
 	{
@@ -211,11 +211,9 @@ int websocket_frame_send(const SOCKET socket, const WebsocketFrame *frame)
 
 	size_t data_len = websocket_frame_encode(frame, data);
 
-
 	KORALL_LOG(LOG_INFO, "'");
 	websocket_frame_print_hex(data, data_len);
 	KORALL_LOG(LOG_PLAIN, "'\n");
-	
 
 	int r = socket_send_secure(socket, data, strlen((const char *)data), 0, frame->ssl);
 	if (r == -1)

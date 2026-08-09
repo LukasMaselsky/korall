@@ -17,16 +17,15 @@ void http_routes_init(ServerConfig *config)
 {
 	size_t capacity = sizeof(HTTPRoute) * config->max_http_routes;
 	Array *routes = &g_http_routes;
-	routes->data = (uint8_t*)safe_calloc(capacity, sizeof(HTTPRoute));
+	routes->data = (uint8_t *)exit_calloc(capacity, sizeof(HTTPRoute));
 	routes->capacity = capacity;
 }
-
 
 void ws_routes_init(ServerConfig *config)
 {
 	size_t capacity = sizeof(WebsocketRoute) * config->max_ws_routes;
 	Array *routes = &g_ws_routes;
-	routes->data = (uint8_t*)safe_calloc(capacity, sizeof(WebsocketRoute));
+	routes->data = (uint8_t *)exit_calloc(capacity, sizeof(WebsocketRoute));
 	routes->capacity = capacity;
 }
 
@@ -36,7 +35,7 @@ void routes_init(ServerConfig *config)
 	ws_routes_init(config);
 }
 
-static void routes_free_one(Array* routes)
+static void routes_free_one(Array *routes)
 {
 	if (routes == NULL)
 		return;

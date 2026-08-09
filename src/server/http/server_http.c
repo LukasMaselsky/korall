@@ -1,10 +1,10 @@
 #include "server_http.h"
 #include "socket/socket.h"
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "arena/arena.h"
 #include "lookup/lookup_tables.h"
 #include "cJSON/cJSON.h"
-#include "http/websocket/websocket_internal.h"
+#include "http/websocket/websocket.h"
 #include "array/array.h"
 #include "config/config.h"
 #include "gui/gui.h"
@@ -65,7 +65,7 @@ WebsocketRoute *ws_route_select(HTTPRequest *req, const Array *routes)
 	return NULL;
 }
 
-bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig* config)
+bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig *config)
 {
 	if (req->start_line->method == HTTP_CONNECT)
 	{
@@ -95,10 +95,9 @@ static int websocket_process_data_construct_out(
 	const WebsocketFrame *in_wsf,
 	WebsocketFrame *out_wsf,
 	const IncomingRequestInfo *req_info,
-	const WebsocketRoute *route
-)
+	const WebsocketRoute *route)
 {
-	const char* data = req_info->data;
+	const char *data = req_info->data;
 
 	if (!(in_wsf->finished))
 		return 0; // todo: add continuous support
@@ -139,11 +138,10 @@ static int websocket_process_data_construct_out(
 bool websocket_process_data(
 	const IncomingRequestInfo *req_info,
 	const WebsocketRoute *route,
-	const MessageQueueWriteInfo *mqi
-)
+	const MessageQueueWriteInfo *mqi)
 {
 	KORALL_LOG(LOG_INFO, "'");
-	websocket_frame_print_hex((uint8_t*)req_info->data, req_info->data_byte_len);
+	websocket_frame_print_hex((uint8_t *)req_info->data, req_info->data_byte_len);
 	KORALL_LOG(LOG_PLAIN, "'\n");
 
 	bool should_close = false;
@@ -161,34 +159,34 @@ bool websocket_process_data(
 	WebsocketFrame *out_wsf;
 	out_wsf = (WebsocketFrame *)arena_alloc(&out_arena, sizeof(*out_wsf));
 
-
 	// process incoming frame
-	if (websocket_frame_decode((uint8_t*)req_info->data, in_wsf) == -1)
+	if (websocket_frame_decode((uint8_t *)req_info->data, in_wsf) == -1)
 	{
 		KORALL_LOG(LOG_ERR, "invalid websocket message received, syntax\n");
 		// prot error : 1002
-		if (websocket_frame_construct_close(out_wsf, WS_CC_1002, false, 0) == -1) {
+		if (websocket_frame_construct_close(out_wsf, WS_CC_1002, false, 0) == -1)
+		{
 			arena_free(&inc_arena);
 			arena_free(&out_arena);
 			return should_close;
 		}
 	}
-	else {
+	else
+	{
 		in_wsf->ssl = req_info->ssl;
 		// incoming parse success
 
 		// post incoming to queue
 
-		Message msg = { .req = NULL, .res = NULL, .ws_frame = in_wsf, .type = MSG_TYPE_WS_FRAME };
+		Message msg = {.req = NULL, .res = NULL, .ws_frame = in_wsf, .type = MSG_TYPE_WS_FRAME};
 		msg_queue_post(mqi->mq, mqi->thread_id, &msg);
 
-
 		if (websocket_process_data_construct_out(
-			in_wsf,
-			out_wsf,
-			req_info,
-			route
-		) == -1) {
+				in_wsf,
+				out_wsf,
+				req_info,
+				route) == -1)
+		{
 			arena_free(&inc_arena);
 			arena_free(&out_arena);
 			return should_close;
@@ -197,7 +195,7 @@ bool websocket_process_data(
 
 	// post outgoing to queue
 
-	Message msg = { .req = NULL, .res = NULL, .ws_frame = out_wsf, .type = MSG_TYPE_WS_FRAME };
+	Message msg = {.req = NULL, .res = NULL, .ws_frame = out_wsf, .type = MSG_TYPE_WS_FRAME};
 	msg_queue_post(mqi->mq, mqi->thread_id, &msg);
 
 	KORALL_LOG(LOG_INFO, "sending ws frame response\n");
@@ -207,9 +205,10 @@ bool websocket_process_data(
 		KORALL_LOG(LOG_ERR, "failed to send websocket frame\n");
 	}
 
-	// 
+	//
 
-	if (in_wsf->opcode == WS_OP_CLOSE) {
+	if (in_wsf->opcode == WS_OP_CLOSE)
+	{
 		should_close = true;
 	}
 
@@ -224,10 +223,10 @@ bool websocket_process_data(
  * @brief send route not found response
  * @return
  */
-int route_not_found(HTTPResponse *res, ServerConfig *config)
+int route_not_found(HTTPResponse *res, const HTTPRequest *req, ServerConfig *config)
 {
 	KORALL_LOG(LOG_ERR, "route not found\n");
-	return http_response_construct(res, HTTP_SC_404, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
+	return http_response_construct(res, req, HTTP_SC_404, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
 }
 
 static bool req_is_ws_upgrade(const HTTPRequest *req)
@@ -248,11 +247,11 @@ static int ws_upgrade(
 	WebsocketRoute *wsr = ws_route_select(req, ws_routes);
 	if (wsr == NULL)
 	{
-		return route_not_found(res, config);
+		return route_not_found(res, req, config);
 	}
 
 	// 101
-	int err = http_response_ws_construct(res, req->ws->accept, config->name.chars);
+	int err = http_response_ws_construct(res, req, req->ws->accept);
 	if (err == -1)
 		return -1;
 	*is_websocket = true;
@@ -261,18 +260,17 @@ static int ws_upgrade(
 }
 
 /**
- * @brief 
- * @param req 
- * @param res 
- * @param config 
- * @param inc_sock 
+ * @brief
+ * @param req
+ * @param res
+ * @param config
+ * @param inc_sock
  * @return -1 if construct failed, 0 if succeeded and 1 if not constructed
  */
 static int http_process_request_options(
 	const HTTPRequest *req,
 	HTTPResponse *res,
-	const ServerConfig *config
-)
+	const ServerConfig *config)
 {
 	KORALL_LOG(LOG_INFO, "OPTIONS request received\n");
 
@@ -282,16 +280,17 @@ static int http_process_request_options(
 	if (acrm_res == -1)
 	{
 		KORALL_LOG(LOG_ERR, "invalid HTTP request received, host\n");
-		return http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "OPTIONS request must contain Access-Control-Request-Method header."));
+		return http_response_construct(res, req, HTTP_SC_400, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "OPTIONS request must contain Access-Control-Request-Method header."));
 	}
 
 	// set response header on which methods are allowed
 
 	char stringified_methods[ALL_METHODS_LIST_STR_LEN + 1] = {0};
 	int am = http_allowed_methods(config->allow_methods, stringified_methods, ALL_METHODS_LIST_STR_LEN);
-	if (am == -1) {
+	if (am == -1)
+	{
 		KORALL_LOG(LOG_ERR, "failed to stringify allowed methods\n");
-		return http_response_construct(res, HTTP_SC_500, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Server error", "Failed to stringify allowed methods."));
+		return http_response_construct(res, req, HTTP_SC_500, HTTP_MT_APP_JSON, ERROR_MESSAGE("Server error", "Failed to stringify allowed methods."));
 	}
 	korall_response_header_set(res, "Access-Control-Allow-Methods", stringified_methods);
 
@@ -309,16 +308,16 @@ static int http_process_request_options(
 
 /**
  * @brief Process request and construct response
- * @param req 
- * @param res 
- * @param config 
- * @param inc_sock 
- * @param data 
- * @param routes 
- * @param ws_routes 
- * @param is_websocket 
- * @param websocket_route 
- * @param should_close 
+ * @param req
+ * @param res
+ * @param config
+ * @param inc_sock
+ * @param data
+ * @param routes
+ * @param ws_routes
+ * @param is_websocket
+ * @param websocket_route
+ * @param should_close
  * @return -1 if couldn't construct response
  */
 static int http_process_request_construct_response(
@@ -328,15 +327,14 @@ static int http_process_request_construct_response(
 	const Array *routes,
 	const Array *ws_routes,
 	bool *is_websocket,
-	WebsocketRoute **websocket_route
-)
+	WebsocketRoute **websocket_route)
 {
 
 	// check if Host matches server domain + port, also if CONNECT req, if rt matches it aswell
 	if (!http_domain_port_match_server(req, config))
 	{
 		KORALL_LOG(LOG_ERR, "invalid HTTP request received, host\n");
-		return http_response_construct(res, HTTP_SC_400, config->name.chars, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
+		return http_response_construct(res, req, HTTP_SC_400, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Invalid Host header."));
 	}
 
 	// Access-Control-Allow-Credentials
@@ -361,7 +359,8 @@ static int http_process_request_construct_response(
 	if (req->start_line->method == HTTP_OPTIONS)
 	{
 		int hpro = http_process_request_options(req, res, config);
-		if (hpro <= 0) return hpro;
+		if (hpro <= 0)
+			return hpro;
 	}
 
 	KORALL_LOG(LOG_INFO, "valid HTTP request received\n");
@@ -377,14 +376,14 @@ static int http_process_request_construct_response(
 		if (route == NULL)
 		{
 			// 404 if no matching route
-			return route_not_found(res, config);
+			return route_not_found(res, req, config);
 		}
 		route->callback(req, res); // CALL CALLBACK
 	}
 	else
 	{
 		// CORS preflight 204 response
-		return http_response_construct(res, HTTP_SC_204, config->name.chars, HTTP_MT_APP_JSON, NULL);
+		return http_response_construct(res, req, HTTP_SC_204, HTTP_MT_APP_JSON, NULL);
 	}
 
 	if (res->start_line.chars[0] == '\0')
@@ -416,8 +415,7 @@ bool http_process_request(
 	const Array *ws_routes,
 	bool *is_websocket,
 	WebsocketRoute **websocket_route,
-	const MessageQueueWriteInfo *mqi
-)
+	const MessageQueueWriteInfo *mqi)
 {
 	KORALL_LOG(LOG_INFO, "'%s'\n", req_info->data);
 
@@ -430,7 +428,6 @@ bool http_process_request(
 	HTTPResponse *res = http_response_init(&res_arena);
 	res->ssl = req_info->ssl;
 
-
 	// todo: do something else when construct response failed?
 
 	// build request
@@ -442,10 +439,13 @@ bool http_process_request(
 
 		HTTPStatusCode sc;
 		HTTPMediaType mt;
-		const char* message = http_error_response_info(parse_res, &sc, &mt);
+		const char *message = http_error_response_info(parse_res, &sc, &mt);
 
-		if (http_response_construct(res, sc, config->name.chars, mt, message) == -1) return should_close;
-	} else {
+		if (http_response_construct(res, req, sc, mt, message) == -1)
+			return should_close;
+	}
+	else
+	{
 
 		// request parse success
 
@@ -457,23 +457,22 @@ bool http_process_request(
 		// build response
 
 		if (http_process_request_construct_response(
-			req,
-			res,
-			config,
-			routes,
-			ws_routes,
-			is_websocket,
-			websocket_route
-		) == -1) {
+				req,
+				res,
+				config,
+				routes,
+				ws_routes,
+				is_websocket,
+				websocket_route) == -1)
+		{
 			return should_close;
 		}
 	}
 
 	// post res to queue
 
-	Message msg = { .req = NULL, .res = res, .ws_frame = NULL, .type = MSG_TYPE_RES };
+	Message msg = {.req = NULL, .res = res, .ws_frame = NULL, .type = MSG_TYPE_RES};
 	msg_queue_post(mqi->mq, mqi->thread_id, &msg);
-
 
 	KORALL_LOG(LOG_INFO, "sending HTTP response\n");
 
@@ -484,11 +483,15 @@ bool http_process_request(
 
 	// check if Connection: close
 
-	char con[20] = { 0 }; // todo: no num
-	if (korall_request_header_get(req, "Connection", con, 20) == 0
-		&& 
-		strcmp_ci(con, "close") == 0
-	) {
+	char con[20] = {0}; // todo: no num
+	if (korall_request_header_get(req, "Connection", con, 20) == 0 &&
+		strcmp_ci(con, "close") == 0)
+	{
+		should_close = true;
+	}
+
+	// or if protocol is 1.0
+	if (req->start_line->protocol == HTTP_PROT_1_0) {
 		should_close = true;
 	}
 
@@ -655,7 +658,7 @@ void process_incoming_data(void *arg)
 
 	mqd_t mq = msg_queue_open(GUI_MSG_QUEUE_NAME, MSG_Q_WRITE);
 
-	const MessageQueueWriteInfo mqi = { .mq = mq, .thread_id = gui_thread_id };
+	const MessageQueueWriteInfo mqi = {.mq = mq, .thread_id = gui_thread_id};
 
 	while (true)
 	{
@@ -683,9 +686,8 @@ void process_incoming_data(void *arg)
 		KORALL_LOG(LOG_INFO, "received data from ");
 		socket_log(inc_sock);
 		KORALL_LOG(LOG_PLAIN, "\n");
-		
 
-		IncomingRequestInfo req_info = { .socket = inc_sock, .data = buffer, .data_byte_len = bytes_read, .ssl = ssl };
+		IncomingRequestInfo req_info = {.socket = inc_sock, .data = buffer, .data_byte_len = bytes_read, .ssl = ssl};
 
 		if (is_websocket && ws_route != NULL)
 		{
@@ -709,6 +711,7 @@ void process_incoming_data(void *arg)
 #endif
 	free(arg);
 	msg_queue_close(mq);
+	socket_close(inc_sock);
 #ifndef _WIN32
 	pthread_mutex_unlock(lock);
 #endif
@@ -727,7 +730,7 @@ void sync_threads(Array *thread_arr, pthread_mutex_t *lock)
 #ifndef _WIN32
 	pthread_mutex_lock(lock);
 #endif
-	size_t *remove_list = safe_calloc(thread_arr->size, sizeof(size_t));
+	size_t *remove_list = exit_calloc(thread_arr->size, sizeof(size_t));
 	size_t len = 0;
 	for (size_t i = 0; i < thread_arr->size; i++)
 	{

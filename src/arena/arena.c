@@ -22,7 +22,7 @@ uintptr_t align_forward(uintptr_t ptr, size_t alignment)
 
 Arena arena_init(size_t capacity)
 {
-    void *buf = safe_calloc(1, capacity);
+    void *buf = exit_calloc(1, capacity);
     Arena arena = {.base = buf, .capacity = capacity, .cur = buf, .size = 0};
     return arena;
 }

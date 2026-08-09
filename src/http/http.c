@@ -1,4 +1,4 @@
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "lookup/lookup_tables.h"
 #include "http/http_headers.h"
 #include "socket/socket.h"
@@ -29,7 +29,7 @@ HTTPError http_request_parse(const char *data, HTTPRequest *req)
 	data++; // advance past space
 
 	// process prot
-	res = http_request_process_protocol(&data);
+	res = http_request_process_protocol(&data, req);
 	if (res != HTTP_SUCCESS)
 		return res;
 
@@ -207,7 +207,7 @@ HTTPError http_request_process_body(const char *str, HTTPRequest *req)
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_request_process_protocol(const char **str)
+HTTPError http_request_process_protocol(const char **str, HTTPRequest *req)
 {
 	char prot[HTTP_PROT_LEN + 1] = {0};
 	bool is_case_insensitive = false;
@@ -216,8 +216,14 @@ HTTPError http_request_process_protocol(const char **str)
 	if (res == -1)
 		return HTTP_BAD_PROT;
 
-	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0)
+	if (strncmp("HTTP/1.1", prot, HTTP_PROT_LEN) == 0) {
+		req->start_line->protocol = HTTP_PROT_1_1;
 		return HTTP_SUCCESS;
+	}
+	if (strncmp("HTTP/1.0", prot, HTTP_PROT_LEN) == 0) {
+		req->start_line->protocol = HTTP_PROT_1_0;
+		return HTTP_SUCCESS;
+	}
 	return HTTP_BAD_PROT;
 }
 
@@ -493,6 +499,7 @@ HTTPRequest *http_request_init(Arena *arena)
 	sl = (HTTPRequestStartLine *)arena_alloc(arena, 1 * sizeof(*sl));
 	sl->request_target = request_target;
 	sl->method = HTTP_METHOD_UNUSED;
+	sl->protocol = HTTP_PROT_1_1;
 
 	// headers
 
@@ -547,7 +554,9 @@ int http_verify_origin(Array *allow_origins, HTTPRequest *req, bool has_creds, c
 
 	// todo: MAX_HTTP_URL ?
 	const char req_origin[MAX_DOMAIN_LEN + 1] = {0};
-	korall_request_header_get(req, "Origin", req_origin, MAX_DOMAIN_LEN);
+	if (korall_request_header_get(req, "Origin", req_origin, MAX_DOMAIN_LEN) == -1) {
+		return -1;
+	}
 
 	// only add Access-Control-Allow-Origin if "allowed"
 	const char *any = "*";
@@ -688,12 +697,12 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 
 int http_response_construct(
 	HTTPResponse *res,
+	const HTTPRequest *req,
 	HTTPStatusCode code,
-	const char *server_name,
 	HTTPMediaType content_type,
 	const char *body)
 {
-	if (korall_response_start_set(res, code) == -1)
+	if (korall_response_start_set(res, req, code) == -1)
 		return -1;
 
 	if (body != NULL)
@@ -720,12 +729,13 @@ int http_response_construct(
 
 int http_response_ws_construct(
 	HTTPResponse *res,
-	const char *accept,
-	const char *server_name)
+	const HTTPRequest *req,
+	const char *accept
+)
 {
-	if (korall_response_start_set(res, HTTP_SC_101) == -1)
+	if (korall_response_start_set(res, req, HTTP_SC_101) == -1)
 		return -1;
-	if (korall_response_header_set(res, "Server", server_name) == -1)
+	if (korall_response_header_set(res, "Server", SERVER_SOFTWARE) == -1)
 		return -1;
 	if (korall_response_header_set(res, "Upgrade", "websocket") == -1)
 		return -1;
@@ -955,7 +965,7 @@ char *korall_request_body_get(const HTTPRequest *req)
 /*
 	Sets the type of response
 */
-int korall_response_start_set(HTTPResponse *res, const int code)
+int korall_response_start_set(HTTPResponse *res, const HTTPRequest *req, const int code)
 {
 	if (code < 100 || code > 599)
 	{
@@ -972,7 +982,17 @@ int korall_response_start_set(HTTPResponse *res, const int code)
 	String start_line = res->start_line;
 	char *str = start_line.chars;
 
-	sprintf(str, "HTTP/1.1 %d %s\r\n", code, reason_phrase);
+	const char* prot;
+	switch (req->start_line->protocol) {
+		case HTTP_PROT_1_0:
+			prot = "HTTP/1.0";
+			break;
+		case HTTP_PROT_1_1:
+		default:
+			prot = "HTTP/1.1";
+	}
+
+	sprintf(str, "%s %d %s\r\n", prot, code, reason_phrase);
 
 	// add some headers
 
@@ -983,6 +1003,7 @@ int korall_response_start_set(HTTPResponse *res, const int code)
 	if (korall_response_header_set(res, "Date", date) == -1)
 		return -1;
 
+	
 	// server
 	if (korall_response_header_set(res, "Server", SERVER_SOFTWARE) == -1)
 		return -1;

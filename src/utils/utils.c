@@ -38,7 +38,7 @@ char *b64_encode(const unsigned char *in, size_t len)
         return NULL;
 
     elen = b64_encoded_size(len);
-    out = safe_calloc(elen + 1, 1);
+    out = exit_calloc(elen + 1, 1);
     out[elen] = '\0';
 
     for (i = 0, j = 0; i < len; i += 3, j += 4)
@@ -145,7 +145,7 @@ int strcmp_ci(const char *str1, const char *str2)
 #endif
 }
 
-void *safe_calloc(size_t count, size_t size)
+void *exit_calloc(size_t count, size_t size)
 {
     void *p = calloc(count, size);
     if (p == NULL)

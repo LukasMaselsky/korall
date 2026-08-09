@@ -74,6 +74,25 @@
 #define HTTP_RES_CC_HAS_VAL(x) (x == HTTP_RES_CC_MAX_AGE || x == HTTP_RES_CC_S_MAX_AGE || x == HTTP_RES_CC_STALE_WHILE_REVALIDATE || x == HTTP_RES_CC_STALE_IF_ERROR)
 
 typedef enum {
+	HTTP_METHOD_UNUSED = -1,
+	HTTP_CONNECT,
+	HTTP_DELETE,
+	HTTP_GET,
+	HTTP_HEAD,
+	HTTP_OPTIONS,
+	HTTP_PATCH,
+	HTTP_POST,
+	HTTP_PUT,
+	HTTP_TRACE,
+	HTTP_METHOD_COUNT
+} HTTPMethod;
+
+typedef enum {
+	HTTP_PROT_1_0,
+	HTTP_PROT_1_1,
+} HTTPProtocol;
+
+typedef enum {
 	HTTP_RQH_A_IM,
 	HTTP_RQH_ACCEPT,
 	HTTP_RQH_ACCEPT_CHARSET,
@@ -467,12 +486,12 @@ typedef enum {
 	HTTP_SUCCESS = 0,
 } HTTPError;
 
-
 // Request
 
 struct HTTPRequestStartLineInternal {
 	char* request_target;
 	HTTPMethod method;
+	HTTPProtocol protocol;
 };
 
 // Headers
@@ -532,7 +551,7 @@ HTTPError http_request_process_target_absolute(const char* str, HTTPRequest* req
 
 HTTPError http_request_process_target(const char** str, HTTPRequest* req);
 
-HTTPError http_request_process_protocol(const char** str);
+HTTPError http_request_process_target(const char** str, HTTPRequest* req);
 
 HTTPRequest* http_request_init(Arena* arena);
 
@@ -550,16 +569,16 @@ HTTPError http_process_response_header_value(const HTTPResponseHeaderField field
 
 int http_response_construct(
 	HTTPResponse* res,
+	const HTTPRequest *req,
 	HTTPStatusCode code,
-	const char* server_name,
 	HTTPMediaType content_type,
 	const char* body
 );
 
 int http_response_ws_construct(
 	HTTPResponse* res,
-	const char* accept,
-	const char* server_name
+	const HTTPRequest *req,
+	const char* accept
 );
 
 int http_response_send(const SOCKET inc_sock, const HTTPResponse* res);

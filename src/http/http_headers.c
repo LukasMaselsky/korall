@@ -1,6 +1,6 @@
 #include "http/http_headers.h"
 #include "utils/utils.h"
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "lookup/lookup_tables.h"
 #include "socket/socket.h"
 #include "utils/date/date.h"
@@ -11,15 +11,19 @@
 /*
 	Make sure domain:port or domain is valid format
 */
-HTTPError http_domain_port(const char* value, char* domain, char* port, bool *with_port) {
-	if (*value == '\0') return HTTP_BAD_DOMAIN_PORT;
-	char temp[MAX_DOMAIN_LEN + 1] = { 0 };
+HTTPError http_domain_port(const char *value, char *domain, char *port, bool *with_port)
+{
+	if (*value == '\0')
+		return HTTP_BAD_DOMAIN_PORT;
+	char temp[MAX_DOMAIN_LEN + 1] = {0};
 
 	*with_port = false;
 	int len = MAX_DOMAIN_LEN;
 	int i = 0;
-	for (char c = *value; c != '\0' && i < len; c = *(++value)) {
-		if (c == ':') {
+	for (char c = *value; c != '\0' && i < len; c = *(++value))
+	{
+		if (c == ':')
+		{
 			*with_port = true;
 			break;
 		};
@@ -30,91 +34,114 @@ HTTPError http_domain_port(const char* value, char* domain, char* port, bool *wi
 
 	// process domain
 
-	if (strcmp("localhost", temp) == 0) {
+	if (strcmp("localhost", temp) == 0)
+	{
 		strcpy(domain, "localhost");
 	}
-	else if (*temp == '[') {
+	else if (*temp == '[')
+	{
 		// ipv6 -> "Host: [....]"
 		temp[i - 1] = '\0'; // remove ]
-		const char* temp_p = temp;
-		if (is_valid_ipv6(temp)) {
+		const char *temp_p = temp;
+		if (is_valid_ipv6(temp))
+		{
 			strcpy(domain, ++temp_p); // todo: test
 		}
 	}
-	else if (is_valid_ipv4(temp)) {
+	else if (is_valid_ipv4(temp))
+	{
 		strcpy(domain, temp);
 	}
-	else {
+	else
+	{
 		return HTTP_BAD_DOMAIN;
 	}
 
-	if (!(*with_port)) return HTTP_SUCCESS;
+	if (!(*with_port))
+		return HTTP_SUCCESS;
 
 	// process port
 
-	char port_temp[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+	char port_temp[MAX_PORT_NUM_CHAR_LEN + 1] = {0};
 	len = MAX_PORT_NUM_CHAR_LEN;
 	value++; // skip ':'
 	i = 0;
 	char c;
-	while ((c = value[i]) != '\0') {
-		if (i >= len || !is_digit(c)) return -1; // port too long or not digit
+	while ((c = value[i]) != '\0')
+	{
+		if (i >= len || !is_digit(c))
+			return -1; // port too long or not digit
 		port_temp[i] = c;
 		i++;
 	}
 	port_temp[i] = '\0';
 
-	if (is_valid_port(port_temp)) {
+	if (is_valid_port(port_temp))
+	{
 		strcpy(port, port_temp);
 		return HTTP_SUCCESS;
 	};
-
 
 	return HTTP_BAD_PORT;
 }
 
 static int http_process_weighted_list(
-	const char* value, 
+	const char *value,
 	const LookupTable *table,
-	const int max_item_len
-) {
-	if (max_item_len > MAX_HTTP_HEADER_VALUE_LEN) return -1;
-	char field_arr[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+	const int max_item_len)
+{
+	if (max_item_len > MAX_HTTP_HEADER_VALUE_LEN)
+		return -1;
+	char field_arr[MAX_HTTP_HEADER_VALUE_LEN + 1] = {0};
 
 	int i = 0;
-	for (char c = *value; ; c = *(++value)) {
-		if (i > max_item_len) return -1;
-		if (!(c == ',' || c == ';' || c == '\0')) {
+	for (char c = *value;; c = *(++value))
+	{
+		if (i > max_item_len)
+			return -1;
+		if (!(c == ',' || c == ';' || c == '\0'))
+		{
 			field_arr[i] = c;
 			i++;
 			continue;
 		}
 		field_arr[i] = '\0';
 		int res = lookup_str_int(field_arr, table, false);
-		if (res == -1) return -1;
+		if (res == -1)
+			return -1;
 
-		if (c == ';') {
+		if (c == ';')
+		{
 			// get weight
 			++value; // skip ;
-			if (!(value[0] == 'q' && value[1] == '=')) return -1; // invalid weight format
-			if (!((value[2] == '0' && value[3] == '.') || value[2] == '1')) return -1;
-			if (value[2] == '1') {
-				if (!(value[3] == '\0' || value[3] == ',')) return -1;
+			if (!(value[0] == 'q' && value[1] == '='))
+				return -1; // invalid weight format
+			if (!((value[2] == '0' && value[3] == '.') || value[2] == '1'))
+				return -1;
+			if (value[2] == '1')
+			{
+				if (!(value[3] == '\0' || value[3] == ','))
+					return -1;
 				value += 3;
 			}
-			else {
+			else
+			{
 				value += 4;
 
 				bool at_least_1_digit = false;
-				for (c = *value; c != ',' && c != '\0'; c = *(++value)) {
-					if (!is_digit(c)) return -1;
+				for (c = *value; c != ',' && c != '\0'; c = *(++value))
+				{
+					if (!is_digit(c))
+						return -1;
 					at_least_1_digit = true;
 				}
-				if (!at_least_1_digit) return -1;
+				if (!at_least_1_digit)
+					return -1;
 			}
 		}
 
-		if (*value == '\0') return 0;
+		if (*value == '\0')
+			return 0;
 
 		value++;
 		value = str_skip_spaces(value);
@@ -127,26 +154,32 @@ static int http_process_weighted_list(
 }
 
 static int http_process_list(
-	const char* value,
-	const LookupTable* table,
-	const int max_item_len
-) {
-	if (max_item_len > MAX_HTTP_HEADER_VALUE_LEN) return -1;
-	char field_arr[MAX_HTTP_HEADER_VALUE_LEN + 1] = { 0 };
+	const char *value,
+	const LookupTable *table,
+	const int max_item_len)
+{
+	if (max_item_len > MAX_HTTP_HEADER_VALUE_LEN)
+		return -1;
+	char field_arr[MAX_HTTP_HEADER_VALUE_LEN + 1] = {0};
 
 	int i = 0;
-	for (char c = *value; ; c = *(++value)) {
-		if (i > max_item_len) return -1;
-		if (!(c == ',' || c == '\0')) {
+	for (char c = *value;; c = *(++value))
+	{
+		if (i > max_item_len)
+			return -1;
+		if (!(c == ',' || c == '\0'))
+		{
 			field_arr[i] = c;
 			i++;
 			continue;
 		}
 		field_arr[i] = '\0';
 		int res = lookup_str_int(field_arr, table, false);
-		if (res == -1) return -1;
+		if (res == -1)
+			return -1;
 
-		if (*value == '\0') return 0;
+		if (*value == '\0')
+			return 0;
 
 		value++;
 		value = str_skip_spaces(value);
@@ -158,199 +191,241 @@ static int http_process_list(
 	return 0;
 }
 
-HTTPError http_process_a_im(const char* value) {
+HTTPError http_process_a_im(const char *value)
+{
 	int res = http_process_weighted_list(value, &http_a_im_lookup_table, MAX_DELTA_ALGORITHM_CHAR_LEN);
-	if (res == -1) return HTTP_BAD_A_IM;
+	if (res == -1)
+		return HTTP_BAD_A_IM;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_content_encoding(const char* value) {
+HTTPError http_process_content_encoding(const char *value)
+{
 	int res = http_process_weighted_list(value, &http_content_encoding_lookup_table, MAX_CONTENT_ENCODING_CHAR_LEN);
-	if (res == -1) return HTTP_BAD_CONTENT_ENC;
+	if (res == -1)
+		return HTTP_BAD_CONTENT_ENC;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_content_length(const char* value) {
+HTTPError http_process_content_length(const char *value)
+{
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
 	return (res != STR_TO_INT_SUCCESS) ? HTTP_BAD_CONTENT_LENGTH : HTTP_SUCCESS;
 }
 
-HTTPError http_process_connection(const char* value, HTTPRequest* req) {
+HTTPError http_process_connection(const char *value, HTTPRequest *req)
+{
 	HTTPConnection val = lookup_str_int(value, &http_connection_lookup_table, true);
-	if (val == HTTP_CON_UPGRADE && req != NULL) {
+	if (val == HTTP_CON_UPGRADE && req != NULL)
+	{
 		req->ws->has_connection = true;
 	}
 	return (val == -1) ? HTTP_BAD_CONNECTION : HTTP_SUCCESS;
 }
 
-HTTPError http_process_content_type(const char* value) {
-	char type[MAX_MEDIA_TYPE_LEN + 1] = { 0 };
+HTTPError http_process_content_type(const char *value)
+{
+	char type[MAX_MEDIA_TYPE_LEN + 1] = {0};
 	int colon = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, ';');
-	if (colon == -1) {
+	if (colon == -1)
+	{
 		int res = fill_string_char(&value, type, MAX_MEDIA_TYPE_LEN, '\0');
-		if (res == -1) return HTTP_BAD_CONTENT_TYPE;
+		if (res == -1)
+			return HTTP_BAD_CONTENT_TYPE;
 	}
 
 	int mt = lookup_str_int(type, &http_media_type_lookup_table, false);
-	if (mt == -1) return HTTP_BAD_CONTENT_TYPE;
+	if (mt == -1)
+		return HTTP_BAD_CONTENT_TYPE;
 
-	if (colon == -1) return HTTP_SUCCESS; // no boundary/charset
+	if (colon == -1)
+		return HTTP_SUCCESS; // no boundary/charset
 
 	// skip spaces
 
 	value++;
 	value = str_skip_spaces(value);
 
-	if (mt == HTTP_MT_MTP || mt == HTTP_MT_MTP_FORM_DATA) {
+	if (mt == HTTP_MT_MTP || mt == HTTP_MT_MTP_FORM_DATA)
+	{
 		// boundary
-		const char* pre = "boundary=";
+		const char *pre = "boundary=";
 		const int pre_len = 10;
-		if (!starts_with(pre, value)) return HTTP_BAD_CONTENT_TYPE;
+		if (!starts_with(pre, value))
+			return HTTP_BAD_CONTENT_TYPE;
 		value += (pre_len - 1);
 
-		char bnd[MAX_HTTP_BOUNDARY_LEN + 1] = { 0 };
+		char bnd[MAX_HTTP_BOUNDARY_LEN + 1] = {0};
 		int boundary_res = fill_string_char(&value, bnd, MAX_HTTP_BOUNDARY_LEN, '\0');
-		if (boundary_res == -1) return HTTP_BAD_CONTENT_TYPE;
+		if (boundary_res == -1)
+			return HTTP_BAD_CONTENT_TYPE;
 		return HTTP_SUCCESS;
 	}
-	else {
+	else
+	{
 		// charset
-		const char* pre = "charset=";
+		const char *pre = "charset=";
 		const int pre_len = 9;
-		if (!starts_with(pre, value)) return HTTP_BAD_CONTENT_TYPE;
+		if (!starts_with(pre, value))
+			return HTTP_BAD_CONTENT_TYPE;
 		value += (pre_len - 1);
 
-		char charset[MAX_HTTP_CHARSET_LEN + 1] = { 0 };
+		char charset[MAX_HTTP_CHARSET_LEN + 1] = {0};
 		int charset_res = fill_string_char(&value, charset, MAX_HTTP_CHARSET_LEN, '\0');
-		if (charset_res == -1) return HTTP_BAD_CONTENT_TYPE;
+		if (charset_res == -1)
+			return HTTP_BAD_CONTENT_TYPE;
 
 		int charset_int = lookup_str_int(charset, &http_charset_lookup_table, true);
-		if (charset_int == -1) return HTTP_BAD_CONTENT_TYPE;
+		if (charset_int == -1)
+			return HTTP_BAD_CONTENT_TYPE;
 
 		return HTTP_SUCCESS;
 	}
 }
 
-HTTPError http_process_date(const char* value) {
-	char day_name[3 + 1] = { 0 };
-	if (fill_string_char(&value, day_name, 3, ',') == -1) return HTTP_BAD_DATE;
+HTTPError http_process_date(const char *value)
+{
+	char day_name[3 + 1] = {0};
+	if (fill_string_char(&value, day_name, 3, ',') == -1)
+		return HTTP_BAD_DATE;
 	value++; // skip ,
-	if (value[0] == '\0') return HTTP_BAD_DATE;
+	if (value[0] == '\0')
+		return HTTP_BAD_DATE;
 	value++; // skip space
 
-	if (lookup_str_int(day_name, &day_lookup_table, false) == -1) return HTTP_BAD_DATE;
+	if (lookup_str_int(day_name, &day_lookup_table, false) == -1)
+		return HTTP_BAD_DATE;
 
-
-	char day[2 + 1] = { 0 };
-	if (fill_string_char(&value, day, 2, ' ') == -1) return HTTP_BAD_DATE;
+	char day[2 + 1] = {0};
+	if (fill_string_char(&value, day, 2, ' ') == -1)
+		return HTTP_BAD_DATE;
 	value++; // skip space
 
 	int day_num;
-	if (str_to_int(&day_num, day, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+	if (str_to_int(&day_num, day, 10) != STR_TO_INT_SUCCESS)
+		return HTTP_BAD_DATE;
 
-
-	char month[3 + 1] = { 0 };
-	if (fill_string_char(&value, month, 3, ' ') == -1) return HTTP_BAD_DATE;
+	char month[3 + 1] = {0};
+	if (fill_string_char(&value, month, 3, ' ') == -1)
+		return HTTP_BAD_DATE;
 	value++;
 
 	int month_val;
-	if ((month_val = lookup_str_int(month, &month_lookup_table, false)) == -1) return HTTP_BAD_DATE;
+	if ((month_val = lookup_str_int(month, &month_lookup_table, false)) == -1)
+		return HTTP_BAD_DATE;
 	int month_num = month_val + 1;
 
-
-	char year[4 + 1] = { 0 };
-	if (fill_string_char(&value, year, 4, ' ') == -1) return HTTP_BAD_DATE;
+	char year[4 + 1] = {0};
+	if (fill_string_char(&value, year, 4, ' ') == -1)
+		return HTTP_BAD_DATE;
 	value++;
 
 	int year_num;
-	if (str_to_int(&year_num, year, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+	if (str_to_int(&year_num, year, 10) != STR_TO_INT_SUCCESS)
+		return HTTP_BAD_DATE;
 
-	if (!is_valid_date(day_num, month_num, year_num)) return HTTP_BAD_DATE;
+	if (!is_valid_date(day_num, month_num, year_num))
+		return HTTP_BAD_DATE;
 
-
-
-	char hour[2 + 1] = { 0 };
-	if (fill_string_char(&value, hour, 2, ':') == -1) return HTTP_BAD_DATE;
+	char hour[2 + 1] = {0};
+	if (fill_string_char(&value, hour, 2, ':') == -1)
+		return HTTP_BAD_DATE;
 	value++;
 
 	int hour_num;
-	if (str_to_int(&hour_num, hour, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+	if (str_to_int(&hour_num, hour, 10) != STR_TO_INT_SUCCESS)
+		return HTTP_BAD_DATE;
 
-	if (hour_num < 0 || hour_num > 23) return HTTP_BAD_DATE;
+	if (hour_num < 0 || hour_num > 23)
+		return HTTP_BAD_DATE;
 
-
-
-
-	char minute[2 + 1] = { 0 };
-	if (fill_string_char(&value, minute, 2, ':') == -1) return HTTP_BAD_DATE;
+	char minute[2 + 1] = {0};
+	if (fill_string_char(&value, minute, 2, ':') == -1)
+		return HTTP_BAD_DATE;
 	value++;
 
 	int minute_num;
-	if (str_to_int(&minute_num, minute, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+	if (str_to_int(&minute_num, minute, 10) != STR_TO_INT_SUCCESS)
+		return HTTP_BAD_DATE;
 
-	if (minute_num < 0 || minute_num > 59) return HTTP_BAD_DATE;
+	if (minute_num < 0 || minute_num > 59)
+		return HTTP_BAD_DATE;
 
-
-
-	char second[2 + 1] = { 0 };
-	if (fill_string_char(&value, second, 2, ' ') == -1) return HTTP_BAD_DATE;
+	char second[2 + 1] = {0};
+	if (fill_string_char(&value, second, 2, ' ') == -1)
+		return HTTP_BAD_DATE;
 	value++;
 
 	int second_num;
-	if (str_to_int(&second_num, second, 10) != STR_TO_INT_SUCCESS) return HTTP_BAD_DATE;
+	if (str_to_int(&second_num, second, 10) != STR_TO_INT_SUCCESS)
+		return HTTP_BAD_DATE;
 
-	if (second_num < 0 || second_num > 59) return HTTP_BAD_DATE;
+	if (second_num < 0 || second_num > 59)
+		return HTTP_BAD_DATE;
 
-
-	if (strstr(value, "GMT") == NULL) return HTTP_BAD_DATE;
+	if (strstr(value, "GMT") == NULL)
+		return HTTP_BAD_DATE;
 
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_host(const char* value, HTTPRequest* req) {
+HTTPError http_process_host(const char *value, HTTPRequest *req)
+{
 
-	char domain[MAX_DOMAIN_LEN + 1] = { 0 };
-	char port[MAX_PORT_NUM_CHAR_LEN + 1] = { 0 };
+	char domain[MAX_DOMAIN_LEN + 1] = {0};
+	char port[MAX_PORT_NUM_CHAR_LEN + 1] = {0};
 	bool with_port = false; // needed since function is used elsewhere, here can throw away
 	HTTPError res = http_domain_port(value, domain, port, &with_port);
-	if (res != HTTP_SUCCESS) return res;
+	if (res != HTTP_SUCCESS)
+		return res;
 
 	strncpy(req->host->domain, domain, MAX_DOMAIN_LEN);
 	strncpy(req->host->port, port, MAX_PORT_NUM_CHAR_LEN);
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_accept(const char* value) {
+HTTPError http_process_accept(const char *value)
+{
 	int res = http_process_weighted_list(value, &http_media_type_lookup_table, MAX_MEDIA_TYPE_LEN);
-	if (res == -1) return HTTP_BAD_ACCEPT;
+	if (res == -1)
+		return HTTP_BAD_ACCEPT;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_accept_encoding(const char* value) {
+HTTPError http_process_accept_encoding(const char *value)
+{
 	int res = http_process_weighted_list(value, &http_accept_encoding_lookup_table, MAX_ACCEPT_ENCODING_CHAR_LEN);
-	if (res == -1) return HTTP_BAD_ACCEPT_ENC;
+	if (res == -1)
+		return HTTP_BAD_ACCEPT_ENC;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_accept_language(const char* value) {
+HTTPError http_process_accept_language(const char *value)
+{
 	// todo:
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_access_control_request_method(const char* value) {
+HTTPError http_process_access_control_request_method(const char *value)
+{
 	int res = lookup_str_int(value, &http_method_lookup_table, true);
-	if (res == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD;
-	
+	if (res == -1)
+		return HTTP_BAD_ACCESS_CONTROL_REQUEST_METHOD;
+
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_access_control_request_headers(const char* value) {
-	char val[MAX_HTTP_HEADER_FIELD_LEN + 1] = { 0 };
+HTTPError http_process_access_control_request_headers(const char *value)
+{
+	char val[MAX_HTTP_HEADER_FIELD_LEN + 1] = {0};
 	int field;
-	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1 || fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') != -1) {
-		if ((field = lookup_str_int(val, &http_req_header_field_lookup_table, true)) == -1) return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
-		if (value[0] == '\0') return HTTP_SUCCESS;
+	while (fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, ',') != -1 || fill_string_char(&value, val, MAX_HTTP_HEADER_FIELD_LEN, '\0') != -1)
+	{
+		if ((field = lookup_str_int(val, &http_req_header_field_lookup_table, true)) == -1)
+			return HTTP_BAD_ACCESS_CONTROL_REQUEST_HEADERS;
+		if (value[0] == '\0')
+			return HTTP_SUCCESS;
 		value++; // skip ,
 		value = str_skip_spaces(value);
 		memset(val, 0, MAX_HTTP_HEADER_FIELD_LEN);
@@ -359,31 +434,36 @@ HTTPError http_process_access_control_request_headers(const char* value) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_cache_control_req(const char* value) {
+HTTPError http_process_cache_control_req(const char *value)
+{
 
-	char val[MAX_HTTP_REQ_CC_LEN + 1] = { 0 };
+	char val[MAX_HTTP_REQ_CC_LEN + 1] = {0};
 	size_t len = MAX_HTTP_REQ_CC_LEN;
 	int name;
 	while (
-		fill_string_char(&value, val, len, '=') != -1
-		|| fill_string_char(&value, val, len, ',') != -1
-		|| fill_string_char(&value, val, len, '\0') != -1
-	) {
-		if ((name = lookup_str_int(val, &http_req_cache_control_lookup_table, true)) == -1) return HTTP_BAD_CACHE_CONTROL;
-		if (value[0] == '=') {
-			if (!HTTP_REQ_CC_HAS_VAL(name)) return HTTP_BAD_CACHE_CONTROL;
-			value++; // skip =
-			char sec[24 + 1] = { 0 }; // todo: change 24
+		fill_string_char(&value, val, len, '=') != -1 || fill_string_char(&value, val, len, ',') != -1 || fill_string_char(&value, val, len, '\0') != -1)
+	{
+		if ((name = lookup_str_int(val, &http_req_cache_control_lookup_table, true)) == -1)
+			return HTTP_BAD_CACHE_CONTROL;
+		if (value[0] == '=')
+		{
+			if (!HTTP_REQ_CC_HAS_VAL(name))
+				return HTTP_BAD_CACHE_CONTROL;
+			value++;				// skip =
+			char sec[24 + 1] = {0}; // todo: change 24
 			size_t sec_len = 24;
 
-			if (!(fill_string_char(&value, sec, sec_len, ',') != -1 || fill_string_char(&value, sec, sec_len, '\0') != -1)) return HTTP_BAD_CACHE_CONTROL;
-			
+			if (!(fill_string_char(&value, sec, sec_len, ',') != -1 || fill_string_char(&value, sec, sec_len, '\0') != -1))
+				return HTTP_BAD_CACHE_CONTROL;
+
 			int sec_num;
 			str_to_int_errno res = str_to_int(&sec_num, sec, 10);
-			if (res != STR_TO_INT_SUCCESS) return HTTP_BAD_CACHE_CONTROL;
+			if (res != STR_TO_INT_SUCCESS)
+				return HTTP_BAD_CACHE_CONTROL;
 		}
-				
-		if (value[0] == '\0') return HTTP_SUCCESS;
+
+		if (value[0] == '\0')
+			return HTTP_SUCCESS;
 		value++; // skip ,
 		value = str_skip_spaces(value);
 		memset(val, 0, len + 1);
@@ -392,41 +472,53 @@ HTTPError http_process_cache_control_req(const char* value) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_user_agent(const char* value) {
+HTTPError http_process_user_agent(const char *value)
+{
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_expect(const char* value) {
-	if (strncmp(value, "100-continue", 13) != 0) return HTTP_BAD_EXPECT;
+HTTPError http_process_expect(const char *value)
+{
+	if (strncmp(value, "100-continue", 13) != 0)
+		return HTTP_BAD_EXPECT;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_te(const char* value) {
+HTTPError http_process_te(const char *value)
+{
 	int res = http_process_weighted_list(value, &http_te_lookup_table, MAX_TE_LEN);
-	if (res == -1) return HTTP_BAD_TE;
+	if (res == -1)
+		return HTTP_BAD_TE;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_transfer_encoding(const char* value) {
+HTTPError http_process_transfer_encoding(const char *value)
+{
 	int res = http_process_list(value, &http_transfer_encoding_lookup_table, MAX_TRANSFER_ENCODING_LEN);
-	if (res == -1) return HTTP_BAD_TRANSFER_ENCODING;
+	if (res == -1)
+		return HTTP_BAD_TRANSFER_ENCODING;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_server(const char* value) {
-	// todo: 
+HTTPError http_process_server(const char *value)
+{
+	// todo:
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_max_forwards(const char* value) {
+HTTPError http_process_max_forwards(const char *value)
+{
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
-	if (res != STR_TO_INT_SUCCESS || val < 0) return HTTP_BAD_MAX_FORWARDS;
+	if (res != STR_TO_INT_SUCCESS || val < 0)
+		return HTTP_BAD_MAX_FORWARDS;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_tk(const char* value) {
-	if (value[0] == '\0' || value[1] != '\0') return HTTP_BAD_TK;
+HTTPError http_process_tk(const char *value)
+{
+	if (value[0] == '\0' || value[1] != '\0')
+		return HTTP_BAD_TK;
 	char c = value[0];
 	if (
 		c == '!' ||
@@ -437,37 +529,43 @@ HTTPError http_process_tk(const char* value) {
 		c == 'C' ||
 		c == 'P' ||
 		c == 'D' ||
-		c == 'U'
-		) return HTTP_SUCCESS;
+		c == 'U')
+		return HTTP_SUCCESS;
 	return HTTP_BAD_TK;
 }
 
-HTTPError http_process_upgrade(const char* value, HTTPRequest* req) {
+HTTPError http_process_upgrade(const char *value, HTTPRequest *req)
+{
 	HTTPUpgrade up = lookup_str_int(value, &http_req_upgrade_lookup_table, false);
-	if (up == -1) return HTTP_BAD_UPGRADE; // todo: support any custom prot ?
-	
-	switch (up) {
-		case HTTP_UPG_WS:
-			if (req == NULL) break;
-			req->ws->has_upgrade = true;
+	if (up == -1)
+		return HTTP_BAD_UPGRADE; // todo: support any custom prot ?
+
+	switch (up)
+	{
+	case HTTP_UPG_WS:
+		if (req == NULL)
 			break;
-		default:
+		req->ws->has_upgrade = true;
+		break;
+	default:
 	}
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
+HTTPError http_process_ws_key(const char *value, HTTPRequest *req)
+{
 	// check key is 16-bytes
 
-	if (strlen(value) != 24) return HTTP_BAD_WS_KEY;
+	if (strlen(value) != 24)
+		return HTTP_BAD_WS_KEY;
 
 	// concat with GUID
 
-	unsigned char concated[WS_KEY_LEN + WS_GUID_LEN + 1] = { 0 };
-	strcpy((char * restrict) concated, value);
-	strcpy((char * restrict) (concated + WS_KEY_LEN), WS_GUID);
+	unsigned char concated[WS_KEY_LEN + WS_GUID_LEN + 1] = {0};
+	strcpy((char *restrict)concated, value);
+	strcpy((char *restrict)(concated + WS_KEY_LEN), WS_GUID);
 
-	//printf("%s\n", concated);
+	// printf("%s\n", concated);
 
 	// hash with SHA-1
 
@@ -482,7 +580,7 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 		return HTTP_BAD_WS_KEY_CALC;
 	}
 
-	err = SHA1Input(&sha, (const unsigned char*)concated, strlen((const char *)concated));
+	err = SHA1Input(&sha, (const unsigned char *)concated, strlen((const char *)concated));
 	if (err)
 	{
 		fprintf(stderr, "SHA1Input Error %d.\n", err);
@@ -496,13 +594,13 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 		return HTTP_BAD_WS_KEY_CALC;
 	}
 
-	
 	// encode base64
 
-	char* str = b64_encode(accept, 20);
-	//printf("%s\n", str);
-	
-	if (req != NULL) {
+	char *str = b64_encode(accept, 20);
+	// printf("%s\n", str);
+
+	if (req != NULL)
+	{
 		strcpy(req->ws->accept, str);
 		req->ws->has_key = true;
 	}
@@ -511,46 +609,55 @@ HTTPError http_process_ws_key(const char* value, HTTPRequest* req) {
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_ws_version(const char* value, HTTPRequest* req) {
+HTTPError http_process_ws_version(const char *value, HTTPRequest *req)
+{
 	int val;
 	str_to_int_errno res = str_to_int(&val, value, 10);
-	if (res != STR_TO_INT_SUCCESS || val != WS_VERSION) return HTTP_BAD_WS_VERSION;
+	if (res != STR_TO_INT_SUCCESS || val != WS_VERSION)
+		return HTTP_BAD_WS_VERSION;
 	req->ws->has_version = true;
 	return HTTP_SUCCESS;
 }
 
-HTTPError http_process_origin(const char* value) {
+HTTPError http_process_origin(const char *value)
+{
 	// todo:  only processes FORMAT, not if origins allowed
 	return HTTP_SUCCESS;
 }
 
 /* Response */
 
-HTTPError http_process_cache_control_res(const char* value) {
-	char val[MAX_HTTP_RES_CC_LEN + 1] = { 0 };
+HTTPError http_process_cache_control_res(const char *value)
+{
+	char val[MAX_HTTP_RES_CC_LEN + 1] = {0};
 	HTTPResponseCacheControl name;
 	size_t len = MAX_HTTP_RES_CC_LEN;
 	while (
-		fill_string_char(&value, val, len, '=') != -1
-		|| fill_string_char(&value, val, len, ',') != -1
-		|| fill_string_char(&value, val, len, '\0') != -1
-		) {
-		if ((name = lookup_str_int(val, &http_res_cache_control_lookup_table, true)) == -1) return HTTP_BAD_CACHE_CONTROL;
-		if (value[0] == '=') {
-			if (!HTTP_RES_CC_HAS_VAL(name)) return HTTP_BAD_CACHE_CONTROL;
+		fill_string_char(&value, val, len, '=') != -1 || fill_string_char(&value, val, len, ',') != -1 || fill_string_char(&value, val, len, '\0') != -1)
+	{
+		if ((name = lookup_str_int(val, &http_res_cache_control_lookup_table, true)) == -1)
+			return HTTP_BAD_CACHE_CONTROL;
+		if (value[0] == '=')
+		{
+			if (!HTTP_RES_CC_HAS_VAL(name))
+				return HTTP_BAD_CACHE_CONTROL;
 			value++; // skip =
-			char sec[MAX_HTTP_CC_SEC_CHAR_LEN + 1] = { 0 };
+			char sec[MAX_HTTP_CC_SEC_CHAR_LEN + 1] = {0};
 			size_t sec_len = MAX_HTTP_CC_SEC_CHAR_LEN;
 
-			if (!(fill_string_char(&value, sec, sec_len, ',') != -1 || fill_string_char(&value, sec, sec_len, '\0') != -1)) return HTTP_BAD_CACHE_CONTROL;
+			if (!(fill_string_char(&value, sec, sec_len, ',') != -1 || fill_string_char(&value, sec, sec_len, '\0') != -1))
+				return HTTP_BAD_CACHE_CONTROL;
 
 			int sec_num;
 			str_to_int_errno res = str_to_int(&sec_num, sec, 10);
-			if (res != STR_TO_INT_SUCCESS) return HTTP_BAD_CACHE_CONTROL;
-			if (sec_num > MAX_HTTP_CC_SEC) return HTTP_BAD_CACHE_CONTROL; // todo: better error msg
+			if (res != STR_TO_INT_SUCCESS)
+				return HTTP_BAD_CACHE_CONTROL;
+			if (sec_num > MAX_HTTP_CC_SEC)
+				return HTTP_BAD_CACHE_CONTROL; // todo: better error msg
 		}
 
-		if (value[0] == '\0') return HTTP_SUCCESS;
+		if (value[0] == '\0')
+			return HTTP_SUCCESS;
 		value++; // skip ,
 		value = str_skip_spaces(value);
 		memset(val, 0, len + 1);

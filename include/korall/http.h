@@ -1,20 +1,6 @@
 #ifndef KORALL_HTTP__H
 #define KORALL_HTTP__H
 
-typedef enum {
-	HTTP_METHOD_UNUSED = -1,
-	HTTP_CONNECT,
-	HTTP_DELETE,
-	HTTP_GET,
-	HTTP_HEAD,
-	HTTP_OPTIONS,
-	HTTP_PATCH,
-	HTTP_POST,
-	HTTP_PUT,
-	HTTP_TRACE,
-	HTTP_METHOD_COUNT
-} HTTPMethod;
-
 typedef struct HTTPRequestStartLineInternal HTTPRequestStartLine;
 typedef struct HTTPHeaderHostInternal HTTPHeaderHost;
 typedef struct HTTPRequestWebsocketInternal HTTPRequestWebsocket;
@@ -28,7 +14,7 @@ int korall_request_header_get(const HTTPRequest* req, const char* field, char* v
 
 char* korall_request_body_get(const HTTPRequest* req);
 
-int korall_response_start_set(HTTPResponse* res, const int code);
+int korall_response_start_set(HTTPResponse* res, const HTTPRequest* req, const int code);
 
 int korall_response_body_set(HTTPResponse* res, const char* body);
 

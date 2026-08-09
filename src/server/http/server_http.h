@@ -2,8 +2,8 @@
 #define KORALL_SERVER_HTTP_H
 
 #include <stdlib.h>
-#include "http/http_internal.h"
-#include "http/websocket/websocket_internal.h"
+#include "http/http.h"
+#include "http/websocket/websocket.h"
 #include "array/array.h"
 #include "korall/korall.h"
 #include "thread/thread.h"
@@ -18,7 +18,7 @@
 #define HTTP_ROUTES_CAPACITY 100
 #define WS_ROUTES_CAPACITY 100
 
-#define MAX_THREADS 32 // todo: get system ?
+#define MAX_THREADS 64 // todo: get system ?
 
 typedef struct
 {
@@ -32,11 +32,12 @@ typedef struct
 	unsigned long gui_thread_id;
 } ProcessDataArgs;
 
-typedef struct {
+typedef struct
+{
 	const SOCKET socket;
-	const char* data;
+	const char *data;
 	size_t data_byte_len;
-	const SSL* ssl;
+	const SSL *ssl;
 } IncomingRequestInfo;
 
 //
@@ -45,24 +46,22 @@ HTTPRoute *http_route_select(HTTPRequest *req, const Array *routes);
 
 WebsocketRoute *ws_route_select(HTTPRequest *req, const Array *routes);
 
-bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig* config);
+bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig *config);
 
 bool websocket_process_data(
-	const IncomingRequestInfo* req_info,
+	const IncomingRequestInfo *req_info,
 	const WebsocketRoute *route,
-	const MessageQueueWriteInfo *mqi
-);
+	const MessageQueueWriteInfo *mqi);
 
-int route_not_found(HTTPResponse *res, const ServerConfig *config);
+int route_not_found(HTTPResponse *res, const HTTPRequest *req, const ServerConfig *config);
 
 bool http_process_request(
-	const IncomingRequestInfo* req_info,
+	const IncomingRequestInfo *req_info,
 	const Array *routes,
 	const Array *ws_routes,
 	bool *is_websocket,
 	WebsocketRoute **websocket_route,
-	const MessageQueueWriteInfo* mqi
-);
+	const MessageQueueWriteInfo *mqi);
 
 SOCKET init_listen_socket();
 

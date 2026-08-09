@@ -1,4 +1,4 @@
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "cJSON/cJSON.h"
 #include "server/http/server_http.h"
 #include "lookup/lookup_tables.h"
@@ -50,13 +50,13 @@ void config_free(ServerConfig *config)
 static ServerConfig *config_alloc(ServerConfig *config)
 {
 
-	config->domain.chars = safe_calloc(1, MAX_DOMAIN_LEN);
+	config->domain.chars = exit_calloc(1, MAX_DOMAIN_LEN);
 	config->domain.size = MAX_DOMAIN_LEN;
 
-	config->port.chars = safe_calloc(1, MAX_PORT_NUM_CHAR_LEN);
+	config->port.chars = exit_calloc(1, MAX_PORT_NUM_CHAR_LEN);
 	config->port.size = MAX_PORT_NUM_CHAR_LEN;
 
-	config->name.chars = safe_calloc(1, MAX_SERVER_NAME_LEN);
+	config->name.chars = exit_calloc(1, MAX_SERVER_NAME_LEN);
 	config->name.size = MAX_SERVER_NAME_LEN;
 
 	Array *arr = (Array *)array_create_heap(sizeof(char *), MAX_ALLOW_ORIGINS);
@@ -165,7 +165,7 @@ static void allow_origins_add(const char *str, va_list args)
 		KORALL_LOG(LOG_WARN, "failed to load origin from \"allow_origins\", max size is %d\n", MAX_DOMAIN_LEN);
 		return;
 	}
-	char *origin = safe_calloc(1, str_len + 1);
+	char *origin = exit_calloc(1, str_len + 1);
 	strncpy(origin, str, str_len);
 	int res = array_push(origins_arr, &origin);
 	if (res == -1)
@@ -183,7 +183,7 @@ static void allow_headers_add(const char *str, va_list args)
 		KORALL_LOG(LOG_WARN, "failed to load header from \"allow_headers\", max size is %d\n", MAX_HTTP_HEADER_FIELD_LEN);
 		return;
 	}
-	char *header = safe_calloc(1, str_len + 1);
+	char *header = exit_calloc(1, str_len + 1);
 	strncpy(header, str, str_len);
 	int res = array_push(arr, &header);
 	if (res == -1)

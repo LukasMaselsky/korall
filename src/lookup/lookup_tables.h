@@ -2,7 +2,7 @@
 #define LOOKUP_TABLES_H
 
 #include "utils/utils.h"
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "korall/websocket.h"
 
 #define HTTP_METHOD_TABLE_COUNT HTTP_METHOD_COUNT
@@ -24,19 +24,21 @@
 #define DAY_TABLE_COUNT DAY_COUNT
 #define MONTH_TABLE_COUNT MONTH_COUNT
 
-typedef struct {
+typedef struct
+{
     int integer;
-    char* string;
+    char *string;
 } LookupEntry;
 
-typedef struct {
-    const LookupEntry* entries;
+typedef struct
+{
+    const LookupEntry *entries;
     const size_t size;
 } LookupTable;
 
-int lookup_str_int(const char* key, const LookupTable* table, const bool case_insensitive);
+int lookup_str_int(const char *key, const LookupTable *table, const bool case_insensitive);
 
-const char* lookup_int_str(const int key, const LookupTable* table);
+const char *lookup_int_str(const int key, const LookupTable *table);
 
 extern const LookupTable http_method_lookup_table;
 extern const LookupTable http_req_header_field_lookup_table;

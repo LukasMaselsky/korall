@@ -4,13 +4,13 @@
 #include "utils/utils.h"
 #include "config/config.h"
 #include "korall/websocket.h"
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "array/array.h"
 
 typedef struct
 {
 	const char *path;
-	void (*const callback)(const WebsocketFrame *, WebsocketFrame*);
+	void (*const callback)(const WebsocketFrame *, WebsocketFrame *);
 } WebsocketRoute;
 
 typedef struct
@@ -19,7 +19,6 @@ typedef struct
 	const HTTPMethod method;
 	void (*const callback)(const HTTPRequest *, HTTPResponse *);
 } HTTPRoute;
-
 
 Array *http_routes_get();
 

@@ -1,5 +1,5 @@
 #if defined HEADERS
-#include "http/http_internal.h"
+#include "http/http.h"
 #include "lookup/lookup_tables.h"
 #include "arena/arena.h"
 #elif defined TESTS

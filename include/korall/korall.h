@@ -13,7 +13,7 @@ void korall_init(const char* config_path, const FILE* log_file);
 
 void korall_run();
 
-void korall_http_routes_add(const char* path, const HTTPMethod method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
+void korall_http_routes_add(const char* path, const char* method, void (* const callback)(const HTTPRequest*, HTTPResponse*));
 
 void korall_ws_routes_add(const char* path, void (* const callback)(const WebsocketFrame*));
 
