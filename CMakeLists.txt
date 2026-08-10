@@ -10,6 +10,7 @@ find_package(glad CONFIG REQUIRED)
 
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_library(${project_name} STATIC ${PROJECT_SOURCES})
+target_compile_definitions(${project_name} PUBLIC KORALL_RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
 
 # Build type flag
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

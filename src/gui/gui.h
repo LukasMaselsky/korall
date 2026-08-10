@@ -3,8 +3,7 @@
 
 #include <stdlib.h>
 #include "utils/utils.h"
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include "gl/gl.h"
 #include "thread/thread.h"
 #include "msg_queue/msg_queue.h"
 
