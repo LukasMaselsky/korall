@@ -86,15 +86,6 @@ int socket_close(SOCKET sock)
     return status;
 }
 
-void socket_print(SOCKET sock)
-{
-    printf("%llu", (unsigned long long)sock);
-}
-
-void socket_log(SOCKET sock) {
-    KORALL_LOG(LOG_PLAIN, "%llu", (unsigned long long)sock);
-}
-
 SOCKET socket_create(struct addrinfo *res)
 {
     return socket(res->ai_family, res->ai_socktype, res->ai_protocol);

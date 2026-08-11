@@ -13,6 +13,8 @@
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr
 
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
 static SSL_CTX *ssl_ctx_init(ServerConfig *config)
 {
 	SSL_CTX *ssl_ctx = NULL;
@@ -64,6 +66,7 @@ static void cleanup(SOCKET server_sock, SSL_CTX *ssl_ctx, ServerConfig *config)
 	{
 		SSL_CTX_free(ssl_ctx);
 	}
+	logging_cleanup();
 	openssl_cleanup();
 	Array *routes = http_routes_get();
 	Array *ws_routes = ws_routes_get();
@@ -76,7 +79,6 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX 
 	ThreadState threads[MAX_THREADS] = {0};
 	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
 
-	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 	Array *http_routes = http_routes_get();
 	Array *ws_routes = ws_routes_get();
 
@@ -195,10 +197,11 @@ void korall_run()
 
 	SOCKET server_sock = server_socket_init();
 
-	THREAD_T gui_thread;
 	unsigned int gui_thread_id = 0;
+#if 0
+	THREAD_T gui_thread;
 	gui_run(&gui_thread, &gui_thread_id);
-
+#endif
 	server_run(gui_thread_id, server_sock, ssl_ctx);
 
 	cleanup(server_sock, ssl_ctx, g_config);

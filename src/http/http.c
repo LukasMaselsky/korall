@@ -768,9 +768,7 @@ int http_response_send(const SOCKET inc_sock, const HTTPResponse *res)
 	int r = socket_send_secure(inc_sock, data, strlen(data), 0, res->ssl);
 	if (r == -1)
 	{
-		KORALL_LOG(LOG_ERR, "couldn't send data to ");
-		socket_log(inc_sock);
-		KORALL_LOG(LOG_PLAIN, "\n");
+		KORALL_LOG(LOG_ERR, "couldn't send data to %llu\n", (unsigned long long)inc_sock);
 	}
 	arena_free(&res_full_arena);
 	return 0;

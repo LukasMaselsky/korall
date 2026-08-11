@@ -140,9 +140,7 @@ bool websocket_process_data(
 	const WebsocketRoute *route,
 	const MessageQueueWriteInfo *mqi)
 {
-	KORALL_LOG(LOG_INFO, "'");
-	websocket_frame_print_hex((uint8_t *)req_info->data, req_info->data_byte_len);
-	KORALL_LOG(LOG_PLAIN, "'\n");
+	websocket_frame_log_hex((uint8_t *)req_info->data, req_info->data_byte_len);
 
 	bool should_close = false;
 
@@ -665,17 +663,14 @@ void process_incoming_data(void *arg)
 		int bytes_read = socket_receive_secure(inc_sock, buffer, buffer_len - 1, 0, ssl);
 		if (bytes_read <= 0)
 		{
+			unsigned long long socket_llu = (unsigned long long)inc_sock;
 			if (bytes_read == 0)
 			{
-				KORALL_LOG(LOG_INFO, "socket ");
-				socket_log(inc_sock);
-				KORALL_LOG(LOG_PLAIN, " closed connection\n");
+				KORALL_LOG(LOG_INFO, "socket %llu closed connection\n", socket_llu);
 			}
 			else
 			{
-				KORALL_LOG(LOG_ERR, "couldn't read from ");
-				socket_log(inc_sock);
-				KORALL_LOG(LOG_PLAIN, "\n");
+				KORALL_LOG(LOG_ERR, "couldn't read from %llu\n", socket_llu);
 			}
 
 			socket_close(inc_sock);
@@ -683,9 +678,7 @@ void process_incoming_data(void *arg)
 		}
 
 		buffer[bytes_read] = '\0';
-		KORALL_LOG(LOG_INFO, "received data from ");
-		socket_log(inc_sock);
-		KORALL_LOG(LOG_PLAIN, "\n");
+		KORALL_LOG(LOG_INFO, "received data from %llu\n", (unsigned long long)inc_sock);
 
 		IncomingRequestInfo req_info = {.socket = inc_sock, .data = buffer, .data_byte_len = bytes_read, .ssl = ssl};
 

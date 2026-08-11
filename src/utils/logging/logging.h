@@ -25,6 +25,8 @@ typedef enum {
 
 void logging_init(FILE* file);
 
+void logging_cleanup();
+
 void log_msg(LogLevel log_level, const char* const format, ...);
 
 

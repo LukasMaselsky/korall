@@ -3,14 +3,32 @@
 #include "socket/socket.h"
 #include "arena/arena.h"
 
-void websocket_frame_print_hex(uint8_t *frame, size_t frame_length)
+void websocket_frame_log_hex(uint8_t *frame, size_t frame_length) {
+	size_t len = DATA_BYTE_LEN_TO_HEX(frame_length);
+	char *out = exit_calloc(1, len + 1);
+	if (websocket_frame_to_hex(frame, frame_length, out, len) == 0) {
+		KORALL_LOG(LOG_INFO, "'%s'\n", out);
+	}
+	free(out);
+}
+
+int websocket_frame_to_hex(uint8_t *frame, size_t frame_length, char *out, size_t out_len)
 {
+	// frame_length = 3 => xx_xx_xx => (2 * 3) + (3 - 1) = 8
+	if (out_len < DATA_BYTE_LEN_TO_HEX(frame_length)) {
+		KORALL_LOG(LOG_ERR, "websocket_frame_to_hex: out_len too small\n");
+		return -1;
+	} 
+	char *p = out;
 	for (size_t i = 0; i < frame_length; i++)
 	{
-		if (i > 0)
-			KORALL_LOG(LOG_PLAIN, " ");
-		KORALL_LOG(LOG_PLAIN, "%02x", frame[i]);
+		if (i > 0) {
+			p += sprintf(p, " %02x", frame[i]);
+			continue;
+		}
+		p += sprintf(p, "%02x", frame[i]);
 	}
+	return 0;
 }
 
 /**
@@ -216,16 +234,12 @@ int websocket_frame_send(const SOCKET socket, const WebsocketFrame *frame)
 
 	size_t data_len = websocket_frame_encode(frame, data);
 
-	KORALL_LOG(LOG_INFO, "'");
-	websocket_frame_print_hex(data, data_len);
-	KORALL_LOG(LOG_PLAIN, "'\n");
+	websocket_frame_log_hex(data, data_len);
 
 	int r = socket_send_secure(socket, data, strlen((const char *)data), 0, frame->ssl);
 	if (r == -1)
 	{
-		KORALL_LOG(LOG_ERR, "failed to send data to ");
-		socket_log(socket);
-		KORALL_LOG(LOG_PLAIN, "\n");
+		KORALL_LOG(LOG_ERR, "failed to send data to %llu\n", (unsigned long long)socket);
 	}
 	arena_free(&data_arena);
 

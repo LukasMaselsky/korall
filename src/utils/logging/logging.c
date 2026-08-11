@@ -1,12 +1,46 @@
 #include "logging.h"
 #include "utils/colours/colours.h"
-
-// todo: can't log, race conditions
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 static FILE* g_log_file = NULL;
 
+#ifdef _WIN32
+static CRITICAL_SECTION log_cs;
+#else
+static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 void logging_init(FILE* file) {
+    #ifdef _WIN32
+    InitializeCriticalSection(&log_cs);
+    #endif
     g_log_file = file;
+}
+
+void logging_cleanup() {
+    #ifdef _WIN32
+    DeleteCriticalSection(&log_cs);
+    #endif
+}
+
+static void logging_lock() {
+#ifdef _WIN32
+    EnterCriticalSection(&log_cs);
+#else
+    pthread_mutex_lock(&log_mutext);
+#endif
+}
+
+static void logging_unlock() {
+#ifdef _WIN32
+    LeaveCriticalSection(&log_cs);
+#else
+    pthread_mutex_unlock(&log_mutext);
+#endif
 }
 
 void log_msg(LogLevel log_level, const char* const format, ...) {
@@ -30,6 +64,8 @@ void log_msg(LogLevel log_level, const char* const format, ...) {
         default:
     }
 
+    logging_lock();
+    
     if (log_level != LOG_PLAIN) {
         time_t timer;
         char buffer[26] = { 0 };
@@ -44,4 +80,6 @@ void log_msg(LogLevel log_level, const char* const format, ...) {
 
     vfprintf(g_log_file, format, argp);
     va_end(argp);
+
+    logging_unlock();
 }
