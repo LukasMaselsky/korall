@@ -659,11 +659,11 @@ void process_incoming_data(void *arg)
 
 		if (is_websocket && ws_route != NULL)
 		{
-			close = websocket_process_data(&req_info, ws_route, &mqi);
+			close = websocket_process_data(&req_info, ws_route);
 		}
 		else
 		{
-			close = http_process_request(&req_info, http_routes, ws_routes, &is_websocket, &ws_route, &mqi);
+			close = http_process_request(&req_info, http_routes, ws_routes, &is_websocket, &ws_route);
 		}
 		if (close)
 			break;
