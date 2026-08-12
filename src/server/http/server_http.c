@@ -13,7 +13,7 @@
 */
 HTTPRoute *http_route_select(HTTPRequest *req, const Array *routes)
 {
-	if (routes == NULL)
+	if (req == NULL || routes == NULL)
 		return NULL;
 	const char *path = req->start_line->request_target;
 	char sub_path[MAX_HTTP_URL_LEN + 1] = {0};
@@ -41,7 +41,7 @@ HTTPRoute *http_route_select(HTTPRequest *req, const Array *routes)
 
 WebsocketRoute *ws_route_select(HTTPRequest *req, const Array *routes)
 {
-	if (routes == NULL)
+	if (req == NULL || routes == NULL)
 		return NULL;
 	const char *path = req->start_line->request_target;
 	char sub_path[MAX_HTTP_URL_LEN + 1] = {0};
