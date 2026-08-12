@@ -3,9 +3,7 @@
 #include "http/http.h"
 #include "arena/arena.h"
 #include "lookup/lookup_tables.h"
-#include "cJSON/cJSON.h"
 #include "config/config.h"
-#include "gui/gui.h"
 #include "server/http/server_http.h"
 #include "http/tls/tls.h"
 #include "http/routes/http_routes.h"
@@ -74,7 +72,7 @@ static void cleanup(SOCKET server_sock, SSL_CTX *ssl_ctx, ServerConfig *config)
 	config_free(config);
 }
 
-static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX *ssl_ctx)
+static void server_run(SOCKET server_sock, SSL_CTX *ssl_ctx)
 {
 	ThreadState threads[MAX_THREADS] = {0};
 	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
@@ -89,8 +87,8 @@ static void server_run(unsigned long gui_thread_id, SOCKET server_sock, SSL_CTX 
 		.thread_num = 0,
 		.thread_arr = &thread_arr,
 		.lock = &lock,
-		.ssl = NULL,
-		.gui_thread_id = gui_thread_id};
+		.ssl = NULL
+	};
 
 	SOCKET sock;
 
@@ -197,12 +195,7 @@ void korall_run()
 
 	SOCKET server_sock = server_socket_init();
 
-	unsigned int gui_thread_id = 0;
-#if 0
-	THREAD_T gui_thread;
-	gui_run(&gui_thread, &gui_thread_id);
-#endif
-	server_run(gui_thread_id, server_sock, ssl_ctx);
+	server_run(server_sock, ssl_ctx);
 
 	cleanup(server_sock, ssl_ctx, g_config);
 

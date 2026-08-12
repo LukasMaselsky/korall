@@ -1,5 +1,4 @@
 #include "http/http.h"
-#include "cJSON/cJSON.h"
 #include "server/http/server_http.h"
 #include "lookup/lookup_tables.h"
 #include <stdarg.h>

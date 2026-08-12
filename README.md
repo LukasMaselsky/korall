@@ -6,6 +6,7 @@ HTTP web server library in C.
 
 - [Features](#features)
 - [Prerequisites](#prerequisites)
+- [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Build](#build)
 - [Examples](#examples)
@@ -18,6 +19,11 @@ HTTP web server library in C.
 ## Prerequisites
 
 - CMake
+
+## Dependencies
+
+- cJSON
+- OpenSSL
 
 ## Installation
 

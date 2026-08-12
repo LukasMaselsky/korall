@@ -10,7 +10,6 @@
 #include "http/routes/http_routes.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include "msg_queue/msg_queue.h"
 
 #define READ_BUFFER_LEN KILOBYTE
 #define RESPONSE_BUFFER_LEN KILOBYTE
@@ -29,7 +28,6 @@ typedef struct
 	Array *http_routes;
 	Array *ws_routes;
 	SSL *ssl;
-	unsigned long gui_thread_id;
 } ProcessDataArgs;
 
 typedef struct
@@ -50,8 +48,8 @@ bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig *c
 
 bool websocket_process_data(
 	const IncomingRequestInfo *req_info,
-	const WebsocketRoute *route,
-	const MessageQueueWriteInfo *mqi);
+	const WebsocketRoute *route
+);
 
 int route_not_found(HTTPResponse *res, const HTTPRequest *req, const ServerConfig *config);
 
@@ -60,8 +58,8 @@ bool http_process_request(
 	const Array *routes,
 	const Array *ws_routes,
 	bool *is_websocket,
-	WebsocketRoute **websocket_route,
-	const MessageQueueWriteInfo *mqi);
+	WebsocketRoute **websocket_route
+);
 
 SOCKET init_listen_socket();
 

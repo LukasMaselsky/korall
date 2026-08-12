@@ -3,11 +3,9 @@
 #include "http/http.h"
 #include "arena/arena.h"
 #include "lookup/lookup_tables.h"
-#include "cJSON/cJSON.h"
 #include "http/websocket/websocket.h"
 #include "array/array.h"
 #include "config/config.h"
-#include "gui/gui.h"
 #include "thread/thread.h"
 
 /*
@@ -137,8 +135,8 @@ static int websocket_process_data_construct_out(
  */
 bool websocket_process_data(
 	const IncomingRequestInfo *req_info,
-	const WebsocketRoute *route,
-	const MessageQueueWriteInfo *mqi)
+	const WebsocketRoute *route
+)
 {
 	websocket_frame_log_hex((uint8_t *)req_info->data, req_info->data_byte_len);
 
@@ -174,10 +172,6 @@ bool websocket_process_data(
 		in_wsf->ssl = req_info->ssl;
 		// incoming parse success
 
-		// post incoming to queue
-
-		Message msg = {.req = NULL, .res = NULL, .ws_frame = in_wsf, .type = MSG_TYPE_WS_FRAME};
-		msg_queue_post(mqi->mq, mqi->thread_id, &msg);
 
 		if (websocket_process_data_construct_out(
 				in_wsf,
@@ -190,11 +184,6 @@ bool websocket_process_data(
 			return should_close;
 		}
 	}
-
-	// post outgoing to queue
-
-	Message msg = {.req = NULL, .res = NULL, .ws_frame = out_wsf, .type = MSG_TYPE_WS_FRAME};
-	msg_queue_post(mqi->mq, mqi->thread_id, &msg);
 
 	KORALL_LOG(LOG_INFO, "sending ws frame response\n");
 
@@ -412,8 +401,8 @@ bool http_process_request(
 	const Array *routes,
 	const Array *ws_routes,
 	bool *is_websocket,
-	WebsocketRoute **websocket_route,
-	const MessageQueueWriteInfo *mqi)
+	WebsocketRoute **websocket_route
+)
 {
 	KORALL_LOG(LOG_INFO, "'%s'\n", req_info->data);
 
@@ -447,11 +436,6 @@ bool http_process_request(
 
 		// request parse success
 
-		// post req to queue
-
-		Message msg = { .req = req, .res = NULL, .ws_frame = NULL, .type = MSG_TYPE_REQ };
-		msg_queue_post(mqi->mq, mqi->thread_id, &msg);
-
 		// build response
 
 		if (http_process_request_construct_response(
@@ -467,10 +451,7 @@ bool http_process_request(
 		}
 	}
 
-	// post res to queue
 
-	Message msg = {.req = NULL, .res = res, .ws_frame = NULL, .type = MSG_TYPE_RES};
-	msg_queue_post(mqi->mq, mqi->thread_id, &msg);
 
 	KORALL_LOG(LOG_INFO, "sending HTTP response\n");
 
@@ -642,7 +623,6 @@ void process_incoming_data(void *arg)
 	pthread_mutex_t *lock = p_args->lock;
 	Array *thread_arr = p_args->thread_arr;
 	SSL *ssl = p_args->ssl;
-	unsigned long gui_thread_id = p_args->gui_thread_id;
 
 	// todo: change to heap for larger buffer
 	char buffer[READ_BUFFER_LEN] = {0}; // buffer for client data
@@ -652,11 +632,6 @@ void process_incoming_data(void *arg)
 	WebsocketRoute *ws_route = NULL;
 	bool close = false;
 
-	// open queue
-
-	mqd_t mq = msg_queue_open(GUI_MSG_QUEUE_NAME, MSG_Q_WRITE);
-
-	const MessageQueueWriteInfo mqi = {.mq = mq, .thread_id = gui_thread_id};
 
 	while (true)
 	{
@@ -703,7 +678,6 @@ void process_incoming_data(void *arg)
 	array_set(thread_arr, thread_num, (void *)&new_ts);
 #endif
 	free(arg);
-	msg_queue_close(mq);
 	socket_close(inc_sock);
 #ifndef _WIN32
 	pthread_mutex_unlock(lock);

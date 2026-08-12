@@ -5,8 +5,7 @@ project(${project_name} LANGUAGES C)
 
 # 3rd party (vcpkg)
 find_package(OpenSSL CONFIG REQUIRED)
-find_package(glfw3 CONFIG REQUIRED)
-find_package(glad CONFIG REQUIRED)
+find_package(cjson CONFIG REQUIRED)
 
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_library(${project_name} STATIC ${PROJECT_SOURCES})
@@ -24,7 +23,7 @@ endif()
 # PUBLIC to allow examples access to it
 target_include_directories(${project_name} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/")
 target_include_directories(${project_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
-target_link_libraries(${project_name} PUBLIC glfw glad::glad OpenSSL::SSL)
+target_link_libraries(${project_name} PUBLIC cjson OpenSSL::SSL)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests/")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/examples/http/")
