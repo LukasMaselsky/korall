@@ -9,13 +9,7 @@
       "name": "base",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": {
-          "value": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
-          "type": "FILEPATH"
-        }
-      }
+      "binaryDir": "${sourceDir}/out/build/${presetName}"
     },
     {
       "name": "base-debug",

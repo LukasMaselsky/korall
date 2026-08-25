@@ -1,13 +1,13 @@
 # korall
 
-HTTP web server library in C.
+HTTP and WebSocket server library in C.
 
 ## Table of Contents
 
 - [Features](#features)
-- [Prerequisites](#prerequisites)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
+	- [Installing OpenSSL](#installing-openssl)
 - [Build](#build)
 - [Examples](#examples)
 - [Tests](#tests)
@@ -16,31 +16,42 @@ HTTP web server library in C.
 
 ## Features
 
-## Prerequisites
-
-- CMake
-
 ## Dependencies
 
+- Standard C toolchain
 - cJSON
 - OpenSSL
 
 ## Installation
 
+### Installing OpenSSL
+
+#### Windows
+
+OpenSSL can be installed through the [SLP](https://slproweb.com/products/Win32OpenSSL.html?ref=passwork.pro/blog) installer.
+
+NOTE: the **full** version, not the light version, of OpenSSL should be installed.
+
+#### Linux
+
+Use your appropriate package manager to install OpenSSL.
+
+On Debian/Ubuntu systems this would be:
+
+```sh
+sudo apt-get install libssl-dev
+```
+
+## Build
+
 1. Clone repo
 
 	```sh
-	git clone --recurse-submodules https://github.com/LukasMaselsky/korall.git
+	git clone https://github.com/LukasMaselsky/korall.git
 	```
 
-2. vcpkg installation
 
-	```sh
-	./vcpkg/bootstrap-vcpkg.bat
-	# or
-	./vcpkg/bootstrap-vcpkg.sh
-	```
-3. CMake
+2. CMake
 
 	```sh
 	mkdir out
@@ -48,22 +59,6 @@ HTTP web server library in C.
 	cmake ..
 	```
 
-## Build
-
-### CMake
-
-```bash
-mkdir build
-cd build
-cmake ..
-make
-```
-
-### Make
-
-```bash
-make
-```
 
 ## Examples
 

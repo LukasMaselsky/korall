@@ -2,7 +2,7 @@
 #define KORALL_CONFIG_H
 
 #include "utils/utils.h"
-#include <cjson/cJSON.h>
+#include <cJSON.h>
 #include "socket/socket.h"
 #include "array/array.h"
 

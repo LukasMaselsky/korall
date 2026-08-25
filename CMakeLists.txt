@@ -3,9 +3,12 @@ set(CMAKE_C_STANDARD 23)
 set(project_name "korall")
 project(${project_name} LANGUAGES C)
 
-# 3rd party (vcpkg)
-find_package(OpenSSL CONFIG REQUIRED)
-find_package(cjson CONFIG REQUIRED)
+# 3rd party
+find_package(OpenSSL REQUIRED COMPONENTS SSL Crypto)
+if (NOT OpenSSL_FOUND)
+	message(FATAL_ERROR "OpenSSL installation not found")
+endif()
+add_subdirectory(deps/cjson)
 
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_library(${project_name} STATIC ${PROJECT_SOURCES})
