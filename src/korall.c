@@ -76,7 +76,7 @@ static void cleanup(SOCKET server_sock, SSL_CTX *ssl_ctx, ServerConfig *config)
 static void server_run(SOCKET server_sock, SSL_CTX *ssl_ctx)
 {
 	ThreadState threads[MAX_THREADS] = {0};
-	Array thread_arr = array_create_stack(threads, sizeof(ThreadState), 0, MAX_THREADS);
+	Array thread_arr = array_create_stack((uint8_t*)threads, sizeof(ThreadState), 0, MAX_THREADS);
 
 	Array *http_routes = http_routes_get();
 	Array *ws_routes = ws_routes_get();
@@ -127,7 +127,7 @@ static void server_run(SOCKET server_sock, SSL_CTX *ssl_ctx)
 
 //
 
-void korall_http_routes_add(const char *path, const char *method, void (*const callback)(const HTTPRequest *, HTTPResponse *))
+void korall_http_routes_add(const char *path, const char *method, KorallHTTPRoute callback)
 {
 	Array *routes = http_routes_get();
 	if (path == NULL)
@@ -153,7 +153,7 @@ void korall_http_routes_add(const char *path, const char *method, void (*const c
 	}
 }
 
-void korall_ws_routes_add(const char *path, void (*const callback)(const WebsocketFrame *))
+void korall_ws_routes_add(const char *path, KorallWSRoute callback)
 {
 	Array *routes = ws_routes_get();
 	if (path == NULL)
