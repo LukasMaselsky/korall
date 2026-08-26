@@ -18,7 +18,7 @@ DEPFILES=$(patsubst %.c,%.d,$(CFILES))
 all: $(BINARY)
 
 $(BINARY): $(OBJECTS)
-	$(CC) $(LIBLINKS) -o $@ $^
+	$(CC) $(LIBLINKS) -pthread -o $@ $^
 
 %.o:%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
