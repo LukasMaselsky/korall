@@ -7,6 +7,7 @@
 #include "server/http/server_http.h"
 #include "http/tls/tls.h"
 #include "http/routes/http_routes.h"
+#include "utils/utils.h"
 
 // https://stackoverflow.com/questions/58885831/what-does-reaping-children-imply
 // https://stackoverflow.com/questions/23401147/what-is-the-difference-between-struct-addrinfo-and-struct-sockaddr

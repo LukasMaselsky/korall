@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <time.h>
 #include <inttypes.h>
-#include <process.h>
 #include <stdarg.h>
 
 #include "logging/logging.h"

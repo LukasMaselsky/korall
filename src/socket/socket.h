@@ -55,7 +55,7 @@ typedef struct {
 #include <sys/wait.h>
 
 #define INVALID_SOCKET (-1)
-typedef int SOCKET
+typedef int SOCKET;
 
 #endif
 

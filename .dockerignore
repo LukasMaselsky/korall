@@ -1,0 +1,15 @@
+examples/out
+library/out
+bin/
+build/
+examples/.vs
+library/.vs
+/.vs
+.idea/
+CMakeSettings.json
+*.o
+*.d
+*.crt
+*.key
+
+logs.txt

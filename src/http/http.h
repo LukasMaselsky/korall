@@ -541,6 +541,8 @@ HTTPError http_request_process_header(const char** str, HTTPRequest* req);
 
 HTTPError http_request_process_headers(const char** str, HTTPRequest* req);
 
+HTTPError http_request_process_protocol(const char** str, HTTPRequest* req);
+
 HTTPError http_request_process_body(const char* str, HTTPRequest* req);
 
 HTTPError http_request_process_method(const char** str, HTTPRequest* req);
