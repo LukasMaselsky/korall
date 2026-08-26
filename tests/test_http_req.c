@@ -415,7 +415,7 @@ TEST("http_process_method")
 
 TEST("http_get_current_date")
 {
-	const char buf[MAX_DATE_STR_LEN + 1];
+	char buf[MAX_DATE_STR_LEN + 1];
 	String str = {.chars = buf, .size = MAX_DATE_STR_LEN + 1};
 	http_get_current_date(&str);
 	// todo
@@ -430,7 +430,7 @@ TEST("http_verify_origin")
 TEST("http_allowed_methods")
 {
 	int data[100] = {0};
-	Array arr = array_create_stack(data, sizeof(int), 0, 30);
+	Array arr = array_create_stack((uint8_t*)data, sizeof(int), 0, 30);
 	int res;
 
 	res = http_allowed_methods(NULL, NULL, 0);
@@ -454,7 +454,7 @@ TEST("http_allowed_methods")
 TEST("http_allowed_headers")
 {
 	int data[1000] = {0};
-	Array arr = array_create_stack(data, sizeof(char *), 0, 30);
+	Array arr = array_create_stack((uint8_t*)data, sizeof(char *), 0, 30);
 	int res;
 
 	res = http_allowed_headers(NULL, NULL, 0);

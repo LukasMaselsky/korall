@@ -4,12 +4,12 @@
 
 TEST("array_create_stack") {
 	int data[30] = { 0 };
-	Array arr = array_create_stack(data, sizeof(int), 0, 30);
+	Array arr = array_create_stack((uint8_t*)data, sizeof(int), 0, 30);
 	ASSERT(arr.capacity == 30);
 	ASSERT(arr.size == 0);
 	ASSERT(arr.element_size == sizeof(int));
 	ASSERT(arr.on_heap == false);
-	ASSERT(arr.data == data);
+	ASSERT(arr.data == (uint8_t*)data);
 }
 
 TEST("array_create_heap") {

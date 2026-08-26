@@ -10,7 +10,7 @@ TEST("korall_request_header_get")
 	HTTPRequest *req = http_request_init(&arena);
 
 	char value[1000] = {0};
-	const char *str;
+	char *str;
 	int res;
 
 	str = "Host: localhost:3500\r\nUser-Agent: curl / 8.17.0\r\nAccept: */*\r\nOrigin: http://localhost:3000\r\nAccess-Control-Request-Method: POST";
