@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 	#else
 
 	// with Make
-	korall_init("./resources/", NULL);
+	korall_init("./resources/", stdout);
 
 	#endif
 

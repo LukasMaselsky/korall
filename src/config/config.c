@@ -4,11 +4,11 @@
 #include <stdarg.h>
 
 static char *g_default_allow[1] = {"*"};
-static Array g_default_allow_arr = array_create_stack(&g_default_allow, sizeof(char *), 1, 1);
+static Array g_default_allow_arr = array_create_stack((uint8_t*)(&g_default_allow), sizeof(char *), 1, 1);
 
 // made int Array to easily remove duplicates when loading
 static int g_default_allow_methods[1] = {ANY_ALLOW_METHODS}; // represents "*"
-static Array g_default_allow_methods_arr = array_create_stack(&g_default_allow_methods, sizeof(int), 1, 1);
+static Array g_default_allow_methods_arr = array_create_stack((uint8_t*)(&g_default_allow_methods), sizeof(int), 1, 1);
 
 static ServerConfig g_default_config = {
 	.resource_path = NULL,

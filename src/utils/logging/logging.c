@@ -31,7 +31,7 @@ static void logging_lock() {
 #ifdef _WIN32
     EnterCriticalSection(&log_cs);
 #else
-    pthread_mutex_lock(&log_mutext);
+    pthread_mutex_lock(&log_mutex);
 #endif
 }
 
@@ -39,7 +39,7 @@ static void logging_unlock() {
 #ifdef _WIN32
     LeaveCriticalSection(&log_cs);
 #else
-    pthread_mutex_unlock(&log_mutext);
+    pthread_mutex_unlock(&log_mutex);
 #endif
 }
 

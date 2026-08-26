@@ -210,7 +210,7 @@ bool websocket_process_data(
  * @brief send route not found response
  * @return
  */
-int route_not_found(HTTPResponse *res, const HTTPRequest *req, ServerConfig *config)
+int route_not_found(HTTPResponse *res, const HTTPRequest *req, const ServerConfig *config)
 {
 	KORALL_LOG(LOG_ERR, "route not found\n");
 	return http_response_construct(res, req, HTTP_SC_404, HTTP_MT_APP_JSON, ERROR_MESSAGE("Bad request", "Route not found"));
@@ -751,5 +751,5 @@ void create_data_process_thread(Array *thread_arr, ProcessDataArgs *t_args)
 #ifndef _WIN32
 	pthread_mutex_unlock(lock);
 #endif
-	return 0;
+	return;
 }

@@ -107,7 +107,7 @@ HTTPError http_process_request_header_value(const HTTPRequestHeaderField field, 
 
 static bool http_header_allowed(ServerConfig *config, const char *field)
 {
-	const char **e1_p = (char **)array_get(config->allow_headers, 0);
+	const char **e1_p = (const char **)array_get(config->allow_headers, 0);
 	if (e1_p == NULL)
 		return false;
 	const char *e1 = *e1_p;

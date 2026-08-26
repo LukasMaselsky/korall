@@ -12,7 +12,7 @@ int thread_create(THREAD_T *thread, void (*const func)(void *), void *arg, unsig
 	}
 	*thread = (THREAD_T)btx;
 #else
-	int res = pthread_create(thread, NULL, func, arg);
+	int res = pthread_create(thread, NULL, (void *(*)(void *))func, arg);
 	if (res != 0)
 	{
 		KORALL_LOG(LOG_ERR, "failed to create thread, could not process connection\n");

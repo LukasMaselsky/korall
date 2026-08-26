@@ -131,7 +131,7 @@ bool array_full(Array* arr) {
 }
 
 void array_for_each(Array* arr, void (* const callback)(const void*, va_list), ...) {
-	if (arr == NULL) return -1;
+	if (arr == NULL) return;
 	for (size_t i = 0; i < arr->size; i++) {
 		void* element = array_get(arr, i);
 		va_list argp;
