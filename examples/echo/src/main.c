@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define USING_CMAKE true
-
 static KORALL_WS_ROUTE(echo) {
 	
 	res->data = req->data;
@@ -22,7 +20,7 @@ int main(int argc, char* argv[]) {
 
 	FILE* log_file = NULL;
 
-	#if USING_CMAKE
+	#if CMAKE
 	
 	log_file = fopen(RESOURCES_PATH "log_file.txt", "a");
 

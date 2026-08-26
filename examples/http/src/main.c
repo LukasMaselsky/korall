@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define USING_CMAKE true
-
 static KORALL_HTTP_ROUTE(my_route) {
 
 	char value[100] = { 0 };
@@ -19,7 +17,7 @@ static KORALL_HTTP_ROUTE(my_route) {
 
 int main(int argc, char* argv[]) {
 	
-	#if USING_CMAKE
+	#if CMAKE
 
 	// RESOURCES_PATH is from CMakeLists.txt
 	korall_init(RESOURCES_PATH, stdout);
