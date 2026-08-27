@@ -77,13 +77,13 @@ bool http_domain_port_match_server(const HTTPRequest *req, const ServerConfig *c
 		if (fill_string_char(&str, port, MAX_PORT_NUM_CHAR_LEN, '\0') == -1)
 			return false;
 
-		if (strcmp(config->domain.chars, domain) != 0 ||
-			strcmp(config->port.chars, port) != 0)
+		if (strcmp(config->domain, domain) != 0 ||
+			strcmp(config->port, port) != 0)
 			return false;
 	}
 
-	if (strcmp(config->domain.chars, req->host->domain) != 0 ||
-		strcmp(config->port.chars, req->host->port) != 0)
+	if (strcmp(config->domain, req->host->domain) != 0 ||
+		strcmp(config->port, req->host->port) != 0)
 		return false;
 
 	return true;
@@ -490,8 +490,8 @@ SOCKET init_listen_socket()
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
 
-	const char *node = g_config->domain.chars;
-	const char *service = g_config->port.chars;
+	const char *node = g_config->domain;
+	const char *service = g_config->port;
 	res = get_addr_info(node, service, &serverinfo);
 
 	if (res != 0)
@@ -539,7 +539,7 @@ SOCKET init_listen_socket()
 	char ip[IPV6_ADDRSTRLEN];
 	char ipver[IP_VER_STR_LEN];
 	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
-	KORALL_LOG(LOG_INFO, "started \"%s\"\n", g_config->name.chars);
+	KORALL_LOG(LOG_INFO, "started \"%s\"\n", g_config->name);
 	KORALL_LOG(LOG_INFO, "opened socket on %s PORT %s (%s)\n", ip, service, ipver);
 
 	res = socket_listen(sock);

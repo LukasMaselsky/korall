@@ -21,9 +21,9 @@
 
 typedef struct {
 	char* resource_path;
-	String domain;
-	String port;
-	String name;
+	char *domain;
+	char *port;
+	char *name;
 	Array* allow_origins; // char **
 	Array* allow_headers; // char **
 	Array* allow_methods; // int

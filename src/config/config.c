@@ -1,6 +1,7 @@
 #include "http/http.h"
 #include "server/http/server_http.h"
 #include "lookup/lookup_tables.h"
+#include "utils/utils.h"
 #include <stdarg.h>
 #include <stdbool.h>
 
@@ -13,9 +14,9 @@ static Array g_default_allow_methods_arr = array_create_stack((uint8_t*)(g_defau
 
 static ServerConfig g_default_config = {
 	.resource_path = NULL,
-	.domain = {.chars = DEFAULT_DOMAIN, .size = sizeof(DEFAULT_DOMAIN) - 1},
-	.port = {.chars = DEFAULT_PORT, .size = sizeof(DEFAULT_PORT) - 1},
-	.name = {.chars = DEFAULT_SERVER_NAME, .size = sizeof(DEFAULT_SERVER_NAME) - 1},
+	.domain = NULL,
+	.port = NULL,
+	.name = NULL,
 	.allow_origins = &g_default_allow_arr,
 	.allow_headers = &g_default_allow_arr,
 	.allow_methods = &g_default_allow_methods_arr,
@@ -30,8 +31,7 @@ static ServerConfig g_config = {0};
 
 ServerConfig *config_get()
 {
-	ServerConfig* c = &g_config;
-	return c;
+	return &g_config;
 }
 
 void config_free(ServerConfig *config)
@@ -39,9 +39,9 @@ void config_free(ServerConfig *config)
 	if (config == NULL || !(config->on_heap))
 		return;
 
-	free(config->domain.chars);
-	free(config->port.chars);
-	free(config->name.chars);
+	free(config->domain);
+	free(config->port);
+	free(config->name);
 	// ! todo: could be on stack (UNDEFINED, FIX) ?
 	// ! todo: FIX
 	free(config->allow_origins);
@@ -52,14 +52,10 @@ void config_free(ServerConfig *config)
 static ServerConfig *config_alloc(ServerConfig *config)
 {
 
-	config->domain.chars = exit_calloc(1, MAX_DOMAIN_LEN);
-	config->domain.size = MAX_DOMAIN_LEN;
-
-	config->port.chars = exit_calloc(1, MAX_PORT_NUM_CHAR_LEN);
-	config->port.size = MAX_PORT_NUM_CHAR_LEN;
-
-	config->name.chars = exit_calloc(1, MAX_SERVER_NAME_LEN);
-	config->name.size = MAX_SERVER_NAME_LEN;
+	config->resource_path = exit_calloc(1, MAX_FILE_PATH);
+	config->domain = exit_calloc(1, MAX_DOMAIN_LEN);
+	config->port = exit_calloc(1, MAX_PORT_NUM_CHAR_LEN);
+	config->name = exit_calloc(1, MAX_SERVER_NAME_LEN);
 
 	Array *arr = (Array *)array_create_heap(sizeof(char *), MAX_ALLOW_ORIGINS);
 	if (arr == NULL)
@@ -81,33 +77,45 @@ static ServerConfig *config_alloc(ServerConfig *config)
 	return config;
 }
 
+static ServerConfig* default_config_init() {
+	ServerConfig* config = &g_default_config;
+	config->resource_path = exit_calloc(1, MAX_FILE_PATH);
+	config->domain = exit_calloc(1, MAX_DOMAIN_LEN);
+	strcpy(config->domain, DEFAULT_DOMAIN);
+	config->port = exit_calloc(1, MAX_PORT_NUM_CHAR_LEN);
+	strcpy(config->port, DEFAULT_PORT);
+	config->name = exit_calloc(1, MAX_SERVER_NAME_LEN);
+	strcpy(config->name, DEFAULT_SERVER_NAME);
+	return config;
+}
+
 static inline void log_field_not_valid(const char *field)
 {
 	KORALL_LOG(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
 }
 
-static void cjson_read_string(cJSON *json, String str, String default_val, const char *field)
+static void cjson_read_string(cJSON *json, char *str, char *default_val, const char *field, size_t max_len)
 {
 	cJSON *item = cJSON_GetObjectItemCaseSensitive(json, field);
 	const char *val;
 	if (!(cJSON_IsString(item) && (item->valuestring != NULL)))
 	{
 		log_field_not_valid(field);
-		val = default_val.chars;
+		val = default_val;
 	}
 	else
 	{
-		if (strlen(item->valuestring) > str.size)
+		if (strlen(item->valuestring) > max_len)
 		{
-			KORALL_LOG(LOG_WARN, "Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, str.size);
-			val = default_val.chars;
+			KORALL_LOG(LOG_WARN, "Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, max_len);
+			val = default_val;
 		}
 		else
 		{
 			val = item->valuestring;
 		}
 	}
-	strncpy(str.chars, val, str.size);
+	strncpy(str, val, max_len);
 	return;
 }
 
@@ -223,6 +231,7 @@ static void allow_methods_add(const char *str, va_list args)
 	}
 }
 
+
 /**
  * @brief
  * @param path
@@ -232,7 +241,7 @@ static int config_init_inner(const char *path)
 {
 
 	ServerConfig *config = config_alloc(&g_config);
-	ServerConfig *default_config = &g_default_config;
+	ServerConfig *default_config = default_config_init();
 
 	const char *config_file_name = SERVER_CONFIG_FILE_NAME;
 	char file_path[MAX_FILE_PATH + 1] = {0};
@@ -242,14 +251,13 @@ static int config_init_inner(const char *path)
 		KORALL_LOG(LOG_WARN, "Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
 		return -1;
 	}
-	else
+	
+	if (str_concat(path, config_file_name, file_path, MAX_FILE_PATH) != 0)
 	{
-		if (str_concat(path, config_file_name, file_path, MAX_FILE_PATH) != 0)
-		{
-			KORALL_LOG(LOG_WARN, "File path too long, using default config.");
-			return -1;
-		}
+		KORALL_LOG(LOG_WARN, "File path too long, using default config.");
+		return -1;
 	}
+	
 
 	FILE *fp = fopen(file_path, "r");
 	if (fp == NULL)
@@ -291,26 +299,26 @@ static int config_init_inner(const char *path)
 
 	// server name
 
-	cjson_read_string(json, config->name, default_config->name, "name");
+	cjson_read_string(json, config->name, default_config->name, "name", MAX_SERVER_NAME_LEN);
 
 	// domain
 
-	cjson_read_string(json, config->domain, default_config->domain, "domain");
+	cjson_read_string(json, config->domain, default_config->domain, "domain", MAX_DOMAIN_LEN);
 
 	// port
 
 	int def;
-	str_to_int(&def, default_config->port.chars, 10);
+	str_to_int(&def, default_config->port, 10);
 	int port = cjson_read_num(json, def, "port");
 
 	if (!is_valid_port_num(port))
 	{
 		KORALL_LOG(LOG_WARN, "Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
-		strncpy(config->port.chars, default_config->port.chars, config->port.size);
+		strncpy(config->port, default_config->port, MAX_PORT_NUM_CHAR_LEN);
 	}
 	else
 	{
-		int_to_str(port, config->port.chars);
+		int_to_str(port, config->port);
 	};
 
 	// max_http_routes
@@ -367,8 +375,10 @@ ServerConfig *config_init(const char *path)
 	int res = config_init_inner(path);
 	if (res == -1)
 	{
-		//g_config = g_default_config;
-		//g_config.resource_path = path;
+		g_config = g_default_config;
+		strcpy(g_config.resource_path, path);
 	}
 	return &g_config;
 }
+
+// todo: redo config to only 1

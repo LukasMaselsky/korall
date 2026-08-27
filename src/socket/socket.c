@@ -256,7 +256,7 @@ int get_addr_info_full(
 {
     if (node == NULL && service == NULL)
     {
-        KORALL_LOG(LOG_ERR, "get_addr_info: both node and service cannot be null");
+        KORALL_LOG(LOG_ERR, "get_addr_info: both node and service cannot be null\n");
         return 1;
     }
 
