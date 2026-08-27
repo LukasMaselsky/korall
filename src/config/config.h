@@ -20,18 +20,17 @@
 #define ALL_METHODS_LIST_STR_LEN 52 // len "CONNECT,DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE"
 
 typedef struct {
-	char* resource_path;
+	char *resource_path;
 	char *domain;
 	char *port;
 	char *name;
-	Array* allow_origins; // char **
-	Array* allow_headers; // char **
+	Array* allow_origins; // char *
+	Array* allow_headers; // char *
 	Array* allow_methods; // int
 	bool allow_credentials;
 	bool secure;
 	unsigned int max_http_routes;
 	unsigned int max_ws_routes;
-	bool on_heap;
 } ServerConfig;
 
 ServerConfig* config_get();

@@ -19,12 +19,12 @@ int main() {
 	#ifdef CMAKE
 
 	// RESOURCES_PATH is from CMakeLists.txt
-	korall_init(RESOURCES_PATH "a/", stdout);
+	korall_init(RESOURCES_PATH, stdout);
 
 	#else
 
 	// with Make
-	korall_init("./resources/", stdout);
+	korall_init("./examples/http/resources/", stdout);
 
 	#endif
 

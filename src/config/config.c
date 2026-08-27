@@ -5,29 +5,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-static char *g_default_allow[1] = {"*"};
-static Array g_default_allow_arr = array_create_stack((uint8_t*)(g_default_allow), sizeof(char *), 1, 1);
-
-// made int Array to easily remove duplicates when loading
-static int g_default_allow_methods[1] = {ANY_ALLOW_METHODS}; // represents "*"
-static Array g_default_allow_methods_arr = array_create_stack((uint8_t*)(g_default_allow_methods), sizeof(int), 1, 1);
-
-static ServerConfig g_default_config = {
-	.resource_path = NULL,
-	.domain = NULL,
-	.port = NULL,
-	.name = NULL,
-	.allow_origins = &g_default_allow_arr,
-	.allow_headers = &g_default_allow_arr,
-	.allow_methods = &g_default_allow_methods_arr,
-	.allow_credentials = false,
-	.secure = true,
-	.max_http_routes = HTTP_ROUTES_CAPACITY,
-	.max_ws_routes = WS_ROUTES_CAPACITY,
-	.on_heap = false
-};
-
-static ServerConfig g_config = {0};
+static ServerConfig g_config = { 0 };
 
 ServerConfig *config_get()
 {
@@ -36,14 +14,13 @@ ServerConfig *config_get()
 
 void config_free(ServerConfig *config)
 {
-	if (config == NULL || !(config->on_heap))
+	if (config == NULL)
 		return;
 
+	free(config->resource_path);
 	free(config->domain);
 	free(config->port);
 	free(config->name);
-	// ! todo: could be on stack (UNDEFINED, FIX) ?
-	// ! todo: FIX
 	free(config->allow_origins);
 	free(config->allow_headers);
 	free(config->allow_methods);
@@ -72,20 +49,22 @@ static ServerConfig *config_alloc(ServerConfig *config)
 		exit(EXIT_FAILURE);
 	config->allow_methods = arr3;
 
-	config->on_heap = true;
-
 	return config;
 }
 
-static ServerConfig* default_config_init() {
-	ServerConfig* config = &g_default_config;
-	config->resource_path = exit_calloc(1, MAX_FILE_PATH);
-	config->domain = exit_calloc(1, MAX_DOMAIN_LEN);
-	strcpy(config->domain, DEFAULT_DOMAIN);
-	config->port = exit_calloc(1, MAX_PORT_NUM_CHAR_LEN);
+static ServerConfig* config_init_default(ServerConfig *config) {
+	
+	strcpy(config->domain, DEFAULT_DOMAIN); // todo: problem here ??????/
 	strcpy(config->port, DEFAULT_PORT);
-	config->name = exit_calloc(1, MAX_SERVER_NAME_LEN);
 	strcpy(config->name, DEFAULT_SERVER_NAME);
+	array_push(config->allow_origins, "*");
+	array_push(config->allow_headers, "*");
+	const int any_allow_methods = ANY_ALLOW_METHODS;
+	array_push(config->allow_methods, &any_allow_methods);
+	config->allow_credentials = false;
+	config->secure = true;
+	config->max_http_routes = HTTP_ROUTES_CAPACITY;
+	config->max_ws_routes = WS_ROUTES_CAPACITY;
 	return config;
 }
 
@@ -241,7 +220,7 @@ static int config_init_inner(const char *path)
 {
 
 	ServerConfig *config = config_alloc(&g_config);
-	ServerConfig *default_config = default_config_init();
+	config_init_default(config);
 
 	const char *config_file_name = SERVER_CONFIG_FILE_NAME;
 	char file_path[MAX_FILE_PATH + 1] = {0};
@@ -295,26 +274,26 @@ static int config_init_inner(const char *path)
 
 	// resource path
 
-	config->resource_path = path;
+	strcpy(config->resource_path, path);
 
 	// server name
 
-	cjson_read_string(json, config->name, default_config->name, "name", MAX_SERVER_NAME_LEN);
+	cjson_read_string(json, config->name, config->name, "name", MAX_SERVER_NAME_LEN);
 
 	// domain
 
-	cjson_read_string(json, config->domain, default_config->domain, "domain", MAX_DOMAIN_LEN);
+	cjson_read_string(json, config->domain, config->domain, "domain", MAX_DOMAIN_LEN);
 
 	// port
 
 	int def;
-	str_to_int(&def, default_config->port, 10);
+	str_to_int(&def, config->port, 10);
 	int port = cjson_read_num(json, def, "port");
 
 	if (!is_valid_port_num(port))
 	{
 		KORALL_LOG(LOG_WARN, "Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
-		strncpy(config->port, default_config->port, MAX_PORT_NUM_CHAR_LEN);
+		strncpy(config->port, config->port, MAX_PORT_NUM_CHAR_LEN);
 	}
 	else
 	{
@@ -323,22 +302,22 @@ static int config_init_inner(const char *path)
 
 	// max_http_routes
 
-	config->max_http_routes = cjson_read_num(json, default_config->max_http_routes, "max_http_routes");
+	config->max_http_routes = cjson_read_num(json, config->max_http_routes, "max_http_routes");
 
 	// max_ws_routes
 
-	config->max_ws_routes = cjson_read_num(json, default_config->max_ws_routes, "max_ws_routes");
+	config->max_ws_routes = cjson_read_num(json, config->max_ws_routes, "max_ws_routes");
 
 	// allow_credentials
 
-	config->allow_credentials = cjson_read_bool(json, default_config->allow_credentials, "allow_credentials");
+	config->allow_credentials = cjson_read_bool(json, config->allow_credentials, "allow_credentials");
 
 	// allow_origins
 
 	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
 	if (ao_res == -1 || array_is_empty(config->allow_origins))
 	{
-		config->allow_origins = default_config->allow_origins; // also hits here when its "*"
+		config->allow_origins = config->allow_origins; // also hits here when its "*"
 	}
 
 	// allow_headers
@@ -346,7 +325,7 @@ static int config_init_inner(const char *path)
 	int ah_res = cjson_read_arr_string(json, "allow_headers", allow_headers_add, config->allow_headers);
 	if (ah_res == -1 || array_is_empty(config->allow_headers))
 	{
-		config->allow_headers = default_config->allow_headers;
+		config->allow_headers = config->allow_headers;
 	}
 
 	// allow_methods
@@ -354,12 +333,12 @@ static int config_init_inner(const char *path)
 	int am_res = cjson_read_arr_string(json, "allow_methods", allow_methods_add, config->allow_methods);
 	if (am_res == -1 || array_is_empty(config->allow_methods))
 	{
-		config->allow_methods = default_config->allow_methods;
+		config->allow_methods = config->allow_methods;
 	}
 
 	// secure
 
-	config->secure = cjson_read_bool(json, default_config->secure, "secure");
+	config->secure = cjson_read_bool(json, config->secure, "secure");
 
 	cJSON_Delete(json);
 	return 0;
@@ -373,12 +352,5 @@ static int config_init_inner(const char *path)
 ServerConfig *config_init(const char *path)
 {
 	int res = config_init_inner(path);
-	if (res == -1)
-	{
-		g_config = g_default_config;
-		strcpy(g_config.resource_path, path);
-	}
 	return &g_config;
 }
-
-// todo: redo config to only 1
