@@ -19,8 +19,8 @@
 #define ANY_ALLOW_METHODS HTTP_METHOD_COUNT + 1
 #define ALL_METHODS_LIST_STR_LEN 52 // len "CONNECT,DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE"
 
-typedef struct ServerConfig {
-	const char* resource_path;
+typedef struct {
+	char* resource_path;
 	String domain;
 	String port;
 	String name;

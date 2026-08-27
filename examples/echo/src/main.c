@@ -1,4 +1,3 @@
-#include "main.h"
 #include "korall/korall.h"
 #include <stdio.h>
 #include <string.h>
@@ -15,12 +14,11 @@ static KORALL_WS_ROUTE(echo) {
 	
 }
 
-int main(int argc, char* argv[]) {
-
+int main() {
 
 	FILE* log_file = NULL;
 
-	#if CMAKE
+	#ifdef CMAKE
 	
 	log_file = fopen(RESOURCES_PATH "log_file.txt", "a");
 

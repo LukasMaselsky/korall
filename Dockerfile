@@ -1,11 +1,12 @@
 # Get the GCC preinstalled image from Docker Hub
 FROM gcc:latest AS build
 
-# Copy the current folder which contains C++ source code to the Docker image under /opt/test
-COPY . /opt/test
+# Copy the current folder which contains C++ source code to the Docker image under /app
+COPY . /app
 
 # Specify the working directory
-WORKDIR /opt/test
+WORKDIR /app
+
 
 EXPOSE 3500
 
@@ -17,6 +18,7 @@ RUN make
 
 # Run the program output from the previous stage
 FROM ubuntu:latest
-WORKDIR /opt/test
-COPY --from=build /opt/test ./
+WORKDIR /app
+COPY --from=build /app ./
 CMD ["./examples/http/bin"]
+#CMD ["./tests/bin"]

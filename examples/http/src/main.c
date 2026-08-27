@@ -1,4 +1,3 @@
-#include "main.h"
 #include "korall/korall.h"
 #include <stdio.h>
 #include <string.h>
@@ -15,9 +14,9 @@ static KORALL_HTTP_ROUTE(my_route) {
 	korall_response_body_set(res, "{\"res\":\"hello\"}");
 }
 
-int main(int argc, char* argv[]) {
+int main() {
 	
-	#if CMAKE
+	#ifdef CMAKE
 
 	// RESOURCES_PATH is from CMakeLists.txt
 	korall_init(RESOURCES_PATH, stdout);

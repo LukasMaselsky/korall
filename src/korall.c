@@ -149,7 +149,7 @@ void korall_http_routes_add(const char *path, const char *method, KorallHTTPRout
 	const HTTPRoute route = {.path = path, .method = meth_int, .callback = callback};
 	if (array_push(routes, &route) == -1)
 	{
-		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count exceeded\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count (%llu) exceeded\n", routes->capacity);
 	}
 }
 
@@ -169,7 +169,7 @@ void korall_ws_routes_add(const char *path, KorallWSRoute callback)
 	const WebsocketRoute route = {.path = path, .callback = callback};
 	if (array_push(routes, &route) == -1)
 	{
-		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count exceeded\n");
+		KORALL_LOG(LOG_ERR, "failed to add route, maximum route count (%llu) exceeded\n", routes->capacity);
 	}
 }
 
@@ -179,9 +179,8 @@ void korall_ws_routes_add(const char *path, KorallWSRoute callback)
  * @param config_path
  * @param log_file can be stdout
  */
-void korall_init(const char *config_path, const FILE *log_file)
+void korall_init(const char *config_path, FILE *log_file)
 {
-
 	logging_init(log_file);
 	ServerConfig *config = config_init(config_path);
 	routes_init(config);
@@ -189,16 +188,15 @@ void korall_init(const char *config_path, const FILE *log_file)
 
 void korall_run()
 {
+	ServerConfig *config = config_get();
 
-	ServerConfig *g_config = config_get();
-
-	SSL_CTX *ssl_ctx = ssl_ctx_init(g_config);
+	SSL_CTX *ssl_ctx = ssl_ctx_init(config);
 
 	SOCKET server_sock = server_socket_init();
 
 	server_run(server_sock, ssl_ctx);
 
-	cleanup(server_sock, ssl_ctx, g_config);
+	cleanup(server_sock, ssl_ctx, config);
 
 	return;
 }

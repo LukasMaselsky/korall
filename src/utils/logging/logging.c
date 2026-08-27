@@ -15,15 +15,17 @@ static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 void logging_init(FILE* file) {
+
     #ifdef _WIN32
-    InitializeCriticalSection(&log_cs);
+        InitializeCriticalSection(&log_cs);
     #endif
+
     g_log_file = file;
 }
 
 void logging_cleanup() {
     #ifdef _WIN32
-    DeleteCriticalSection(&log_cs);
+        DeleteCriticalSection(&log_cs);
     #endif
 }
 

@@ -2,13 +2,14 @@
 #include "server/http/server_http.h"
 #include "lookup/lookup_tables.h"
 #include <stdarg.h>
+#include <stdbool.h>
 
 static char *g_default_allow[1] = {"*"};
-static Array g_default_allow_arr = array_create_stack((uint8_t*)(&g_default_allow), sizeof(char *), 1, 1);
+static Array g_default_allow_arr = array_create_stack((uint8_t*)(g_default_allow), sizeof(char *), 1, 1);
 
 // made int Array to easily remove duplicates when loading
 static int g_default_allow_methods[1] = {ANY_ALLOW_METHODS}; // represents "*"
-static Array g_default_allow_methods_arr = array_create_stack((uint8_t*)(&g_default_allow_methods), sizeof(int), 1, 1);
+static Array g_default_allow_methods_arr = array_create_stack((uint8_t*)(g_default_allow_methods), sizeof(int), 1, 1);
 
 static ServerConfig g_default_config = {
 	.resource_path = NULL,
@@ -22,13 +23,15 @@ static ServerConfig g_default_config = {
 	.secure = true,
 	.max_http_routes = HTTP_ROUTES_CAPACITY,
 	.max_ws_routes = WS_ROUTES_CAPACITY,
-	.on_heap = false};
+	.on_heap = false
+};
 
 static ServerConfig g_config = {0};
 
 ServerConfig *config_get()
 {
-	return &g_config;
+	ServerConfig* c = &g_config;
+	return c;
 }
 
 void config_free(ServerConfig *config)
@@ -361,12 +364,11 @@ static int config_init_inner(const char *path)
  */
 ServerConfig *config_init(const char *path)
 {
-
 	int res = config_init_inner(path);
 	if (res == -1)
 	{
-		g_config = g_default_config;
-		g_config.resource_path = path;
+		//g_config = g_default_config;
+		//g_config.resource_path = path;
 	}
 	return &g_config;
 }

@@ -2,6 +2,7 @@ examples/out
 library/out
 bin/
 build/
+out/
 examples/.vs
 library/.vs
 /.vs

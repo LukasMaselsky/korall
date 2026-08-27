@@ -13,7 +13,7 @@ typedef void (*KorallHTTPRoute)(const HTTPRequest* req, HTTPResponse* res);
 typedef void (*KorallWSRoute)(const WebsocketFrame* req, WebsocketFrame* res);
 
 
-void korall_init(const char* config_path, const FILE* log_file);
+void korall_init(const char* config_path, FILE* log_file);
 
 void korall_run();
 
