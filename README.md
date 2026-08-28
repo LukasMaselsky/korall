@@ -17,6 +17,12 @@ HTTP and WebSocket server library in C.
 
 ## Features
 
+- HTTP and HTTPS support
+- HTTP header and format parsing
+- HTTP route and query parameter handling
+- WebSocket support
+- Connection management using threads
+
 ## Dependencies
 
 - Standard C toolchain
@@ -41,6 +47,12 @@ On Debian/Ubuntu systems this would be:
 
 ```sh
 sudo apt-get install libssl-dev
+```
+
+On Red Hat systems like Fedora this would be:
+
+```sh
+sudo dnf install openssl-devel
 ```
 
 ## Build
@@ -95,5 +107,6 @@ For tests, see the ```tests/``` directory.
 | allow_headers     | ```Array*```       | ```char**``` dynamic array of allowed custom headers | \*           |
 | allow_methods     | ```Array*```       | ```ìnt``` dynamic array of allowed methods           | \*           |
 | allow_credentials | ```boolean```      | Allow credentials                                    | false        |
+| secure            | ```boolean```      | Use HTTPS                                            | true         |
 | max_http_routes   | ```unsigned int``` | Maximum number of HTTP routes capacity               | 100          |
 | max_ws_routes     | ```unsigned int``` | Maximum number of WebSocket routes capacity          | 100          |
