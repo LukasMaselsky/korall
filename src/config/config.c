@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+static char* g_default_any = "*";
+
 static ServerConfig g_config = { 0 };
 
 ServerConfig *config_get()
@@ -28,7 +30,6 @@ void config_free(ServerConfig *config)
 
 static ServerConfig *config_alloc(ServerConfig *config)
 {
-
 	config->resource_path = exit_calloc(1, MAX_FILE_PATH);
 	config->domain = exit_calloc(1, MAX_DOMAIN_LEN);
 	config->port = exit_calloc(1, MAX_PORT_NUM_CHAR_LEN);
@@ -54,11 +55,11 @@ static ServerConfig *config_alloc(ServerConfig *config)
 
 static ServerConfig* config_init_default(ServerConfig *config) {
 	
-	strcpy(config->domain, DEFAULT_DOMAIN); // todo: problem here ??????/
+	strcpy(config->domain, DEFAULT_DOMAIN);
 	strcpy(config->port, DEFAULT_PORT);
 	strcpy(config->name, DEFAULT_SERVER_NAME);
-	array_push(config->allow_origins, "*");
-	array_push(config->allow_headers, "*");
+	array_push(config->allow_origins, &g_default_any);
+	array_push(config->allow_headers, &g_default_any);
 	const int any_allow_methods = ANY_ALLOW_METHODS;
 	array_push(config->allow_methods, &any_allow_methods);
 	config->allow_credentials = false;
@@ -73,80 +74,78 @@ static inline void log_field_not_valid(const char *field)
 	KORALL_LOG(LOG_WARN, "Config \"%s\" field is not valid, using default value.\n", field);
 }
 
-static void cjson_read_string(cJSON *json, char *str, char *default_val, const char *field, size_t max_len)
+static void cjson_read_string(cJSON *json, char *str, const char *field, size_t max_len)
 {
 	cJSON *item = cJSON_GetObjectItemCaseSensitive(json, field);
-	const char *val;
+
 	if (!(cJSON_IsString(item) && (item->valuestring != NULL)))
 	{
 		log_field_not_valid(field);
-		val = default_val;
+		return;
 	}
-	else
+	
+	if (strlen(item->valuestring) > max_len)
 	{
-		if (strlen(item->valuestring) > max_len)
-		{
-			KORALL_LOG(LOG_WARN, "Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, max_len);
-			val = default_val;
-		}
-		else
-		{
-			val = item->valuestring;
-		}
+		KORALL_LOG(LOG_WARN, "Config \"%s\" field is too long, maximum %zu characters, using default value.\n", field, max_len);
+		return;
 	}
-	strncpy(str, val, max_len);
+	
+	strncpy(str, item->valuestring, max_len);
 	return;
 }
 
-static bool cjson_read_bool(cJSON *json, bool default_val, const char *field)
+static void cjson_read_bool(cJSON *json, bool* out, const char *field)
 {
 	cJSON *item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsBool(item)))
 	{
 		log_field_not_valid(field);
-		return default_val;
+		return;
 	}
-	return item->valueint;
+	memcpy(out, &(item->valueint), sizeof(bool));
 }
 
-static int cjson_read_num(cJSON *json, int default_val, const char *field)
+static void cjson_read_num(cJSON *json, int* out, const char *field)
 {
 	cJSON *item = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsNumber(item)))
 	{
 		log_field_not_valid(field);
-		return default_val;
+		return;
 	}
-	return item->valueint;
+	memcpy(out, &(item->valueint), sizeof(int));
 }
 
-static int cjson_read_arr_string(cJSON *json, const char *field, void (*callback)(const char *, va_list), ...)
+static void cjson_read_arr_string(cJSON *json, const char *field, void (*callback)(const char *, Array*), Array* array)
 {
 	cJSON *arr = cJSON_GetObjectItemCaseSensitive(json, field);
 	if (!(cJSON_IsArray(arr)))
 	{
 		log_field_not_valid(field);
-		return -1;
+		return;
 	};
 
+	bool use_default = true;
 	const cJSON *item = NULL;
 	cJSON_ArrayForEach(item, arr)
 	{
-		if (!cJSON_IsString(item))
+		if (!cJSON_IsString(item) || item->valuestring == NULL)
 			continue;
+
+		if (use_default) {
+			array_clear(array);
+			use_default = false;
+		}
+
 		char *str = item->valuestring;
-		va_list argp;
-		va_start(argp, callback);
-		callback(str, argp);
-		va_end(argp);
+		callback(str, array);
 	}
 
-	return 0;
+	return;
 }
 
-static void allow_origins_add(const char *str, va_list args)
+static void allow_origins_add(const char *str, Array* origins_arr)
 {
-	Array *origins_arr = va_arg(args, Array *);
 	const size_t str_len = strlen(str);
 	// todo: MAX_HTTP_URL ?
 	if (str_len > MAX_DOMAIN_LEN)
@@ -163,9 +162,8 @@ static void allow_origins_add(const char *str, va_list args)
 	}
 }
 
-static void allow_headers_add(const char *str, va_list args)
+static void allow_headers_add(const char *str, Array* arr)
 {
-	Array *arr = va_arg(args, Array *);
 	const size_t str_len = strlen(str);
 	if (str_len > MAX_HTTP_HEADER_FIELD_LEN)
 	{
@@ -188,9 +186,8 @@ static bool comp_int(const void *a, const void *b)
 	return a == b;
 }
 
-static void allow_methods_add(const char *str, va_list args)
+static void allow_methods_add(const char *str, Array* arr)
 {
-	Array *arr = va_arg(args, Array *);
 	HTTPMethod method = lookup_str_int(str, &http_method_lookup_table, false);
 	if (method == -1)
 	{
@@ -210,13 +207,7 @@ static void allow_methods_add(const char *str, va_list args)
 	}
 }
 
-
-/**
- * @brief
- * @param path
- * @return -1 if use default, 0 if use custom
- */
-static int config_init_inner(const char *path)
+static void config_init_inner(const char *path)
 {
 
 	ServerConfig *config = config_alloc(&g_config);
@@ -228,13 +219,17 @@ static int config_init_inner(const char *path)
 	if (path == NULL)
 	{
 		KORALL_LOG(LOG_WARN, "Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
-		return -1;
+		free(config->resource_path);
+		config->resource_path = NULL;
+		return;
 	}
 	
 	if (str_concat(path, config_file_name, file_path, MAX_FILE_PATH) != 0)
 	{
 		KORALL_LOG(LOG_WARN, "File path too long, using default config.");
-		return -1;
+		free(config->resource_path);
+		config->resource_path = NULL;
+		return;
 	}
 	
 
@@ -242,7 +237,9 @@ static int config_init_inner(const char *path)
 	if (fp == NULL)
 	{
 		KORALL_LOG(LOG_WARN, "Could not find a korall_config.json, using default config. If you are using a custom config, make sure the path is correct.\n");
-		return -1;
+		free(config->resource_path);
+		config->resource_path = NULL;
+		return;
 	};
 
 	// read the file contents into a string
@@ -251,7 +248,9 @@ static int config_init_inner(const char *path)
 	if (ferror(fp))
 	{
 		KORALL_LOG(LOG_WARN, "Could not read from korall_config.json, using default config.\n");
-		return -1;
+		free(config->resource_path);
+		config->resource_path = NULL;
+		return;
 	}
 	fclose(fp);
 
@@ -262,10 +261,10 @@ static int config_init_inner(const char *path)
 		const char *error_ptr = cJSON_GetErrorPtr();
 		if (error_ptr != NULL)
 		{
-			printf("%s\n", error_ptr);
+			KORALL_LOG(LOG_ERR, "%s\n", error_ptr);
 		}
 		cJSON_Delete(json);
-		return -1;
+		return;
 	}
 
 	// access the JSON data
@@ -278,22 +277,21 @@ static int config_init_inner(const char *path)
 
 	// server name
 
-	cjson_read_string(json, config->name, config->name, "name", MAX_SERVER_NAME_LEN);
+	cjson_read_string(json, config->name, "name", MAX_SERVER_NAME_LEN);
 
 	// domain
 
-	cjson_read_string(json, config->domain, config->domain, "domain", MAX_DOMAIN_LEN);
+	cjson_read_string(json, config->domain, "domain", MAX_DOMAIN_LEN);
 
 	// port
 
-	int def;
-	str_to_int(&def, config->port, 10);
-	int port = cjson_read_num(json, def, "port");
+	int port = 0;
+	str_to_int(&port, config->port, 10);
+	cjson_read_num(json, &port, "port");
 
 	if (!is_valid_port_num(port))
 	{
 		KORALL_LOG(LOG_WARN, "Config \"port\" field number is not valid, must be between %d and %d.\n", MIN_PORT_NUM, MAX_PORT_NUM);
-		strncpy(config->port, config->port, MAX_PORT_NUM_CHAR_LEN);
 	}
 	else
 	{
@@ -302,46 +300,34 @@ static int config_init_inner(const char *path)
 
 	// max_http_routes
 
-	config->max_http_routes = cjson_read_num(json, config->max_http_routes, "max_http_routes");
+	cjson_read_num(json, &(config->max_http_routes), "max_http_routes");
 
 	// max_ws_routes
 
-	config->max_ws_routes = cjson_read_num(json, config->max_ws_routes, "max_ws_routes");
+	cjson_read_num(json, &(config->max_ws_routes), "max_ws_routes");
 
 	// allow_credentials
 
-	config->allow_credentials = cjson_read_bool(json, config->allow_credentials, "allow_credentials");
+	cjson_read_bool(json, &(config->allow_credentials), "allow_credentials");
 
 	// allow_origins
 
-	int ao_res = cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
-	if (ao_res == -1 || array_is_empty(config->allow_origins))
-	{
-		config->allow_origins = config->allow_origins; // also hits here when its "*"
-	}
+	cjson_read_arr_string(json, "allow_origins", allow_origins_add, config->allow_origins);
 
 	// allow_headers
 
-	int ah_res = cjson_read_arr_string(json, "allow_headers", allow_headers_add, config->allow_headers);
-	if (ah_res == -1 || array_is_empty(config->allow_headers))
-	{
-		config->allow_headers = config->allow_headers;
-	}
+	cjson_read_arr_string(json, "allow_headers", allow_headers_add, config->allow_headers);
 
 	// allow_methods
 
-	int am_res = cjson_read_arr_string(json, "allow_methods", allow_methods_add, config->allow_methods);
-	if (am_res == -1 || array_is_empty(config->allow_methods))
-	{
-		config->allow_methods = config->allow_methods;
-	}
-
+	cjson_read_arr_string(json, "allow_methods", allow_methods_add, config->allow_methods);
+	
 	// secure
 
-	config->secure = cjson_read_bool(json, config->secure, "secure");
+	cjson_read_bool(json, &(config->secure), "secure");
 
 	cJSON_Delete(json);
-	return 0;
+	return;
 }
 
 /**
@@ -351,6 +337,6 @@ static int config_init_inner(const char *path)
  */
 ServerConfig *config_init(const char *path)
 {
-	int res = config_init_inner(path);
+	config_init_inner(path);
 	return &g_config;
 }

@@ -9,6 +9,7 @@ HTTP and WebSocket server library in C.
 - [Installation](#installation)
 	- [Installing OpenSSL](#installing-openssl)
 - [Build](#build)
+	- [Docker](#docker)	
 - [Examples](#examples)
 - [Tests](#tests)
 - [API](#api)
@@ -59,6 +60,19 @@ sudo apt-get install libssl-dev
 	cmake ..
 	```
 
+## Docker
+
+1. Build image
+	
+	```sh
+	docker build -t korall .
+	```
+
+2. Run container 
+
+	```sh
+	docker run -it -p 3500:3500 korall
+	```
 
 ## Examples
 
