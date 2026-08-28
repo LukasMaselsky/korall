@@ -490,9 +490,9 @@ SOCKET init_listen_socket()
 	SOCKET sock;
 	struct addrinfo *serverinfo, *addrinfo;
 
-	const char *node = g_config->domain;
+	//const char *node = g_config->domain;
 	const char *service = g_config->port;
-	res = get_addr_info(node, service, &serverinfo);
+	res = get_addr_info(NULL, service, &serverinfo);
 
 	if (res != 0)
 	{
@@ -527,20 +527,14 @@ SOCKET init_listen_socket()
 
 		break;
 	}
-
-	freeaddrinfo(serverinfo);
-
-	if (addrinfo == NULL)
-	{
-		KORALL_LOG(LOG_ERR, "failed to freeaddrinfo");
-		return INVALID_SOCKET;
-	}
-
-	char ip[IPV6_ADDRSTRLEN];
-	char ipver[IP_VER_STR_LEN];
+	
+	char ip[IPV6_ADDRSTRLEN + 1] = { 0 };
+	char ipver[IP_VER_STR_LEN] = { 0 };
 	get_ip_info_addr(addrinfo, ip, sizeof(ip), ipver, sizeof(ipver));
 	KORALL_LOG(LOG_INFO, "started \"%s\"\n", g_config->name);
 	KORALL_LOG(LOG_INFO, "opened socket on %s PORT %s (%s)\n", ip, service, ipver);
+
+	freeaddrinfo(serverinfo);
 
 	res = socket_listen(sock);
 	if (res == -1)

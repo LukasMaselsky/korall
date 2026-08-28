@@ -1,6 +1,6 @@
 {
   "name": "HTTPServer",
-  "domain": "127.3.3.1",
+  "domain": "localhost",
   "port": 3500,
   "allow_custom_headers": true,
   "allow_origins": [ "*" ],

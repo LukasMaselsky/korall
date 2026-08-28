@@ -46,7 +46,7 @@ int socket_init(void)
     }
 
     KORALL_LOG(LOG_ERR, "could not initialise any version of winsock");
-    return 1;
+    return -1;
 
 #else
     return 0;
@@ -257,26 +257,25 @@ int get_addr_info_full(
     if (node == NULL && service == NULL)
     {
         KORALL_LOG(LOG_ERR, "get_addr_info: both node and service cannot be null\n");
-        return 1;
+        return -1;
     }
 
-    struct addrinfo hints;
-
-    memset(&hints, 0, sizeof(hints)); // make sure the struct is empty
+    struct addrinfo hints = { 0 };
     hints.ai_family = pf;
     hints.ai_socktype = st;
     if (node == NULL)
     {
-        // hints.ai_flags = AI_PASSIVE; // this machines IP
-        //! When AI_PASSIVE, can't use NULL for node (doesn't connect on client even though 0.0.0.0 assigned)
-        //! todo
+        #ifndef _WIN32
+            hints.ai_flags = AI_PASSIVE; // this machines IP
+        #endif
+        // on WIN : When AI_PASSIVE, can't use NULL for node (doesn't connect on client even though 0.0.0.0 assigned
     }
 
     int status = getaddrinfo(node, service, &hints, res);
     if (status != 0)
     {
         KORALL_LOG(LOG_ERR, "get_addr_info -> getaddrinfo: %s\n", gai_strerror(status));
-        return 1;
+        return -1;
     }
     return 0;
 }
