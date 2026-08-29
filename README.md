@@ -103,9 +103,9 @@ For tests, see the ```tests/``` directory.
 | domain            | ```String```       | Domain URL                                           | localhost    |
 | port              | ```String```       | Port number                                          | 3500         |
 | name              | ```String```       | Server name                                          | KorallServer |
-| allow_origins     | ```Array*```       | ```char**``` dynamic array of allowed origins        | \*           |
-| allow_headers     | ```Array*```       | ```char**``` dynamic array of allowed custom headers | \*           |
-| allow_methods     | ```Array*```       | ```ìnt``` dynamic array of allowed methods           | \*           |
+| allow_origins     | ```Array*```       | ```char*``` dynamic array of allowed origins         | \*           |
+| allow_headers     | ```Array*```       | ```char*``` dynamic array of allowed custom headers  | \*           |
+| allow_methods     | ```Array*```       | ```int``` dynamic array of allowed methods           | \*           |
 | allow_credentials | ```boolean```      | Allow credentials                                    | false        |
 | secure            | ```boolean```      | Use HTTPS                                            | true         |
 | max_http_routes   | ```unsigned int``` | Maximum number of HTTP routes capacity               | 100          |
