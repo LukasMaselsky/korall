@@ -25,7 +25,7 @@ HTTP and WebSocket server library in C.
 
 ## Dependencies
 
-- Standard C toolchain
+- C standard library
 - cJSON
 - OpenSSL
 
