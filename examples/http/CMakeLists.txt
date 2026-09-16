@@ -20,4 +20,4 @@ target_include_directories(${project_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/i
 # Link libraries that use CMake
 target_link_libraries(${project_name} PRIVATE korall)
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_compile_definitions.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/cmake_compile_definitions.cmake")

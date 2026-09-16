@@ -11,4 +11,13 @@ file(GLOB MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_executable(${project_name})
 target_sources(${project_name} PRIVATE ${MY_SOURCES})
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_compile_definitions.cmake")
+# This is useful to get an ASSETS_PATH in your IDE during development
+target_compile_definitions(${project_name} PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
+
+# Include directories
+target_include_directories(${project_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+
+# Link libraries that use CMake
+target_link_libraries(${project_name} PRIVATE korall)
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/cmake_compile_definitions.cmake")
